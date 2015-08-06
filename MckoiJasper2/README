@@ -1,0 +1,12 @@
+This is a slightly modified version of the Tomcat Jasper JSP engine used
+by the Mckoi Web Platform.
+
+The diff file for the modifications is;
+  tomcat_6.diff
+
+The changes are summarized as follows;
+
+1) All code not related to the Tomcat Jasper/JSP engine is not included.
+2) The Eclipse and Ant compilers are removed.
+3) org/apache/jasper/compiler/Compiler.java changed so that it doesn't
+   need to deal directly with files in the local file system.

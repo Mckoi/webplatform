@@ -1,0 +1,76 @@
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/: javax
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache: catalina
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache: coyote
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache: el
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache/jasper: JspC.java
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache/jasper/compiler: AntCompiler.java
+diff -ur ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache/jasper/compiler/Compiler.java src/main/java/org/apache/jasper/compiler/Compiler.java
+--- ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache/jasper/compiler/Compiler.java	Mon Feb 27 18:27:07 2012
++++ src/main/java/org/apache/jasper/compiler/Compiler.java	Mon Feb 27 22:14:04 2012
+@@ -17,12 +17,7 @@
+ 
+ package org.apache.jasper.compiler;
+ 
+-import java.io.File;
+-import java.io.FileNotFoundException;
+-import java.io.FileOutputStream;
+-import java.io.OutputStreamWriter;
+-import java.io.PrintWriter;
+-import java.io.UnsupportedEncodingException;
++import java.io.*;
+ import java.net.JarURLConnection;
+ import java.net.URL;
+ import java.net.URLConnection;
+@@ -253,14 +248,16 @@
+                 }
+             }
+             // Remove the generated .java file
+-            File file = new File(javaFileName);
+-            if (file.exists()) {
+-                if (!file.delete()) {
+-                    log.warn(Localizer.getMessage(
+-                            "jsp.warning.compiler.javafile.delete.fail",
+-                            file.getAbsolutePath()));
+-                }
+-            }
++// [ Mckoi Jasper Modification START ]
++//            File file = new File(javaFileName);
++//            if (file.exists()) {
++//                if (!file.delete()) {
++//                    log.warn(Localizer.getMessage(
++//                            "jsp.warning.compiler.javafile.delete.fail",
++//                            file.getAbsolutePath()));
++//                }
++//            }
++// [ Mckoi Jasper Modification END ]
+             throw e;
+         } finally {
+             if (writer != null) {
+@@ -296,7 +293,7 @@
+ 
+ 		try {
+ 		    osw = new OutputStreamWriter(
+-		            new FileOutputStream(javaFileName), javaEncoding);
++		            getServletFileOutputStream(javaFileName), javaEncoding);
+ 		} catch (UnsupportedEncodingException ex) {
+ 		    errDispatcher.jspError("jsp.error.needAlternateJavaEncoding",
+ 		            javaEncoding);
+@@ -582,4 +579,13 @@
+                      e);
+         }
+     }
++    
++    /**
++     * Method added for Mckoi Jasper implementation to be overridden.
++     */
++    public OutputStream getServletFileOutputStream(String javaFileName)
++                                                 throws FileNotFoundException {
++        return new FileOutputStream(javaFileName);
++    }
++    
+ }
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache/jasper/compiler: JDTCompiler.java
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache/jasper: resources
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache: jk
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache: naming
+Only in ../Tomcat6SVN/TOMCAT_6_0_35/java/org/apache: tomcat
