@@ -1,0 +1,2 @@
+mckoiddbhost=${this_ddb_address}
+mckoiddbport=${this_ddb_port}

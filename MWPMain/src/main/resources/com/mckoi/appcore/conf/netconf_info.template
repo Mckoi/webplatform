@@ -1,0 +1,5 @@
+
+# This property file provides the location of the network.conf file. It
+# is used by the tools in the 'bin' directory.
+
+netconf_location=${network_conf_location}

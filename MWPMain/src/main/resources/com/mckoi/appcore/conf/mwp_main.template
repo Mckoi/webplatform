@@ -1,0 +1,55 @@
+
+# ----------------------------------------------------
+# Configuration properties for the Mckoi Web Platform
+# web/process server. This defines machine specific
+# information used for initialization of the software.
+# ----------------------------------------------------
+
+# The location of the JDK (Java Developers Kit) directory.
+# From this path there should be accessible a lib/tools.jar
+# library containing the JDK tools (compiler, etc).
+
+java_home=${java_home}
+
+
+# The location of various support files and directories for
+# this installation, including the lib/ directory, the
+# log/ directory and the client and network configuration
+# files used by MckoiDDB.
+
+home_dir=${root_directory}
+lib_dir=lib/
+mckoi_client=client.conf
+temporary_dir=temp/
+log_dir=log/
+
+# The location of the 'network.conf' file that describes
+# the topology of the MckoiDDB network.
+
+# Use this to reference the network.conf file directly
+#mckoi_network=${network_conf_location}
+
+# Info file that locates the 'network.conf' resource.
+# (This must be an absolute file location)
+mckoi_netconf_info=${netconf_info_file}
+
+
+# The private and public IP address of this machine.
+
+private_ip=${private_ip}
+public_ip=${public_ip}
+
+
+# The interface to bind the private IP to. Used for IPv6
+# link local resolution.
+
+net_interface=${net_interface}
+
+
+# The TCP port of the administration service
+# (currently not used).
+
+admin_port=9422
+
+
+${extra_mwp_main_arg01}

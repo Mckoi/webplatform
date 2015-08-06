@@ -1,0 +1,49 @@
+# Node configuration
+# ==================
+
+# The node configuration defines general properties used
+# by the com.mckoi.runtime.MckoiMachineNode application.
+# This file must be deployed together with each node
+# installation. This configuration should not be needed
+# to be changed from its initial version but an
+# administrator may find it useful to change this file
+# after deployment for tweaking/debugging an
+# installation.
+
+
+# The network password needed to talk with the nodes on
+# the network. All machines in a MckoiDDB network must
+# share the same network password.
+
+network_password = ${network_password}
+
+
+# The network interface used for IPv6 link-local
+# resolution.
+
+net_interface = ${net_interface}
+
+
+# The location in the local filesystem of the directory
+# that stores stateful data of the roles running on the
+# machine.
+
+node_directory = ${ddb_node_directory}
+
+
+# The directory location in the local filesystem to store
+# logging information (uses the internal Java logging
+# format).
+
+log_directory = ${log_directory}
+
+
+# The minimum log level to report (inclusive),
+
+log_level = info
+
+
+# The size of the root server transaction cache. The
+# default size is 14MB.
+
+root_server_transaction_cache = default

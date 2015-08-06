@@ -1,0 +1,423 @@
++help
+!help ([[command]])
+Examples:
+  help
+  help add account user
+
+When no arguments are given this displays the list of all commands available.
+Otherwise, displays a description of the given command.
++initialize system
+!initialize system [ddb root server(s)]
+Examples:
+  initialize system "192.168.10.11:9400"
+  initialize system "192.168.10.15:9400 [ 192.168.10.15:9400 192.168.10.16:9400]"
+
+Initializes the Mckoi Web Platform system database by creating a MckoiDDB path
+called 'sysplatform' at the given root server location. It is necessary to use
+this function on a MckoiDDB network to initialize the Mckoi Web Platform before
+it can be used to host applications.
+
+The 'sysplatform' path is a database of accounts, virtual web hosts and a file
+repository for application server installs. This database also stores details
+about the network topology.
++initialize process
+!initialize process [ddb root server(s)]
+Examples:
+  initialize process "192.168.10.11:9400"
+  initialize process "192.168.10.15:9400 [ 192.168.10.15:9400 192.168.10.16:9400]"
+
+Initializes the Mckoi Web Platform system database by creating a MckoiDDB path
+called 'sysprocess00' at the given root server location. It is necessary to use
+this function on a MckoiDDB network to initialize the Mckoi Web Platform before
+it can be used to host applications.
+
+The 'sysprocess00' path is a database used to manage process instances.
++update network
+!update network
+Inspects the MckoiDDB network and updates the information stored in the
+'sysplatform' database. This should be used if the network topology is changed
+outside of the function of this administration tool (for example, if a third
+party application adds new paths or changes machine roles).
++create install
+!create install [install name]
+Example:
+  create install testdeploy
+
+Creates a new named install. This command allows the administrator to create
+and deploy a new install branch.
++upload install
+!upload install [install name] [directory]
+Example:
+  upload install testdeploy "/mckoi/test_install_dev/"
+
+Uploads or updates a named install in the Mckoi Web Platform install file
+repository (stored in the 'sysplatform' database). After an install has been
+uploaded it can be deployed by using the 'deploy install' command.
+
+The [directory] argument must be the location of the install directory in the
+local file system to upload to the Mckoi Web Platform. The format of this
+directory has very specific requirements that goes beyond the scope of this
+documentation.
+
+It is recommended this command is only used to update to newer versions of the
+'MWPCore' project available from the Mckoi website.
++deploy install
+!deploy install [install name]
+Example:
+  deploy install testdeploy
+
+Deploys the latest version of the named install. After this is called, all the
+Mckoi Web Platform service nodes will download and use this install.
++register server
+!register server [server name] [public ip] [private ip]
+Example:
+  register server "machine01.myserver.com" 10.76.99.101 192.168.0.10
+
+Registers a server to be used as an application server in the Mckoi Web
+Platform infrastructure. This must be used before a web or process role can be
+started on the server.
+
+It is recommended that every Mckoi Web Platform server has a private and public
+network interface, however if the server only has one interface, the same IP
+can be used for both the private and public address.
+
+A registered server's private IP address must be in the 'connect_whitelist'
+property of the 'network.conf' file.
++deregister server
+!deregister server [server name | public ip | private ip]
+Example
+  deregister server "machine01.myserver.com"
+
+Removes a registered server from the Mckoi Web Platform database.
++start role
+!start role [http | https | process] on [server name]
+Examples:
+  start role http on machine01.myserver.com
+  start role process on 192.168.0.10
+
+Starts a role on the given registered server in the Mckoi Web Platform
+infrastructure. [server name] may be either the host name, private IP or public
+IP of the registered server.
+
+Once this command is used the server will invoke the specified role.
++stop role
+!stop role [http | https | process] on [server name]
+Examples:
+  stop role http on machine01.myserver.com
+  stop role process on 192.168.0.10
+
+Stops a role that is currently running on the given registered server in the
+Mckoi Web platform infrastructure. [server name] may be either the host name,
+private IP or public IP of the registered server.
+
+Once this command is used the server will stop the specified role running on
+the server.
++start ddb role
+!start ddb role [block | root | manager] on [ddb server]
+Examples:
+  start ddb role block on 192.168.0.12:13030
+  start ddb role root on 192.168.0.19:13030
+
+Starts a MckoiDDB role on the given machine node in the MckoiDDB
+infrastructure. This is used to tell a server to take on the role of either a
+block, root or manager machine node.
+
+Please make sure you are familiar with the working topology of MckoiDDB
+networks before using this command. Details are in the MckoiDDB documentation.
++stop ddb role
+!stop ddb role [block | root | manager] on [ddb server]
+Examples:
+  stop ddb role block on 192.168.0.12:13030
+  stop ddb role root on 192.168.0.19:13030
+
+Stops a MckoiDDB role on the given machine node in the MckoiDDB
+infrastructure. This is used to tell a server to stop taking the role of either
+a block, root or manager machine node.
+
+Please make sure you are familiar with the working topology of MckoiDDB
+networks before using this command. Details are in the MckoiDDB documentation.
++create odb resource
+!create odb resource [resource name] [ddb root server(s)]
+Examples:
+  create odb resource ufscarp "192.168.10.11:9400"
+  create odb resource ufscarp "192.168.10.15:9400 [ 192.168.10.15:9400 192.168.10.16:9400]"
+
+Initializes an com.mckoi.odb.ObjectDatabase MckoiDDB path and path location.
+Use this command to allocate new resources in the network.
++create account
+!create account [account name]
+Example:
+  create account bengal
+
+Creates a new account with the given name in the Mckoi Web Platform system.
+Fails if an account with the same name already exists.
++add account user
+!add account user [account name] [username] [password]
+Example:
+  add account user bengal "bob" "p4ssw0rd"
+
+Adds a new user (with a password) to the given account. The user account is
+available in the account's authentication system. Fails if the account does not
+exist or the user already exists.
++remove account user
+!remove account user [account name] [username]
+Example:
+  remove account user bengal "bob"
+
+Removes an existing user from the given account's authentication system. Fails
+if the account does not exist or the user does not exist.
++set account user password
+!set account user password [account name] [username] [new password]
+Example:
+  set account user password bengal "bob" "n3wp4ssw0rd"
+
+Sets the user's password in the given account. This will additionally
+invalidate any session information related to the account.
++invalidate account user sessions
+!invalidate account user sessions [account name] [username]
+Example:
+  invalidate account user sessions bengal "bob"
+
+Invalidates all sessions currently active for the given user in the given
+account. This will delete any cookies associated with the user, thereby
+requiring re-authentication.
++deactivate account
+!deactivate account [account name]
+Deactivates the given account.
++add account app
+!add account app [account name] [app name] [vhost list] [context path] [build dir]
+Example:
+  add account app bengal "console" "cons.myserver.com:http" "/console/" "/apps/console/"
+
+Sets up a new application in the given account. This updates the
+"/system/webapps.xml" file in the account's file system and adds the
+application details to it in XML form.
+
+The [vhost list] is a list of virtual host names that should resolve to the
+application in this account. Note that for a virtual host to be resolved
+correctly, the 'connect vhost' must be used to associate the virtual host with
+this account.
+
+The [context path] argument is the URL context that resolves to the
+application. As a demonstration, in the example above the URL:
+"http://cons.myserver.com/console/" will resolve to the application.
+
+[build dir] is the directory in the account's file system where the
+application's binary files are found.
+
+This command is useful for initializing an account or recovering an account
+that has a bad webapps.xml configuration.
++remove account app
+!remove account app [account name] [app name]
+Example:
+  remove account app bengal "console"
+
+Modifies the "/system/webapps.xml" file in the given account's file system and
+removes the application with the given name.
+
+This command is useful for recovering an account with a bad webapps.xml
+configuration.
++clean account apps
+!clean account apps [account name]
+Example:
+  clean account apps bengal
+
+Removes all the applications from the "/system/webapps.xml" file in the given
+account's file system.
+
+This command is useful for recovering an account with a bad webapps.xml
+configuration.
++upload account app
+!upload account app [account name] [app name] [local object (war or directory)]
+Examples:
+  upload account app bengal "console" "/mckoidev/console/target/MWPUI.war"
+  upload account app bengal "console" "/mckoidev/console/target/MWPUI/"
+
+Uploads an application's binary files from the local file system into the given
+account's file system. This is used to initialize or update an application in
+an account.
+
+The local file system object that is uploaded may either be a .war file or a
+directory of an unzipped .war file.
+
+When updating an existing installation, this command will only refresh files
+that are different from the existing copy.
++refresh all account apps
+!refresh all account apps [account name]
+Example:
+  refresh all account apps bengal
+
+Rebuilds the web apps system file for the given account which will cause the
+application server context to refresh with a new class loader. It's necessary
+to use this after uploading a new application or updating an existing
+application.
++refresh account app
+!refresh account app [account name] [app name]
+Example:
+  refresh account app bengal console
+
+Refreshes the given web app system file in the given account. This will cause
+the application server context to refresh with a new class loader. It's
+necessary to use this after uploading a new application or updating an existing
+application.
++copy local
+!copy local [local dir] to [account name] [account dir]
+Examples:
+  copy local "C:\myfiles\" to bengal "/data/myfiles/"
+  copy local "/home/bengal/htmlstuff/" to bengal "/data/cms/data/"
+
+Recursively copies all files from the given directory in the local file system
+to the given account's file system at [account dir]. If there are existing
+files at the location in the account's file system, they will be overwritten
+only if the local file is different. This will not remove files in the
+account file system that are not present in the local directory.
++copy account dir
+!copy account dir [account name] [account dir] to [local dir]
+Example:
+  copy account dir bengal "/data/myfiles/" to "/home/bengal/myfiles_backup/"
+
+Recursively copies all files from the given directory in the account file
+system to the directory in the local file system. If there are existing files
+in the local directory, they will be overwritten only if the files from the
+account file system are different than the local copy. This will not remove
+files in the local directory that are not present in the account's directory.
++unzip local
+!unzip local [local zip archive] to [account name] [accuont dir]
+Example:
+  unzip local "/home/bengal/myzips/data.zip" to bengal "/zipdata/"
+
+Recursively copies all the files from the given zip archive in the local file
+system to the given account's file system at [account dir]. If there are
+existing files at the destination location, they will be overwritten only if
+the file from the zip is different. This will not remove files or directories
+in the account file system that are not present in the zip archive.
++connect vhost
+!connect vhost [vhost] [account name]
+Examples:
+  connect vhost "www.myserver.com:http" bengal
+  connect vhost "secure.myserver.com:https" bengal
+
+Associates a virtual host name with an account in the Mckoi Web Platform. This
+command must be used before a host name will resolve to a user account. Once a
+virtual host is added to the database, the "/system/webapps.xml" file in the
+account's file system may use the virtual host name in the <vhosts> section.
++disconnect vhost
+!disconnect vhost [vhost] [account name]
+Example:
+  disconnect vhost "www.myserver.com:http" bengal
+
+Removes an association between a virtual host name and an account from the
+Mckoi Web Platform database.
++connect resource
+!connect resource [ddb path name] [account]
+Example:
+  connect resource ufscarp bengal
+
+Connects a MckoiDDB path resource to the given account. Once a DDB path is
+associated with an account, applications running on the account have full
+permission to read and change the data in the path.
++disconnect resource
+!disconnect resource [ddb path name] [account]
+Example:
+  disconnect resource ufscarp bengal
+
+Disconnects a MckoiDDB path resource from the given account. An account only
+has permission to read and modify DDB paths that it is connected to.
++grant superuser
+!grant superuser [account name]
+Example:
+  grant superuser bengal
+
+Grants super user privilege to the given account. A super user account is able
+to perform administration functions on the Mckoi Web Platform infrastructure
+(such as creating new accounts, resources and changing the server roles).
++revoke superuser
+!revoke superuser [account name]
+Example:
+  revoke superuser bengal
+
+Revokes super user privilege from the given account. A super user account is
+able to perform administration functions on the Mckoi Web Platform
+infrastructure.
++add ddb path
+!add ddb path [consensus function] [ddb path name] to [ddb root server(s)]
+Examples:
+  add ddb path "com.mckoi.sdb.SimpleDatabase" sdb01 to "192.168.10.11:9400"
+  add ddb path "com.mckoi.odb.ObjectDatabase" odb09 to "192.168.10.15:9400 [ 192.168.10.15:9400 192.168.10.16:9400]"
+
+Given a path type (consensus function), name and root server(s) location,
+initializes the specified MckoiDDB path on the MckoiDDB network. Use this
+command to allocate new resources in the network.
++check network
+!check network
+Performs a scan of the MckoiDDB network and reports on any issues that may be
+present. For example, reports when a block is replicated less than three
+times.
+
+Block availability problems can be fixed by using the 'fix block availability'
+command.
++fix block availability
+!fix block availability
+If the MckoiDDB network contains blocks that are replicated less than three
+times, and there are three or more block servers available, this will create
+new replicas of the block as is appropriate.
++rollback path
+!rollback path [ddb path] [timestamp | time frame]
+Examples:
+  rollback path odb09 "12 hours"
+  rollback path sdb01 "5/22/2012 2:15pm"
+
+Reverts all changes made to the MckoiDDB path since the given time frame or
+date/time string. The [time frame] can be formatted in denominations of
+days, hours, minutes or seconds.
+
+Rolling back a path in MckoiDDB may cause an application that is currently
+accessing the database to throw an unexpected CommitFaultException on commit.
++show vhosts
+!show vhosts
+Displays a list of all virtual hosts and the accounts associated to them. This
+information is retrieved from the Mckoi Web Platform database.
++show account apps
+!show account apps [account name]
+Example:
+  show account apps bengal
+
+Displays a summary of all applications currently active in the given account.
++show accounts
+!show accounts
+Displays a list of all accounts currently set up in the Mckoi Web Platform
+system. Additionally shows which accounts have been granted super user
+privilege.
++show account
+!show account [account name]
+Example:
+  show account bengal
+
+Displays a summary of the given account. The summary includes the list of all
+virtual host names and DDB resources associated with the account.
++show installs
+!show installs
+Displays a list of all the install names currently defined, the latest version
+number of each install, and the install that is currently deployed.
++show servers
+!show servers ([sort by])
+Displays a list of all the servers currently registered in the Mckoi Web
+Platform database. The list includes the private and public IP addresses
+assigned to each server.
++show network
+!show network
+Displays a summary of all the machines currently in the Mckoi Web Platform
+network infrastructure, and the role they are performing.
++show status
+!show status
+Displays the status of all the servers currently in the network infrastructure
+according to the MckoiDDB server monitoring service. If a machine is known to
+be down and the manager is monitoring it, this will be shown.
++show free
+!show free
+Displays information about the local resources of every server in the network
+infrastructure. This is used as a general monitor for server health.
++show paths
+!show paths
+Lists all the MckoiDDB paths in the network, including all the system paths
+necessary to run the Mckoi Web Platform.

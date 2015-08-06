@@ -1,0 +1,6 @@
+manager_address=${manager_addr}
+network_password=${network_password}
+net_interface=${net_interface}
+
+transaction_cache_size=14MB
+global_cache_size=64MB
