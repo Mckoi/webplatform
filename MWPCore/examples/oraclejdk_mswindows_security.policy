@@ -1,0 +1,376 @@
+
+// A general security policy for Sun JDK installations.
+
+// Assumes following directory structure;
+// ${mckoi.install}
+//     /lib/          -- All MWP system .jar libraries
+//     /cert/keystore -- SSL keystore
+// ${mckoi.base}
+//     /temp/         -- Temporary directory for Jetty/Jasper.
+//     /log/          -- Log directory
+
+
+//    CODESOURCE Defines
+// ------------------------
+
+define codesource USER {
+
+  // Anything in /temp/ or loaded from mwpfs proto is a user code source
+  // (most restrictive)
+
+  "file" "${mckoi.base}/temp/-";
+  "mwpfs" "-";
+
+}
+
+// USER libraries available to all users,
+define codesource USERLIBS {
+
+  // The Rhino Javascript engine,
+  "file" "${mckoi.install}/lib/user/-";
+
+}
+
+// SYSTEM is the default codesource to use for the Java system classes as well
+//   as the MWPCore/Jetty/Jasper/etc libraries.
+define codesource SYSTEM {
+
+  // PENDING: More fine grain code sources here?
+
+  "file" "${mckoi.install}/lib/base/-";
+  "file" "${mckoi.install}/lib/jetty/-";
+
+}
+
+// COMPILER is the JDK tools.jar codesource,
+define codesource COMPILER {
+
+  // The system compiler,
+
+  "file" "${jdk.home}/lib/tools.jar";
+
+}
+
+// Java extensions code source,
+define codesource JAVAEXT {
+
+  // System extensions,
+
+  "file" "${java.home}/lib/ext/-";
+
+}
+
+
+
+//    Macro GRANTS
+// ------------------
+
+// General grants with platform specific details,
+
+grant "DEF_USER_RESOURCE_PRIVS" {
+  permission java.io.FilePermission "${mckoi.install}/lib/user/-", "read";
+}
+
+grant "DEF_JAVA_RESOURCE_PRIVS" {
+  permission java.io.FilePermission "${java.home}/-", "read";
+  permission java.io.FilePermission "${jdk.home}/lib/tools.jar", "read";
+
+  // This is a system function that grants file read permissions to all paths
+  // in the the 'java.ext.dir' system property.
+  // This includes a workaround for a bug in Java 7 and 8 that causes a
+  // security exception when the extension path(s) contains whitespace.
+  inherit "%java_ext_file_permissions";
+
+}
+
+grant "DEF_JAVA_CONFIG_PRIVS" {
+}
+
+grant "DEF_MWP_RESOURCE_PRIVS" {
+  permission java.io.FilePermission "${mckoi.install}/lib/-", "read";
+}
+
+grant "DEF_MWP_CONFIG_PRIVS" {
+  permission java.io.FilePermission "${mckoi.install}/cert/keystore", "read";
+  // NOTE: Allows SYSTEM access to the 'network.conf' file. This is a bit
+  //       hacky because 'network.conf' can be configured to be anywhere.
+  //       Change or remove this as necessary.
+  permission java.io.FilePermission "${mckoi.base}/network.conf", "read";
+}
+
+grant "DEF_MWP_TEMP_DIRECTORY_PRIVS" {
+  // The system has read, write and delete grants on the temp directory
+  permission java.io.FilePermission "${mckoi.base}/temp/-", "read,write,delete";
+  permission java.io.FilePermission "${mckoi.base}/temp", "read";
+}
+
+
+// -----------------------------------------------
+
+
+
+//    Code Source Grants
+// ------------------------
+
+grant USER {
+
+  // Inherit USER Java resource permissions,
+  inherit "DEF_USER_RESOURCE_PRIVS";
+
+// NOTE: We should be able to safely enable this now, however it's not safe to
+//    enable getClassLoader or getProtectionDomain because it would allow
+//    bypass of class loader restrictions (using 'forName' to load system
+//    classes that aren't allowed).
+  permission java.lang.RuntimePermission "createClassLoader";
+
+  // 'suppressAccessChecks' allows for untrusted code to make reflected
+  // methods, fields, constructors accessible. When these are made accessible
+  // then they act as if they are public regardless of their declared status
+  // (for example, you can access a field declared private).
+  // This may sound like a big security problem, but fortunately you can't
+  // access the declared fields of a class using reflection outside of classes
+  // created by your own class loader. Therefore this ultimately can only
+  // suppress access checks on objects already owned by the class loader
+  // context.
+
+  permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+
+
+  // Required for JNDI lookup of named JDBC DataSource's and
+  // javamail named MimePart DataSource used to send mail
+
+  permission java.util.PropertyPermission "java.home", "read";
+  permission java.util.PropertyPermission "java.naming.*", "read";
+  permission java.util.PropertyPermission "javax.sql.*", "read";
+
+  // Standard properties allowed for read access,
+
+  permission java.util.PropertyPermission "java.version", "read";
+  permission java.util.PropertyPermission "java.vendor", "read";
+  permission java.util.PropertyPermission "java.vendor.url", "read";
+  permission java.util.PropertyPermission "java.class.version", "read";
+  permission java.util.PropertyPermission "os.name", "read";
+  permission java.util.PropertyPermission "os.version", "read";
+  permission java.util.PropertyPermission "os.arch", "read";
+  permission java.util.PropertyPermission "file.separator", "read";
+  permission java.util.PropertyPermission "path.separator", "read";
+  permission java.util.PropertyPermission "line.separator", "read";
+
+  permission java.util.PropertyPermission "java.specification.version", "read";
+  permission java.util.PropertyPermission "java.specification.vendor", "read";
+  permission java.util.PropertyPermission "java.specification.name", "read";
+
+  permission java.util.PropertyPermission "java.vm.specification.version", "read";
+  permission java.util.PropertyPermission "java.vm.specification.vendor", "read";
+  permission java.util.PropertyPermission "java.vm.specification.name", "read";
+  permission java.util.PropertyPermission "java.vm.version", "read";
+  permission java.util.PropertyPermission "java.vm.vendor", "read";
+  permission java.util.PropertyPermission "java.vm.name", "read";
+
+  permission java.util.PropertyPermission "org.eclipse.jetty.util.*", "read";
+
+  permission java.util.PropertyPermission "entityExpansionLimit", "read";
+  permission java.util.PropertyPermission "elementAttributeLimit", "read";
+  permission java.util.PropertyPermission "maxOccurLimit", "read";
+
+
+  // Required for OpenJMX
+
+  permission java.lang.RuntimePermission "getAttribute";
+
+  // Precompiled JSPs need access to these packages.
+
+  permission java.lang.RuntimePermission "accessClassInPackage.org.apache.jasper.el";
+  permission java.lang.RuntimePermission "accessClassInPackage.org.apache.jasper.runtime";
+  permission java.lang.RuntimePermission "accessClassInPackage.org.apache.jasper.runtime.*";
+
+  // Allow read of JAXP compliant XML parser debug
+
+  permission java.util.PropertyPermission "jaxp.debug", "read";
+
+  // Precompiled JSPs need access to these system properties.
+  permission java.util.PropertyPermission
+              "org.apache.jasper.runtime.BodyContentImpl.LIMIT_BUFFER", "read";
+  permission java.util.PropertyPermission
+              "org.apache.el.parser.COERCE_TO_ZERO", "read";
+
+  // Rhino 1.7.7 requires read access to this property,
+  permission java.util.PropertyPermission "rhino.stack.style", "read";
+
+
+
+  // For encryption,
+  permission java.lang.RuntimePermission "loadLibrary.sunmscapi";
+
+
+  // Nashorn
+  permission java.lang.RuntimePermission "nashorn.setConfig";
+  permission java.lang.RuntimePermission "nashorn.getContext";
+  permission java.lang.RuntimePermission "nashorn.createGlobal";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.internal.dynalink.support";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.objects";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.runtime";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.runtime.linker";
+
+}
+
+
+grant COMPILER {
+
+  // Inherit all USER permissions,
+  inherit USER;
+
+  // Inherit Java resource permissions,
+  inherit "DEF_JAVA_RESOURCE_PRIVS";
+
+  // Inherit Mckoi Web Platform resource permissions,
+  inherit "DEF_MWP_RESOURCE_PRIVS";
+
+
+
+  // Permissions for the Java JDK tools (compiler, etc),
+
+  permission java.util.PropertyPermission "nonBatchMode", "read";
+  permission java.lang.RuntimePermission "accessClassInPackage.sun.misc";
+
+  // COMPILER can use reflection to access the public and declared members of
+  // all objects.
+  permission com.mckoi.webplatform.MckoiDDBWebPermission "accessPublicMembers";
+
+//  permission java.lang.RuntimePermission "accessDeclaredMembers";
+//  permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+
+
+}
+
+
+grant USERLIBS {
+
+  // Inherit all USER permissions,
+  inherit USER;
+
+}
+
+
+grant JAVAEXT {
+
+  // Inherit all USER permissions,
+  inherit USER;
+
+  // Inherit Java resource permissions,
+  inherit "DEF_JAVA_RESOURCE_PRIVS";
+  inherit "DEF_JAVA_CONFIG_PRIVS";
+
+
+
+  // Permissions for the Java extensions,
+
+  permission java.lang.RuntimePermission "loadLibrary.*";
+  permission java.lang.RuntimePermission "getProtectionDomain";
+
+  permission java.util.PropertyPermission "*", "read";
+
+  permission java.security.SecurityPermission "putProviderProperty.*";
+  permission com.mckoi.webplatform.MckoiDDBWebPermission "accessPublicMembers";
+
+
+  // Nashorn
+
+  permission java.lang.RuntimePermission "nashorn.*";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.internal.dynalink.support";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.objects";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.runtime";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.runtime.linker";
+  permission java.util.logging.LoggingPermission "control" "";
+
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
+
+
+
+}
+
+
+grant SYSTEM {
+
+  // Inherit all USER permissions,
+  inherit USER;
+
+  // Inherit Java resource permissions,
+  inherit "DEF_JAVA_RESOURCE_PRIVS";
+  inherit "DEF_JAVA_CONFIG_PRIVS";
+
+  // Inherit Mckoi Web Platform resource permissions,
+  inherit "DEF_MWP_RESOURCE_PRIVS";
+  inherit "DEF_MWP_CONFIG_PRIVS";
+
+  // Inherit temp directory privs,
+  inherit "DEF_MWP_TEMP_DIRECTORY_PRIVS";
+
+
+
+
+
+  // The SYSTEM gets full use of network permissions,
+  // Socket permission
+  permission java.net.SocketPermission "*", "listen,accept,connect,resolve";
+
+  // MckoiDDB specific permissions,
+  // SYSTEM can use all MckoiDDBWebAppClassLoader calls,
+  permission com.mckoi.webplatform.MckoiDDBWebPermission "webAppClassLoader.*";
+
+  // SYSTEM can alter thread context
+  permission com.mckoi.webplatform.MckoiDDBWebPermission "platformContextImpl.*";
+
+  // SYSTEM can construct, start and stop a logger service
+  permission com.mckoi.webplatform.MckoiDDBWebPermission "loggerService.*";
+
+  // SYSTEM can create NetworkProfile,
+  permission com.mckoi.network.MckoiNetworkPermission "networkprofile.create";
+
+  // SYSTEM can query all network paths,
+  permission com.mckoi.network.MckoiNetworkPermission "mckoiddbclient.query_all_network_paths";
+
+
+  // SYSTEM can use reflection to access the public and declared members of
+  // all objects, and can suppress access checks.
+  permission com.mckoi.webplatform.MckoiDDBWebPermission "accessPublicMembers";
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
+  permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+
+
+  permission java.util.logging.LoggingPermission "control", "";
+
+  // SYSTEM has read permission on all properties,
+  permission java.util.PropertyPermission "*", "read";
+//  permission java.util.PropertyPermission "*", "read,write";
+  permission java.util.PropertyPermission "user.timezone", "write";
+
+  permission java.lang.RuntimePermission "setIO";
+  permission java.lang.RuntimePermission "readFileDescriptor";
+  permission java.lang.RuntimePermission "writeFileDescriptor";
+  permission java.lang.RuntimePermission "getClassLoader";
+  permission java.lang.RuntimePermission "getProtectionDomain";
+  permission java.lang.RuntimePermission "setContextClassLoader";
+  permission java.lang.RuntimePermission "loadLibrary.*";
+  permission java.lang.RuntimePermission "selectorProvider";
+  permission java.lang.RuntimePermission "accessClassInPackage.*";
+  permission java.lang.RuntimePermission "createClassLoader";
+  permission java.lang.RuntimePermission "modifyThread";
+  permission java.lang.RuntimePermission "modifyThreadGroup";
+
+  permission java.net.NetPermission "*";
+
+  permission java.security.SecurityPermission "putProviderProperty.SUN";
+  permission java.security.SecurityPermission "getPolicy";
+  permission java.security.SecurityPermission "getProperty.securerandom.source";
+  permission java.security.SecurityPermission "getProperty.security.provider.*";
+  permission java.security.SecurityPermission "getProperty.networkaddress.cache.*";
+
+  permission java.security.SecurityPermission "getProperty.ssl.*";
+
+
+  // Nashorn
+
+
+
+}

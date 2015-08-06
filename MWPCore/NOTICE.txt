@@ -1,0 +1,26 @@
+
+MWPCore contains code written by third parties. Such code has its own
+copyright message and license details written in the code or stored in a
+LICENSE file within the same directory as the code. All third party code
+is copyright its respective owner.
+
+
+Copyright message acknowledgments required by third party software licenses
+are listed below;
+
+Apache Ant
+Copyright 1999-2015 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+The <sync> task is based on code Copyright (c) 2002, Landmark
+Graphics Corp that has been kindly donated to the Apache Software
+Foundation.
+
+
+The name, license and location of the third party code are listed below;
+
+Program: Apache Ant
+License: (see LICENSE_APACHE.txt)
+Location: src/main/java/com/mckoi/webplatform/anttools/

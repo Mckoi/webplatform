@@ -1,0 +1,176 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.mckoi.platform</groupId>
+  <artifactId>MWPCore</artifactId>
+  <packaging>jar</packaging>
+  <name>MWP Core System</name>
+  <version>1.0-SNAPSHOT</version>
+  <url>http://www.mckoi.com/</url>
+  <description>
+    The core Mckoi Web Platform software which includes the web service, process
+    service and all user facing APIs. This is typically deployed to a MckoiDDB
+    database and downloaded and invoked by a com.mckoi.platform:MWPMain
+    installation.
+  </description>
+
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
+  <licenses>
+    <license>
+      <name>GNU General Public License, Version 3</name>
+      <url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <url>http://git.mckoi.com:8900/?p=mwpcore.git</url>
+    <connection>scm:git://git.mckoi.com/git/mwpcore.git</connection>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>Tobias Downer</id>
+      <name>Tobias Downer</name>
+      <email>toby@mckoi.com</email>
+    </developer>
+  </developers>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.5.1</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+
+      <!-- Build the distribution assembly -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.3</version>
+        <configuration>
+          <descriptors>
+            <descriptor>assembly.xml</descriptor>
+          </descriptors>
+          <finalName>MWPNodeInstall</finalName>
+          <appendAssemblyId>false</appendAssemblyId>
+        </configuration>
+      </plugin>
+
+    </plugins>
+
+    <!-- Include legal documents -->
+    <resources>
+      <resource>
+        <directory>src/main/resources/</directory>
+      </resource>
+      <resource>
+        <directory>${basedir}</directory>
+        <targetPath>META-INF</targetPath>
+        <includes>
+          <include>COPYRIGHT.txt</include>
+          <include>LICENSE.txt</include>
+          <include>NOTICE.txt</include>
+        </includes>
+      </resource>
+    </resources>
+
+  </build>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.mckoi</groupId>
+      <artifactId>MckoiDDB</artifactId>
+      <!-- Version 1.4 onwards -->
+      <version>[1.4-SNAPSHOT,)</version>
+    </dependency>
+
+    <!-- Rhino for JavaScript -->
+    <!-- License: MPL 2 -->
+    <dependency>
+      <groupId>org.mozilla</groupId>
+      <artifactId>rhino</artifactId>
+      <version>1.7.7</version>
+    </dependency>
+
+    <!-- Jetty dependencies -->
+
+    <dependency>
+      <groupId>org.eclipse.jetty.aggregate</groupId>
+      <artifactId>jetty-all-server</artifactId>
+      <version>8.1.17.v20150415</version>
+<!--      <version>8.1.7.v20120910</version> -->
+<!--      <version>7.6.7.v20120910</version> -->
+<!--      <version>7.6.1.v20120215</version> -->
+<!--      <version>7.4.5.v20110725</version> -->
+
+      <!-- Exclude the eclipse orbit javax.servlet api
+            (we use the official 2.1 one) -->
+      <exclusions>
+      </exclusions>
+
+    </dependency>
+
+    <!-- For Servlet 3 annotations processing -->
+    <dependency>
+      <groupId>asm</groupId>
+      <artifactId>asm-all</artifactId>
+      <version>3.3.1</version>
+    </dependency>
+
+<!-- Slightly customized version of Apache Jasper (JSP engine) -->
+    <dependency>
+      <groupId>com.mckoi.jasper</groupId>
+      <artifactId>ModJasper</artifactId>
+      <version>1.1-jasper_7_0_32</version>
+    </dependency>
+
+    <!-- JSON library -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20090211</version>
+    </dependency>
+
+    <!-- MWPMain is also required -->
+    <dependency>
+      <groupId>com.mckoi.platform</groupId>
+      <artifactId>MWPMain</artifactId>
+      <version>[1.0-SNAPSHOT,)</version>
+    </dependency>
+
+    <!-- MWPUIApp dependency is necessary for assembly -->
+    <dependency>
+      <groupId>com.mckoi.platform</groupId>
+      <artifactId>MWPUIApp</artifactId>
+      <version>[1.0-SNAPSHOT,)</version>
+      <type>war</type>
+    </dependency>
+
+  </dependencies>
+
+</project>
