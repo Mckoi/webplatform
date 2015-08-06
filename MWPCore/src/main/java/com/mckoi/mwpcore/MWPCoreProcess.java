@@ -183,6 +183,7 @@ public class MWPCoreProcess extends AbstractCoreProcess {
 
       // Create the web service node properties,
       Properties web_config = new Properties();
+      SSLExtraConfig ssl_extras = new SSLExtraConfig();
 
       web_config.setProperty("log_dir", getLogPath().getCanonicalPath());
       web_config.setProperty("network_config", getNetworkConf().toString());
@@ -209,6 +210,42 @@ public class MWPCoreProcess extends AbstractCoreProcess {
 
         web_config.setProperty("key_store_pwd", key_store_pwd);
         web_config.setProperty("key_store_manager_pwd", key_store_manager_pwd);
+        
+        // Excluded cipher suites
+        String excluded_ciphers =
+                  app_service_config.getProperty("ssl_exclude_cipher_suites");
+        if (excluded_ciphers != null && excluded_ciphers.length() > 0) {
+          String[] ciphers = excluded_ciphers.split(",");
+          for (int i = 0; i < ciphers.length; ++i) {
+            ciphers[i] = ciphers[i].trim();
+          }
+          ssl_extras.setCipherSuitesToExclude(ciphers);
+        }
+
+        // SSL renegotiation allowed?
+        String renegotiation =
+                  app_service_config.getProperty("ssl_renegotiation_allowed");
+        if (renegotiation != null) {
+          renegotiation = renegotiation.toLowerCase();
+          if (renegotiation.equals("false")) {
+            ssl_extras.setRenegotiationAllowed(false);
+          }
+          else if (renegotiation.equals("true")) {
+            ssl_extras.setRenegotiationAllowed(true);
+          }
+        }
+
+        // Protocols to exclude,
+        String excluded_protocols =
+                  app_service_config.getProperty("ssl_exclude_protocols");
+        if (excluded_protocols != null && excluded_protocols.length() > 0) {
+          String[] protocols = excluded_protocols.split(",");
+          for (int i = 0; i < protocols.length; ++i) {
+            protocols[i] = protocols[i].trim();
+          }
+          ssl_extras.setExcludedProtocols(protocols);
+        }
+
       }
 
       // HTTP and HTTPS are public interface facing,
@@ -476,7 +513,8 @@ public class MWPCoreProcess extends AbstractCoreProcess {
 
       // -- POST SECURITY INIT --
 
-      web_service_node.init(web_config, allowed_sys_classes, class_loader_set);
+      web_service_node.init(web_config, ssl_extras,
+                            allowed_sys_classes, class_loader_set);
       process_service_node.init(
                       process_config, allowed_sys_classes,
                       class_loader_set, shared_thread_pool);

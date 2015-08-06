@@ -29,6 +29,7 @@ import com.mckoi.mwpcore.ClassNameValidator;
 import com.mckoi.mwpcore.DBSessionCache;
 import com.mckoi.mwpcore.GeneralLogFormatter;
 import com.mckoi.mwpcore.MWPClassLoaderSet;
+import com.mckoi.mwpcore.SSLExtraConfig;
 import com.mckoi.process.impl.ProcessClientService;
 import java.io.File;
 import java.util.Collections;
@@ -242,8 +243,14 @@ public class WebServiceNode {
 
   /**
    * Initialization.
+   * 
+   * @param web_config
+   * @param ssl_extras
+   * @param allowed_sys_classes
+   * @param classloaders
    */
   public void init(Properties web_config,
+                   SSLExtraConfig ssl_extras,
                    ClassNameValidator allowed_sys_classes,
                    MWPClassLoaderSet classloaders) {
 
@@ -281,6 +288,7 @@ public class WebServiceNode {
                                          system_timer,
                                          allowed_sys_classes,
                                          classloaders,
+                                         ssl_extras,
                                          local_temp_folder);
       // Init successful
       init_complete = true;

@@ -28,6 +28,7 @@ package com.mckoi.webplatform.impl;
 import com.mckoi.mwpcore.ClassNameValidator;
 import com.mckoi.mwpcore.DBSessionCache;
 import com.mckoi.mwpcore.MWPClassLoaderSet;
+import com.mckoi.mwpcore.SSLExtraConfig;
 import com.mckoi.process.impl.ProcessClientService;
 import java.io.File;
 import java.util.Timer;
@@ -72,6 +73,11 @@ class JettyWebService {
   private final MWPClassLoaderSet classloaders;
 
   /**
+   * Extra SSL configuration properties.
+   */
+  private final SSLExtraConfig ssl_extras;
+
+  /**
    * The location of the local temporary folder.
    */
   private final File local_temp_folder;
@@ -99,6 +105,7 @@ class JettyWebService {
                          Timer system_timer,
                          ClassNameValidator general_allowed_sys_classes,
                          MWPClassLoaderSet classloaders,
+                         SSLExtraConfig ssl_extras,
                          File local_temp_folder) {
 
     this.sessions_cache = sessions_cache;
@@ -106,6 +113,7 @@ class JettyWebService {
     this.system_timer = system_timer;
     this.general_allowed_sys_classes = general_allowed_sys_classes;
     this.classloaders = classloaders;
+    this.ssl_extras = ssl_extras;
     this.local_temp_folder = local_temp_folder;
 
     // Create the Jetty context,
@@ -196,6 +204,22 @@ class JettyWebService {
       cf.setKeyStorePath(key_store_file);
       cf.setKeyStorePassword(key_store_pwd);
       cf.setKeyManagerPassword(key_store_manager_pwd);
+      // Cipher excludes,
+      String[] cipher_patterns = ssl_extras.getCipherSuitesToExclude();
+      if (cipher_patterns != null) {
+        cf.addExcludeCipherSuites(cipher_patterns);
+      }
+      // Renegotiation allowed,
+      Boolean renegotiation = ssl_extras.getRenegotiationAllowed();
+      if (renegotiation != null) {
+        cf.setAllowRenegotiate(renegotiation);
+      }
+      // Protocols to exclude,
+      String[] protocols = ssl_extras.getExcludedProtocols();
+      if (protocols != null) {
+        cf.addExcludeProtocols(protocols);
+      }
+
       server.addConnector(ssl_connector);
       try {
         ssl_connector.start();
