@@ -1,0 +1,309 @@
+
+/* For IE */
+html {
+  overflow: hidden
+}
+
+body {
+  overflow: hidden;
+  margin: 0px;
+  background-color: #fdfdff;
+  color: #000000;
+}
+
+/* The main div */
+div.mwpenv_main {
+  width: 100%;
+  height: 100%;
+}
+
+/* Style for modal overlays */
+div.mwpoverlay {
+  background: rgba(0, 0, 0, .5);
+}
+
+
+#mwpenv_side_menu {
+  width: 38px;
+}
+
+div.sidebaritem {
+  padding: 1px 0px 0px 4px;
+  margin: 1px 0px 1px 3px;
+  -webkit-border-top-left-radius: 3px;
+  -webkit-border-bottom-left-radius: 3px;
+  -moz-border-radius-topleft: 3px;
+  -moz-border-radius-bottomleft: 3px;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+}
+div.sidebaritem_hover {
+  background-color: #646466;
+}
+div.sidebaritem_select {
+  background-color: #B4B4B8;
+  border-bottom: 1px solid #000000;
+}
+
+
+
+div.pulldown, div.button {
+/*  background-color: #C2C7CC; */
+  background-color: inherit;
+  color: #000000;
+  -webkit-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  border-radius: 3px;
+/*  border: 1px solid #8C96A1; */
+/*  border: 1px solid #C2C7CC; */
+  border: 1px solid #E2E2E2;
+
+  /* Prevent selecting the elements */
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+div.componentborder, div.dropdown {
+  background-color: inherit;
+
+  color: #000000;
+  -webkit-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  border-radius: 3px;
+  border: 1px solid #8C96A1;
+
+  /* Prevent selecting the elements */
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+div.pulldown_hover, div.button_hover, div.dropdown_hover {
+  background-color: #D8E0E8;
+  border: 1px solid #707074;
+}
+div.button_focus {
+  background-color: #D8E0E8;
+  outline: none;
+}
+
+div.pulldown_select, div.button_select, div.pulldown_focus,
+div.dropdown_select, div.dropdown_focus {
+  background-color: #8BA8C4;
+  color: #ffffff;
+  border: 1px solid #404040;
+}
+
+/* Icon theme color */
+div.pulldown svg.icon path.icon_path,
+div.button   svg.icon path.icon_path,
+div.dropdown svg.icon path.icon_path {
+  fill: #000000;
+}
+/* Set the SVG mask of selected and focused widget icon elements */
+div.pulldown_select svg.icon_element path.icon_path,
+div.button_select   svg.icon_element path.icon_path,
+div.dropdown_select svg.icon_element path.icon_path,
+div.pulldown_focus  svg.icon_element path.icon_path,
+div.button_focus    svg.icon_element path.icon_path,
+div.dropdown_focus  svg.icon_element path.icon_path  {
+  fill: #ffffff;
+}
+
+/* Set the SVG mask of selected and focused main icons */
+div.pulldown_select svg.icon_main path.icon_mask,
+div.button_select   svg.icon_main path.icon_mask,
+div.dropdown_select svg.icon_main path.icon_mask,
+div.pulldown_focus  svg.icon_main path.icon_mask,
+div.button_focus    svg.icon_main path.icon_mask,
+div.dropdown_focus  svg.icon_main path.icon_mask  {
+  fill: #E2E2E2;
+}
+
+/* Close button style ( normal (dull), hover (black), select (dull red) ) */
+div.close_button svg.icon_close path.icon_path {
+  fill: #888888;
+}
+div.close_button_hover svg.icon_close path.icon_path {
+  fill: black;
+}
+div.close_button_select svg.icon_close path.icon_path {
+  fill: #bb6666;
+}
+
+
+
+
+/* The drop down list theme */
+div.pdmenu, div.ddlist {
+/*  background-color: #F0F5FA; */
+  background-color: #F6F6F6;
+  color: black;
+  text-align: left;
+  border: 1px solid #273F5E;
+  z-index: 15;
+  -moz-box-shadow: 0 0 5px #101036;
+  -webkit-box-shadow: 0 0 5px #101036;
+  box-shadow: 0 0 5px #101036;
+  /* No focus outline */
+  outline: none;
+  /* Prevent selecting the elements */
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  cursor:default;
+}
+
+
+/* Single color icon theme (NOTE: SVG path style) */
+div.pdmenuitem svg.icon path.icon_path,
+div.ddlistitem svg.icon path.icon_path {
+  fill: #000000;
+}
+
+div.pdmenuitem, div.ddlistitem {
+  font-family: "Arial", sans-serif;
+  font-size: 75%;
+}
+
+/* {
+  background-color: #173861;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}*/
+div.pdmenuitem_hover, div.ddlistitem_hover {
+  background-color: #ABCBEB;
+  -webkit-border-radius: 1px;
+  -moz-border-radius: 1px;
+  border-radius: 1px;
+}
+
+div.buttonlabel {
+  font-family: "Arial", sans-serif;
+  font-size: 75%;
+  font-weight: bold;
+}
+
+
+
+
+div.textcomponent {
+  font-family: "Arial", sans-serif;
+  font-size: 75%;
+
+  color: #000000;
+  -webkit-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  border-radius: 3px;
+  border: 1px solid #8C96A1;
+}
+
+
+/* CSS for the top bar of app UI */
+div.topbargradient {
+
+/*  background: #C2C7CC; */
+  background: #E2E2E2;
+  border-top: 1px solid #E2E2E2;
+  border-bottom: 1px solid black;
+
+/*background: #465373;
+
+background: #45484d;
+
+background: -moz-linear-gradient(top, #45484d 0%, #000000 100%);
+
+background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#45484d), color-stop(100%,#000000));
+
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#45484d', endColorstr='#000000',GradientType=0 );*/
+
+}
+
+/* The style of the dialog button bar */
+div.dialogcontrolpanel {
+  background: #C2C7CC;
+  border-top: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+/* The style of the dialog message */
+div.dialogmessage {
+  font-family: "Arial", sans-serif;
+  font-size: 75%;
+  font-weight: bold;
+}
+pre.dialogextendedmessage {
+  font-family: monospace;
+  font-size: 90%;
+}
+
+/* Message dialog flair */
+div.dialoghtml {
+  font-family: "Arial", sans-serif;
+  font-size: 13px;
+  line-height: 16px;
+}
+
+
+
+/* The style of the modal outer container */
+div.modalouter {
+
+  background-color: #5678A3;
+  border: 1px solid #273F5E;
+
+  -moz-box-shadow: 0 0 5px #114;
+  -webkit-box-shadow: 0 0 5px #114;
+  box-shadow: 0 0 5px #114;
+
+  -webkit-border-radius: 6px;
+  -moz-border-radius: 6px;
+  border-radius: 6px;
+
+  padding: 6px 2px 6px 2px;
+
+}
+
+div.modalinner {
+  background-color: #F0F5FA;
+/*  border: 1px solid #273F5E; */
+
+  padding: 6px 6px 6px 6px;
+  color: black;
+}
+
+
+
+
+
+
+/* Uploader style */
+form.mwp_upload_form {
+  border-left: 6px solid #6666ee;
+  padding: 1px 1px 1px 4px;
+  margin: 8px 0px 8px 0px;
+}
+
+form.mwp_upload_form input {
+  color: white;
+  background: black;
+}

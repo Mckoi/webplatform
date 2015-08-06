@@ -1,0 +1,183 @@
+
+div.mwpconsole_base {
+
+  background-color: #0F161F;
+  font-family: "Lucida Console", monospace;
+  border-left: 1px solid #000000;
+
+}
+
+div.mwpconsole_selector {
+
+  background-color: #000000;
+  font-family: "Lucida Console", monospace;
+  border-right: 2px solid #404040;
+
+}
+
+div.mwpconsole_sitem {
+  
+/*  background-color: #588BC4; */
+  
+  border-top-left-radius: 5px;
+  -moz-border-radius-topleft: 5px;
+  border-bottom-left-radius: 5px;
+  -moz-border-radius-bottomleft: 5px;
+  
+  border-top: 1px solid #000000;
+  border-left: 1px solid #000000;
+  border-bottom: 1px solid #000000;
+
+}
+
+div.mwpconsole_sitem_selected {
+  
+  border-top: 1px solid #404040;
+  border-left: 1px solid #404040;
+  border-bottom: 1px solid #404040;
+  
+}
+
+
+div.base {
+  font-family: monospace;
+  font-weight: normal;
+  font-size: 16px;
+  padding: 0 0 0 4px;
+  white-space: pre;
+  color: white;
+}
+
+div.base A.terminal_ahref,
+div.base A.terminal_app_ahref {
+  color: #5080ff;
+  text-decoration: none;
+}
+div.base A.terminal_ahref:hover,
+div.base A.terminal_app_ahref:hover {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+div.base A.disabled {
+  color: #808080;
+  text-decoration: none;
+}
+div.base A.disabled:hover {
+  background-color: transparent;
+  color: #808080;
+  text-decoration: none;
+}
+
+div.base input.terminal_inputfield {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 0 0 0 0;
+  margin: 0 1px 1px 1px;
+  border: 1px solid #404040;
+  background-color: #000000;
+  color: #EEEEEE;
+}
+
+
+
+
+/* Various colors */
+
+div.debug, span.debug {
+  color: #2080A0;
+  fill: #2080A0;
+}
+
+div.error, span.error {
+  color: #F02020;
+  fill: #F02020;
+}
+
+div.info, span.info {
+  color: #20F020;
+  fill: #20F020;
+}
+
+div.warn, span.warn {
+  color: #F0E220;
+  fill: #F0E220;
+}
+
+/* Colors for the LS command */
+
+div.base span.lscmd_dir {
+  color: #20F020;
+}
+div.base span.lscmd_file {
+  color: #E2F020;
+}
+
+/* Maps Unix color codes to CSS colors */
+/* PENDING: These should be in their own stylesheet */
+div.base span.fuxblack { color: black; fill:black; }
+div.base span.fuxred { color: maroon; fill:maroon; }
+div.base span.fuxgreen { color: green; fill:green; }
+div.base span.fuxyellow { color: olive; fill:olive; }
+div.base span.fuxblue { color: navy; fill:navy; }
+div.base span.fuxmagenta { color: purple; fill:purple; }
+div.base span.fuxcyan { color: teal; fill:teal; }
+div.base span.fuxlightgray { color: silver; fill:silver; }
+div.base span.fuxdarkgray { color: gray; fill:gray; }
+div.base span.fuxlightred { color: red; fill:red; }
+div.base span.fuxlightgreen { color: lime; fill:lime; }
+div.base span.fuxlightyellow { color: yellow; fill:yellow; }
+div.base span.fuxlightblue { color: blue; fill:blue; }
+div.base span.fuxlightmagenta { color: fuchsia; fill:fuchsia; }
+div.base span.fuxlightcyan { color: cyan; fill:cyan; }
+div.base span.fuxwhite { color: white; fill:white; }
+
+div.base span.buxblack { background: black; }
+div.base span.buxred { background: maroon; }
+div.base span.buxgreen { background: green; }
+div.base span.buxyellow { background: olive; }
+div.base span.buxblue { background: navy; }
+div.base span.buxmagenta { background: purple; }
+div.base span.buxcyan { background: teal; }
+div.base span.buxlightgray { background: silver; }
+div.base span.buxdarkgray { background: gray; }
+div.base span.buxlightred { background: red; }
+div.base span.buxlightgreen { background: lime; }
+div.base span.buxlightyellow { background: yellow; }
+div.base span.buxlightblue { background: blue; }
+div.base span.buxlightmagenta { background: fuchsia; }
+div.base span.buxlightcyan { background: cyan; }
+div.base span.buxwhite { background: white; }
+
+div.base span.smbold { font-weight: bold; }
+div.base span.smitalic { font-style: italic; }
+div.base span.smunderline { text-decoration: underline; }
+/* Blink doesn't really work anymore */
+div.base span.smblink { text-decoration: blink; }
+/* Inverse should swap foreground with background, but that's not possible in */
+/* CSS */
+div.base span.sminverse { background: white; color: black; fill: black; }
+
+
+
+#promptline {
+  background-color: #000000;
+  padding: 0 0 0 0;
+}
+
+input.promptc {
+  font-family: monospace;
+  font-weight: normal;
+  font-size: 16px;
+  padding: 0 0 0 0;
+  margin: 0 0 0 0;
+  border: none;
+  background-color: #000000;
+  color: #FFFFFF;
+}
+
+/* For Chrome - removes input focus */
+input.promptc:focus {
+  outline:none;
+}

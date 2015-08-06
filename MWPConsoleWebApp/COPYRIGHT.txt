@@ -1,0 +1,8 @@
+
+MWPUIApp is Copyright 2009-2012 Diehl and Associates, Inc. All rights
+reserved.
+MWPUIApp is released under the GPL version 3 Open Source License (see
+LICENSE_GPL3.txt).
+
+See NOTICE.txt for additional copyright notices for third party code
+included in this repository.

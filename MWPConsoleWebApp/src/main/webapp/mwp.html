@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Mckoi Web Platform</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="icon" href="favicon01.png" type="image/png" />
+
+<!--
+  Base CSS loaded.
+-->
+
+<link REL=StyleSheet HREF="css/mwpenv.css" TYPE="text/css" MEDIA="screen">
+<link REL=StyleSheet HREF="css/console.css" TYPE="text/css" MEDIA="screen">
+<link REL=StyleSheet HREF="css/codemirror.css" TYPE="text/css" MEDIA="screen">
+
+</head>
+
+<body>
+
+<!--
+  Display a message for users with no JavaScript.
+-->
+<noscript>
+  <p id="javascript_not_enabled">JavaScript must be enabled to use this.</p>
+</noscript>
+
+<!--
+  The layout.
+
+  Default to not displaying this (The JavaScript will change the style)
+-->
+<div style="display:none;" id='mwplogin'>
+
+  <h3>Mckoi Web Platform Login</h3>
+
+  <p>
+    <a href="#popup" id="link_popup_a">Click here to open a new login window.</a>
+  </p>
+
+  <div id='error_report' class='error'></div>
+
+  <form id='login_form'>
+
+    Username: <input type='text' name='user'><br />
+    Password: <input type='password' name='pass'><br />
+
+    <input type='submit' name='btn' value='Login' /><br />
+
+  </form>
+
+</div>
+
+<!--
+  The base scripts. Any other required scripts are loaded dynamically.
+  NOTE: 'mwpinit.js' contains the code that actively sets the elements on this
+    page up so that the user can login.
+-->
+  
+<script type="text/javascript"  src="js/mdom.js"></script>
+<script type="text/javascript"  src="js/svgpaths.js"></script>
+<script type="text/javascript"  src="js/guiwidgets.js"></script>
+<script type="text/javascript"  src="js/mwpinit.js"></script>
+  
+</body>
+</html>

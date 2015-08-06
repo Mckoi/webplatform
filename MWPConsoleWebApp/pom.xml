@@ -1,0 +1,86 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.mckoi.platform</groupId>
+  <artifactId>MWPUIApp</artifactId>
+  <packaging>war</packaging>
+  <name>MWP Console UI (Webapp)</name>
+  <version>1.0-SNAPSHOT</version>
+  <url>http://www.mckoi.com/</url>
+  <description>
+    A web based user interface for the Mckoi Web Platform. Includes a console
+    with scripting and other tools for administrating an MWP installation and
+    building applications.
+  </description>
+  
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>7</version>
+  </parent>
+
+  <licenses>
+    <license>
+      <name>GNU General Public License, Version 3</name>
+      <url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <url>http://git.mckoi.com:8900/?p=mwpmain.git</url>
+    <connection>scm:git://git.mckoi.com/git/mwpmain.git</connection>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>Tobias Downer</id>
+      <name>Tobias Downer</name>
+      <email>toby@mckoi.com</email>
+    </developer>
+  </developers>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.5.1</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>2.3</version>
+        <configuration>
+          <failOnMissingWebXml>true</failOnMissingWebXml>
+          <webXml>src/main/webapp/WEB-INF/web.xml</webXml>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+
+    <!-- Assume the Mckoi Web Platform API is provided -->
+    <dependency>
+      <groupId>com.mckoi.platform</groupId>
+      <artifactId>MWPCore</artifactId>
+      <version>[1.0-SNAPSHOT,)</version>
+      <scope>provided</scope>
+    </dependency>
+
+  </dependencies>
+
+</project>

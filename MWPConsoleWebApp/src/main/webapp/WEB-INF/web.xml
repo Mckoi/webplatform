@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+      version="3.0"> 
+<!-- <web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"> -->
+    <display-name>MWPUIApp</display-name>
+    <servlet>
+        <servlet-name>MainServlet</servlet-name>
+        <servlet-class>com.mckoi.mwpui.servlets.ReaderServlet</servlet-class>
+        <async-supported>true</async-supported>
+    </servlet>
+    <servlet>
+        <servlet-name>AuthServlet</servlet-name>
+        <servlet-class>com.mckoi.mwpui.servlets.AuthServlet</servlet-class>
+        <async-supported>true</async-supported>
+    </servlet>
+    <servlet>
+        <servlet-name>FunctionServlet</servlet-name>
+        <servlet-class>com.mckoi.mwpui.servlets.FunctionServlet</servlet-class>
+        <async-supported>true</async-supported>
+    </servlet>
+    <servlet>
+        <servlet-name>DBBrowser</servlet-name>
+        <servlet-class>com.mckoi.mwpui.servlets.DBBrowserServlet</servlet-class>
+        <async-supported>true</async-supported>
+    </servlet>
+    <servlet>
+        <servlet-name>GeneralCommandServlet</servlet-name>
+        <servlet-class>com.mckoi.mwpui.servlets.GeneralCommandServlet</servlet-class>
+        <async-supported>true</async-supported>
+    </servlet>
+    <servlet>
+        <servlet-name>SystemSupportServlet</servlet-name>
+        <servlet-class>com.mckoi.mwpui.servlets.SystemSupportServlet</servlet-class>
+        <async-supported>true</async-supported>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>MainServlet</servlet-name>
+        <url-pattern>/M</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AuthServlet</servlet-name>
+        <url-pattern>/Auth</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>FunctionServlet</servlet-name>
+        <url-pattern>/F</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>DBBrowser</servlet-name>
+        <url-pattern>/DBBrowser/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GeneralCommandServlet</servlet-name>
+        <url-pattern>/C</url-pattern>
+    </servlet-mapping>
+    <!-- Remote system support (such as file system syncing) -->
+    <servlet-mapping>
+        <servlet-name>SystemSupportServlet</servlet-name>
+        <url-pattern>/SA</url-pattern>
+    </servlet-mapping>
+
+    <session-config>
+        <session-timeout>
+            30
+        </session-timeout>
+    </session-config>
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+</web-app>

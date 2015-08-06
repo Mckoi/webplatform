@@ -1,0 +1,6 @@
+span.c-like-keyword {color: #CF6A2B;}
+span.c-like-number {color: #DBDB1F;}
+span.c-like-comment {color: #1785D4;font-style:italic;}
+span.c-like-string {color: #DBDB1F;}
+span.c-like-preprocessor {color: #ffffff;}
+span.c-like-var {color: #20e020;}
