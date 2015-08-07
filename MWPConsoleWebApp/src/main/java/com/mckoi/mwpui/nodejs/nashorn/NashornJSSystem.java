@@ -60,7 +60,8 @@ public class NashornJSSystem extends AbstractGJSSystem {
 
   static {
     nashorn = new NashornInstanceGlobalFactory();
-    nashorn.init();
+    nashorn.setNoJava(true);
+    nashorn.init(NashornJSSystem.class.getClassLoader());
   }
 
 
