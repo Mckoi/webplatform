@@ -18,6 +18,7 @@ package com.mckoi.webplatform.nashorn;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 import javax.script.ScriptContext;
 import javax.script.ScriptException;
 import jdk.nashorn.api.scripting.AbstractJSObject;
@@ -47,11 +48,11 @@ import jdk.nashorn.internal.scripts.JO;
 public class NashornInstanceGlobalFactory {
 
   private static final String[] DEFAULT_NASHORN_ARGS = new String[] {
-      "--no-java=true",
+      "--no-java=false",
       "--global-per-engine=false",
-//      "--optimistic-types=true",
       "--lazy-compilation=true",
-      "--loader-per-compile=false"
+      "--loader-per-compile=false",
+//      "--optimistic-types=false"
   };
 
   /**
@@ -68,7 +69,7 @@ public class NashornInstanceGlobalFactory {
    * Constructor.
    */
   public NashornInstanceGlobalFactory() {
-    engine_args = DEFAULT_NASHORN_ARGS;
+    this(DEFAULT_NASHORN_ARGS);
   }
 
   /**
@@ -77,77 +78,123 @@ public class NashornInstanceGlobalFactory {
    * 
    * @param nashorn_engine_args 
    */
-  public NashornInstanceGlobalFactory(String[] nashorn_engine_args) {
-    engine_args = nashorn_engine_args;
+  NashornInstanceGlobalFactory(String[] nashorn_engine_args) {
+    engine_args =
+              Arrays.copyOf(nashorn_engine_args, nashorn_engine_args.length);
+  }
+
+  /**
+   * If true, the Java extention functions are NOT included in the global
+   * instances created by this object. False by default. Must be called before
+   * the 'init' method is called.
+   * 
+   * @param flag true to not include the Java extentions in JavaScript.
+   */
+  public void setNoJava(boolean flag) {
+    if (PRIV_nashorn_ctx != null) {
+      throw new IllegalStateException("Already initialized");
+    }
+    if (!engine_args[0].startsWith("--no-java=")) {
+      throw new RuntimeException("'engine args' format invalid");
+    }
+    engine_args[0] = "--no-java=" + Boolean.toString(flag);
+  }
+
+  /**
+   * Startup function that can access the context from the Nashorn internal
+   * Context static.
+   */
+  private static class EngineStartupFunction extends AbstractJSObject {
+    private final Object[] inner_data;
+    public EngineStartupFunction(Object[] inner_data) {
+      this.inner_data = inner_data;
+    }
+    @Override
+    public boolean isFunction() {
+      return true;
+    }
+    @Override
+    public Object call(Object thiz, Object... args) {
+      inner_data[0] = Context.getContext();
+//      inner_data[1] = Context.getGlobal();
+      return null;
+    }
   }
 
   /**
    * Initializes the NashornInternal object.
+   * 
+   * @param cl the ClassLoader to use, or null for default.
    */
-  public void init() {
+  public void init(final ClassLoader cl) {
 
     // Incase we call 'init' more than once,
     if (PRIV_nashorn_ctx != null) {
       return;
     }
 
-    // We make a VM static NashornScriptEngine that we use to compile scripts
-    // and fork new JavaScript instances.
-
-    NashornScriptEngineFactory factory = new NashornScriptEngineFactory();
-    NashornScriptEngine engine =
-                  (NashornScriptEngine) factory.getScriptEngine(engine_args);
-
     // Hacky way to return properties from the Nashorn engine,
     final Object[] inner_data = new Object[5];
 
-    // We add some functions to the global object,
-    ScriptObjectMirror global_object =
-              (ScriptObjectMirror) engine.getBindings(
+    // Run initialization in a privileged security context,
+    AccessController.doPrivileged(new PrivilegedAction<Object>() {
+      @Override
+      public Object run() {
+
+        // We make a VM static NashornScriptEngine that we use to compile
+        // scripts and fork new JavaScript instances.
+
+        NashornScriptEngineFactory factory = new NashornScriptEngineFactory();
+        NashornScriptEngine engine;
+        if (cl == null) {
+          engine = (NashornScriptEngine) factory.getScriptEngine(engine_args);
+        }
+        else {
+          engine = 
+              (NashornScriptEngine) factory.getScriptEngine(engine_args, cl);
+        }
+
+        // We add some functions to the global object,
+        ScriptObjectMirror global_object =
+                  (ScriptObjectMirror) engine.getBindings(
                                                   ScriptContext.ENGINE_SCOPE);
 
-    // A function that performs startup. We execute this to obtain information
-    // about the engine such as the Global and Context object. It seems the
-    // only way to get at this information is from code running within the
-    // engine.
-    global_object.put("engineStartup", new AbstractJSObject() {
-      @Override
-      public boolean isFunction() {
-        return true;
-      }
-      @Override
-      public Object call(Object thiz, Object... args) {
-        // Execute under this class security privs.
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-          @Override
-          public Object run() {
-            inner_data[0] = Context.getContext();
-//            inner_data[1] = Context.getGlobal();
-            return null;
-          }
-        });
+        // A function that performs startup. We execute this to obtain
+        // information about the engine such as the Global and Context object.
+        // It seems the only way to get at this information is from code
+        // running within the engine.
+        global_object.put("engineStartup",
+                          new EngineStartupFunction(inner_data));
+
+        // Invoke the 'engineStartup' function to get at the priviledged
+        // information.
+        try {
+          engine.invokeFunction("engineStartup", new Object[0]);
+        }
+        catch (ScriptException | NoSuchMethodException ex) {
+          // Oops,
+          throw new RuntimeException(ex);
+        }
+        finally {
+          // Don't leave this function around, just incase,
+          global_object.delete("engineStartup");
+        }
+
         return null;
       }
     });
-
-    // Invoke the 'engineStartup' function to get at the priviledged
-    // information.
-    try {
-      engine.invokeFunction("engineStartup", new Object[0]);
-    }
-    catch (ScriptException | NoSuchMethodException ex) {
-      // Oops,
-      throw new RuntimeException(ex);
-    }
-
-    // Don't leave this function around, just incase,
-    global_object.delete("engineStartup");
-
+    
     PRIV_nashorn_ctx = (Context) inner_data[0];
 //    base_nashorn_global = (Global) inner_data[1];
 
   }
 
+  /**
+   * Initializes the NashornInternal object.
+   */
+  public void init() {
+    init(null);
+  }
 
   /**
    * Creates a new isolated JavaScript instance with a unique newly
@@ -156,7 +203,14 @@ public class NashornInstanceGlobalFactory {
    * @return 
    */
   public NashornInstanceGlobal createInstanceGlobal() {
-    Global global = PRIV_nashorn_ctx.createGlobal();
+    // Create global under local privilege
+    Global global = AccessController.doPrivileged(
+                                          new PrivilegedAction<Global>() {
+      @Override
+      public Global run() {
+        return PRIV_nashorn_ctx.createGlobal();
+      }
+    });
     return new NIInstanceGlobal(global);
   }
   

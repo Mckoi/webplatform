@@ -28,7 +28,6 @@ package com.mckoi.mwpcore;
 import com.mckoi.webplatform.MckoiDDBWebPermission;
 import com.mckoi.webplatform.impl.PlatformContextImpl;
 import java.lang.reflect.Member;
-import java.net.URL;
 import java.security.*;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -83,7 +82,7 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
     if (trusted_class_loaders == null) {
       // Get the system class loader and descend through the parents adding
       // each class loader to the list,
-      ArrayList<ClassLoader> loaders = new ArrayList();
+      ArrayList<ClassLoader> loaders = new ArrayList<>();
       ClassLoader system_class_loader = top_level_priv_cl;
       while (system_class_loader != null) {
         loaders.add(system_class_loader);
@@ -140,19 +139,6 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
 
     return isTrustedClassLoader(cl);
 
-//    if (cl == null) {
-//      return true;
-//    }
-//    // Is cl in the set of trusted class loaders?
-//    for (ClassLoader trusted_cl : trusted_class_loaders) {
-//      if (cl == trusted_cl) {
-//        return true;
-//      }
-//    }
-////    if (cl == null || cl == trusted_get_system_class_loader.getSystemClassLoader()) {
-////      return true;
-////    }
-//    return false;
   }
 
   // ----- Threads -----
@@ -217,34 +203,6 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
         // If it's public member access,
         if (which == Member.PUBLIC) {
 
-//          // If the class is whitelisted then allow it, otherwise we check
-//          // permission on ACCESS_MEMBERS_PERMISSION which is a Mckoi Web
-//          // Platform specific permission.
-//          String check_class_name = clazz.getName();
-//          
-////          System.err.println("CHECKING: " + check_class_name);
-//          
-//          // PENDING: Check there are no security problems with permitting
-//          //   proxy inspection.
-//          if (check_class_name.startsWith("$Proxy")) {
-//            // Inspecting proxy class is allowed.
-//            // This is necessary to support annotations.
-//          }
-//          else if (!user_allowed_sys_classes.isAcceptedClass(check_class_name)) {
-////            System.err.println(
-////                "SE: (ACCESS_MEMBERS_PERMISSION on " + check_class_name + ")");
-////            try {
-//              checkPermission(ACCESS_MEMBERS_PERMISSION);
-////            }
-////            catch (SecurityException e) {
-////              System.err.println("  FAILED");
-////              e.printStackTrace(System.err);
-////              throw e;
-////            }
-//          }
-//
-////          System.err.println("  PASSED");
-
         }
         if (which != Member.PUBLIC) {
 
@@ -293,7 +251,7 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
       return c.getClassLoader();
     }
   }
-  private TrustedGetClassLoader trusted_get_class_loader =
+  private final TrustedGetClassLoader trusted_get_class_loader =
                                                  new TrustedGetClassLoader();
 
   private static class TrustedGetSystemClassLoader implements SMTrustedAction {
@@ -301,7 +259,7 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
       return ClassLoader.getSystemClassLoader();
     }
   }
-  private TrustedGetSystemClassLoader trusted_get_system_class_loader =
+  private final TrustedGetSystemClassLoader trusted_get_system_class_loader =
                                            new TrustedGetSystemClassLoader();
 
   private static class TrustedGetDomain implements SMTrustedAction {
@@ -309,14 +267,15 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
       return c.getProtectionDomain();
     }
   }
-  private TrustedGetDomain trusted_get_domain = new TrustedGetDomain();
+  private final TrustedGetDomain trusted_get_domain = new TrustedGetDomain();
 
   private static class TrustedGetCodeSource implements SMTrustedAction {
     private CodeSource getCodeSource(ProtectionDomain domain) {
       return domain.getCodeSource();
     }
   }
-  private TrustedGetCodeSource trusted_get_code_source = new TrustedGetCodeSource();
+  private final TrustedGetCodeSource trusted_get_code_source =
+                                                  new TrustedGetCodeSource();
 
 
 
@@ -324,7 +283,18 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
   @Override
   public void checkPermission(final Permission perm) {
 
-    boolean trace = false;
+    // The current policy
+    MckoiDDBAppPolicy policy = MckoiDDBAppPolicy.getCurrentMckoiPolicy();
+
+    // Fast path: User level permissions are implied by default,
+    boolean is_user_permitted = policy.userLevelPermissions().implies(perm);
+    if (is_user_permitted) {
+      return;
+    }
+
+    final boolean trace = false;
+    final StringBuilder trace_out = trace ? new StringBuilder() : null;
+
 //    if (perm instanceof java.io.FilePermission) {
 //      String perm_msg = perm.toString();
 //      trace = true;
@@ -361,17 +331,23 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
     }
 
     // Remember domains visited.
-    ArrayList<ProtectionDomain> domains = new ArrayList(6);
-    // The current policy
-    MckoiDDBAppPolicy policy = MckoiDDBAppPolicy.getCurrentMckoiPolicy();
+    ArrayList<ProtectionDomain> domains = new ArrayList<>(6);
 
     int perms_checked = 0;
+    int frame_position = 0;
 
     // For each frame on the stack,
     for (Class contxt : context_stack) {
+      ++frame_position;
 
       // Skip past the security manager entries on the stack,
-      if (contxt != MckoiDDBAppSecurityManager.class) {
+      if (contxt == MckoiDDBAppSecurityManager.class) {
+        if (trace_out != null) {
+          trace_out.append(" ").append("<MckoiDDBAppSecurityManager>\n");
+        }
+      }
+      // if (contxt != MckoiDDBAppSecurityManager.class) {
+      else {
         // Get the protection domain,
         // NOTE: This can't be trusted if untrusted code can create class
         //   loaders. We can trust the ProtectionDomain to determine if an
@@ -379,8 +355,16 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
         //   ProtectionDomain to deny an operation would not aid in a privilege
         //   escalation attack).
         ProtectionDomain domain = trusted_get_domain.getProtectionDomain(contxt);
-        if (trace) {
-          System.err.println(" " + trusted_get_code_source.getCodeSource(domain));
+        if (trace_out != null) {
+          trace_out.append("ProtectionDomain\n");
+          trace_out.append(" CodeSource: ").append(
+                  trusted_get_code_source.getCodeSource(domain)).append("\n");
+          trace_out.append(" Permissions: ").
+                  append(domain.getPermissions()).append("\n");
+          trace_out.append(" ClassLoader: ").
+                  append(domain.getClassLoader()).append("\n");
+          trace_out.append(" Principles count: ").
+                  append(domain.getPrincipals().length).append("\n");
         }
         // If the protection domain is null, or the code source is null, then
         // assume the class is the bootstrap class and keep going.
@@ -395,17 +379,23 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
 
               // The security exception,
               SecurityException se = new SecurityException(
-                             MessageFormat.format("access denied: {0}", perm));
+                  MessageFormat.format("access denied: {0} [frame: {1}]",
+                                       perm, frame_position));
 
-              // If it's from a trusted class loader then report the security
-              // exception to System.err.
-              // This helps work out the security privs that should be allowed
-              // to SYSTEM.
-              ClassLoader cl = trusted_get_class_loader.getClassLoader(contxt);
-              if (this.isTrustedClassLoader(cl)) {
-                System.err.println("SE: " + perm);
-                System.err.println("  on class: " + contxt.getName());
-                se.printStackTrace(System.err);
+              if (trace_out != null) {
+                // If it's from a trusted class loader then report the security
+                // exception to System.err.
+                // This helps work out the security privs that should be
+                // allowed to SYSTEM.
+                ClassLoader cl = trusted_get_class_loader.getClassLoader(contxt);
+                if (this.isTrustedClassLoader(cl)) {
+                  System.err.println("SE: " + perm);
+                  System.err.println("  on class: " + contxt.getName());
+                  se.printStackTrace(System.err);
+                }
+
+                System.err.println("FAILED: " + perm);
+                System.err.println(trace_out.toString());
               }
 
               throw se;
@@ -417,23 +407,20 @@ final class MckoiDDBAppSecurityManager extends SecurityManager {
         // decide if we should exit or throw a security exception. A
         // privileged action that happens from an untrusted class loader can
         // only be allowed if the user permissions grant it.
-//        if (PrivilegedAction.class.isAssignableFrom(contxt) ||
-//            PrivilegedExceptionAction.class.isAssignableFrom(contxt) ||
-//            TrustedObject.class.isAssignableFrom(contxt) ||
-//            SDBTrustedObject.class.isAssignableFrom(contxt)
-//           ) {
+
         if (PrivilegedAction.class.isAssignableFrom(contxt) ||
             PrivilegedExceptionAction.class.isAssignableFrom(contxt)
            ) {
 
           // If the classloader of the object is not trusted,
           if (!fromTrustedClassLoader(contxt)) {
-            // Not from a trusted classloader, so check against the user privs
-            if (!policy.userLevelPermissions().implies(perm)) {
-              System.out.println("SE (bcl): " + perm);
-              throw new SecurityException(
-                                   "access denied (bad class loader) " + perm);
-            }
+            // Not from a trusted classloader,
+            System.out.println("SE (bcl): " + perm);
+            SecurityException se = new SecurityException(
+                    MessageFormat.format(
+                        "access denied (bad class loader): {0} [frame: {1}]",
+                        perm, frame_position));
+            throw se;
           }
           if (perms_checked == 0) {
             System.out.println("EXITING (no checks) on " + perm);

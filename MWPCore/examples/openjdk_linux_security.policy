@@ -119,10 +119,33 @@ grant "DEF_MWP_TEMP_DIRECTORY_PRIVS" {
 
 // -----------------------------------------------
 
+grant "DEF_NASHORN_INTERNAL_PACKAGE_ACCESS" {
 
+  // Nashorn package access allows code to access the internal Nashorn APIs
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.internal.dynalink.support";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.codegen";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.objects";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.runtime";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.runtime.arrays";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.runtime.linker";
+  permission java.lang.RuntimePermission "accessClassInPackage.jdk.nashorn.internal.scripts";
+
+}
+
+grant "DEF_NASHORN_PRIVS" {
+  // Nashorn
+  permission java.lang.RuntimePermission "nashorn.*";
+  permission java.lang.RuntimePermission "dynalink.getCurrentLinkRequest";
+}
+
+
+// -----------------------------------------------
 
 //    Code Source Grants
 // ------------------------
+
+// By default, every security check will allow permissions defined in this
+// grant regardless of whether the USER grant is inherited or not.
 
 grant USER {
 
@@ -214,13 +237,14 @@ grant USER {
   // For encryption,
   permission java.lang.RuntimePermission "loadLibrary.sunmscapi";
 
+
+  // Nashorn package access
+  inherit "DEF_NASHORN_INTERNAL_PACKAGE_ACCESS";
+
 }
 
 
 grant COMPILER {
-
-  // Inherit all USER permissions,
-  inherit USER;
 
   // Inherit Java resource permissions,
   inherit "DEF_JAVA_RESOURCE_PRIVS";
@@ -248,21 +272,17 @@ grant COMPILER {
 
 grant USERLIBS {
 
-  // Inherit all USER permissions,
-  inherit USER;
-
 }
 
 
 grant JAVAEXT {
 
-  // Inherit all USER permissions,
-  inherit USER;
-
   // Inherit Java resource permissions,
   inherit "DEF_JAVA_RESOURCE_PRIVS";
   inherit "DEF_JAVA_CONFIG_PRIVS";
 
+  // Inherit Nashorn permissions,
+  inherit "DEF_NASHORN_PRIVS";
 
 
   // Permissions for the Java extensions,
@@ -275,13 +295,16 @@ grant JAVAEXT {
   permission java.security.SecurityPermission "putProviderProperty.*";
   permission com.mckoi.webplatform.MckoiDDBWebPermission "accessPublicMembers";
 
+  permission java.util.logging.LoggingPermission "control" "";
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
+
+
+  permission java.lang.RuntimePermission "getClassLoader";
+
 }
 
 
 grant SYSTEM {
-
-  // Inherit all USER permissions,
-  inherit USER;
 
   // Inherit Java resource permissions,
   inherit "DEF_JAVA_RESOURCE_PRIVS";
@@ -293,6 +316,9 @@ grant SYSTEM {
 
   // Inherit temp directory privs,
   inherit "DEF_MWP_TEMP_DIRECTORY_PRIVS";
+
+  // Inherit Nashorn permissions,
+  inherit "DEF_NASHORN_PRIVS";
 
 
 

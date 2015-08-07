@@ -68,8 +68,8 @@ final class MckoiDDBAppPolicy extends Policy {
    * Constructor.
    */
   MckoiDDBAppPolicy() {
-    this.code_source_list = new ArrayList();
-    this.permissions_map = new HashMap();
+    this.code_source_list = new ArrayList<>();
+    this.permissions_map = new HashMap<>();
   }
 
 
@@ -219,6 +219,12 @@ final class MckoiDDBAppPolicy extends Policy {
 
   @Override
   public PermissionCollection getPermissions(CodeSource codesource) {
+
+//    if (codesource.getLocation() == null) {
+//      System.out.println("getPermissions for CodeSource: " + codesource);
+//      new Error().printStackTrace(System.out);
+//    }
+
     // If null code source,
     if (codesource == null) {
       // This is from a bootstrap loader,
@@ -286,6 +292,9 @@ final class MckoiDDBAppPolicy extends Policy {
 
   @Override
   public PermissionCollection getPermissions(final ProtectionDomain domain) {
+
+//    System.out.println("getPermission for CodeSource: " + domain);
+
     CodeSource code_source = domain.getCodeSource();
     if (code_source == null) {
       // If null code_source, return a user level permissions object.
@@ -317,7 +326,7 @@ final class MckoiDDBAppPolicy extends Policy {
     }
     boolean b = pc.implies(permission);
 //    if (b == false) {
-//      System.out.println("Failed Permission: " + permission);
+//      System.out.println("### Failed Permission: " + permission);
 //    }
     return b;
   }

@@ -38,6 +38,8 @@ packages {
   "java.io",
   "java.lang",
   "java.lang.annotation",
+//  "java.lang.instrument",
+  "java.lang.invoke",
   "java.lang.management",
   "java.lang.ref",
   "java.lang.reflect",

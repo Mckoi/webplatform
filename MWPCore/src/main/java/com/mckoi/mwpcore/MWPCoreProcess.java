@@ -113,9 +113,6 @@ public class MWPCoreProcess extends AbstractCoreProcess {
       System.setSecurityManager(security_manager);
     }
 
-//    // Set up the Rhino security controller,
-//    SecurityController.initGlobal(new MWPRhinoSecurityController());
-
     // Now this JVM is running under our custom security manager.
 
   }  
@@ -494,9 +491,6 @@ public class MWPCoreProcess extends AbstractCoreProcess {
 
       // Opens the client service,
       process_client_service.open();
-
-//      // Set the sessions cache in the MWPFS URL handler,
-//      MWPFSURLStreamHandler.setDBSessionCache(sessions_cache);
 
       // -- BEFORE SECURITY INITIALIZATION --
       

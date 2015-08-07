@@ -242,13 +242,6 @@ final class FileRepositoryImpl
   }
 
   /**
-   * Returns true if the given File does NOT contain path entries '..' and '.'.
-   */
-  public boolean checkFileValid(File f) {
-    return backed.checkFileValid(f);
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override
