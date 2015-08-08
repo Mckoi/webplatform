@@ -1,0 +1,38 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.mckoi.platform</groupId>
+  <artifactId>MWP-parent</artifactId>
+  <name>Mckoi Web Platform Parent</name>
+  <version>1.0</version>
+  
+  <packaging>pom</packaging>
+  
+  <url>http://www.mckoi.com/</url>
+
+  <scm>
+    <url>https://github.com/Mckoi/webplatform.git</url>
+    <connection>scm:git:ssh://github.com/Mckoi/webplatform.git</connection>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>Tobias Downer</id>
+      <name>Tobias Downer</name>
+      <email>toby@mckoi.com</email>
+    </developer>
+  </developers>
+
+  <modules>
+    <module>MckoiJasper2</module>
+    <module>MWPMain</module>
+    <module>MWPCore</module>
+    <module>MWPClient</module>
+    <module>MWPConsoleWebApp</module>
+    <module>MWPTestSuiteApp</module>
+  </modules>
+
+
+</project>
