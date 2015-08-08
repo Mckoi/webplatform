@@ -1,0 +1,4 @@
+# Line ending settings for OS console commands.
+
+*.sh text eol=lf
+*.bat text eol=crlf
