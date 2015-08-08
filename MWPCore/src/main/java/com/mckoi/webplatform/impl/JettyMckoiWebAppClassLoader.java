@@ -109,6 +109,8 @@ public final class JettyMckoiWebAppClassLoader extends WebAppClassLoader {
    * <p>
    * A class path reference may be a directory reference, or a .jar or .zip
    * file.
+   * 
+   * @throws java.io.IOException
    */
   @Override
   public void addClassPath(String classPath) throws IOException {
@@ -284,7 +286,7 @@ public final class JettyMckoiWebAppClassLoader extends WebAppClassLoader {
     Enumeration<URL> this_resources = findResources(name);
 
     // Merge the lists,
-    ArrayList<URL> resource_list = new ArrayList();
+    ArrayList<URL> resource_list = new ArrayList<>();
     if (parent_resources != null) {
       while (parent_resources.hasMoreElements())
                             resource_list.add(parent_resources.nextElement());

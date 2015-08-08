@@ -56,7 +56,7 @@ public class MWPFSURLJarStreamHandler extends URLStreamHandler {
   /**
    * A cache for jar files.
    */
-  private final Map<URL, CachedJarFile> jar_file_cache = new HashMap();
+  private final Map<URL, CachedJarFile> jar_file_cache = new HashMap<>();
 
 
 
@@ -115,7 +115,7 @@ public class MWPFSURLJarStreamHandler extends URLStreamHandler {
         // entries,
         if (jar_file_cache.size() > 150) {
           // Sort by the 'last_checked_timestamp' key,
-          SortedMap<Long, CachedJarFile> sm = new TreeMap();
+          SortedMap<Long, CachedJarFile> sm = new TreeMap<>();
           for (CachedJarFile fj : jar_file_cache.values()) {
             sm.put(fj.last_checked_timestamp, fj);
           }
@@ -431,10 +431,10 @@ public class MWPFSURLJarStreamHandler extends URLStreamHandler {
       this.last_checked_timestamp = last_checked_timestamp;
       this.mod_timestamp = mod_timestamp;
       if (ref_type == 'W') {
-        this.jfile_ref = new WeakReference(jfile);
+        this.jfile_ref = new WeakReference<>(jfile);
       }
       else {
-        this.jfile_ref = new SoftReference(jfile);
+        this.jfile_ref = new SoftReference<>(jfile);
       }
     }
 

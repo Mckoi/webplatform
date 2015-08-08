@@ -36,6 +36,7 @@ import com.mckoi.process.impl.ProcessClientService;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -65,7 +66,8 @@ class JettyMckoiRequestHandler extends AbstractHandler {
   /**
    * The cache from account name to web app contexts.
    */
-  private HashMap<String, JettyMckoiWebAppContextSet> webapp_map = new HashMap();
+  private final Map<String, JettyMckoiWebAppContextSet> webapp_map =
+                                                              new HashMap<>();
   private final Object webapp_map_lock = new Object();
 
   /**

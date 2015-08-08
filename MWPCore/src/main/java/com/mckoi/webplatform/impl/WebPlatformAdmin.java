@@ -35,12 +35,11 @@ import com.mckoi.mwpcore.DBSessionCache;
 import com.mckoi.network.*;
 import com.mckoi.odb.*;
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONStringer;
@@ -55,7 +54,7 @@ import org.json.JSONStringer;
 
 public class WebPlatformAdmin {
 
-  private static SecureRandom RND = SecureRandomUtil.RND;
+  private static final SecureRandom RND = SecureRandomUtil.RND;
 
   /**
    * The session cache.
@@ -254,7 +253,7 @@ public class WebPlatformAdmin {
         ServiceAddress service_addr = m.getServiceAddress();
         String privateIP = service_addr.formatString();
 
-        ArrayList<String> role_list = new ArrayList();
+        ArrayList<String> role_list = new ArrayList<>();
         if (m.isManager()) {
           role_list.add("manager");
         }
@@ -579,6 +578,12 @@ public class WebPlatformAdmin {
 
   /**
    * Initializes a single process path (sysprocess00) with the given path info.
+   * 
+   * @param out
+   * @param process_path_leader
+   * @param process_path_servers
+   * @throws java.io.IOException
+   * @throws com.mckoi.network.NetworkAdminException
    */
   public void initProcess(PrintStream out,
                 String process_path_leader, String[] process_path_servers)
@@ -693,6 +698,10 @@ public class WebPlatformAdmin {
   /**
    * Public method for populating the system tables with the current network
    * information.
+   * 
+   * @param out
+   * @throws java.io.IOException
+   * @throws com.mckoi.network.NetworkAdminException
    */
   public void populateSystemTables(PrintStream out)
                                     throws IOException, NetworkAdminException {
@@ -708,13 +717,19 @@ public class WebPlatformAdmin {
   /**
    * Adds a user account to a user resource path. The given transaction must
    * be to the account's main resource path.
+   * 
+   * @param t
+   * @param username
+   * @param email
+   * @param password
+   * @param priv
    */
   public static void addUserToAccount(ODBTransaction t,
                                       String username, String email,
                                       String password, String priv) {
 
     // Create the map for account info,
-    HashMap<String, String> account_info = new HashMap();
+    Map<String, String> account_info = new HashMap<>();
     account_info.put("auth", "local");
     account_info.put("pass", password);
     account_info.put("priv", priv);
@@ -727,6 +742,14 @@ public class WebPlatformAdmin {
 
   /**
    * Adds a new account to the platform.
+   * 
+   * @param out
+   * @param userfs_path_root_leader
+   * @param userfs_path_root_cluster
+   * @param username
+   * @param password
+   * @throws java.io.IOException
+   * @throws com.mckoi.network.NetworkAdminException
    */
   public void addAccount(PrintStream out,
                          String userfs_path_root_leader,
@@ -940,6 +963,9 @@ public class WebPlatformAdmin {
   /**
    * Makes the given account name a super user, allowing it read/write access
    * to the system platform.
+   * 
+   * @param out
+   * @param account_name
    */
   public void makeSuperUser(PrintStream out, String account_name) {
 
@@ -1013,6 +1039,10 @@ public class WebPlatformAdmin {
 
   /**
    * Maps a vhost (eg. mckoi.com) to an account.
+   * 
+   * @param out
+   * @param domain_name
+   * @param account_name
    */
   public void addVHost(PrintStream out,
                        String domain_name, String account_name) {
@@ -1075,269 +1105,5 @@ public class WebPlatformAdmin {
     // Done,
 
   }
-
-//  /**
-//   * Updates a webapp in an account's filesystem. Either a .war file or a
-//   * directory in the local file system can be given. Existing files will only
-//   * be updated if they are different than any file already at the location.
-//   * <p>
-//   * Also adds/updates a context entry in the Contexts property set.
-//   *
-//   * @param account the user account to upload the .war to.
-//   * @param vhost_match the vhost match string (eg, "*.mckoi.com").
-//   * @param context_path the path that matches on the server.
-//   * @param war_or_file_url the location of the .war being uploaded.
-//   * @param resource_name the name to give the resource directory on the server
-//   *   (eg. "/apps/[resource_name]/..files..")
-//   */
-//  public void uploadApp(PrintStream out,
-//          String account,
-//          String vhost_match, String context_path,
-//          URL war_or_file_url, String resource_name) throws IOException {
-//
-//    ODBTransaction fs_t = sessions_cache.getODBTransaction("ufs" + account);
-//    FileRepositoryImpl repository = new FileRepositoryImpl(fs_t, "accountfs");
-//
-//    if (war_or_file_url.getFile().endsWith(".war")) {
-//
-//      InputStream war_in = new BufferedInputStream(war_or_file_url.openStream());
-//
-//      // Upload the war app,
-//      repository.uploadWarApp(out, war_in, resource_name);
-//
-//    }
-//    else if (war_or_file_url.getFile().endsWith("/")) {
-//      // Directory, so turn it into a file object,
-//      File f = new File(war_or_file_url.getFile());
-//
-//      // Upload the war app,
-//      String dest_path = "/apps/" + resource_name + "/";
-//      repository.uploadFromLocalDirectoryTo(out, f, dest_path);
-//
-//    }
-//    else {
-//      out.println("FAILED: Can only upload .war apps");
-//      return;
-//    }
-//
-//    FileSystem file_sys = repository.getBacked();
-//
-//    ApplicationsDocument apps_doc =
-//                UserApplicationsSchema.readApplicationsDocument(file_sys);
-//    boolean changed = apps_doc.addDefaultApplication(
-//            resource_name, "", context_path,
-//            "$user", "/apps/" + resource_name + "/",
-//            Collections.singletonList(vhost_match), "full");
-//
-//    if (changed) {
-//      UserApplicationsSchema.writeApplicationsDocument(file_sys, apps_doc);
-//    }
-//
-//    StringWriter str_out = new StringWriter();
-//    PrintWriter bout = new PrintWriter(str_out);
-//
-//    boolean success =
-//                  UserApplicationsSchema.buildSystemWebApps(file_sys, bout);
-//
-//    if (!success) {
-//      bout.flush();
-//      out.println(str_out);
-//      return;
-//    }
-//
-//    // Commit the changes,
-//    try {
-//      // Commit,
-//      repository.commit();
-//    }
-//    catch (CommitFaultException e) {
-//      out.println("FAILED: Commit fault");
-//      e.printStackTrace(out);
-//      return;
-//    }
-//
-//    out.println("SUCCESS");
-//  }
-
-
-//  /**
-//   * Updates a webapp project (source code) into an account's filesystem.
-//   * The local project is represented as a directory and the content of the
-//   * directory and sub-directories are copied to the destination path in the
-//   * given file repository.
-//   */
-//  public void uploadPath(PrintStream out,
-//          String account,
-//          String src_path, String dest_path) throws IOException {
-//
-//    ODBTransaction fs_t = sessions_cache.getODBTransaction("ufs" + account);
-//    FileRepositoryImpl repository =
-//                           new FileRepositoryImpl(account, fs_t, "accountfs");
-//
-//    // Directory, so turn it into a file object,
-//    File f = new File(src_path);
-//
-//    if (!f.isDirectory()) {
-//      out.println("Source path = " + src_path);
-//      out.println("FAILED: Source path is not a directory.");
-//    }
-//
-//    // Upload the war app,
-//    repository.uploadFromLocalDirectoryTo(out, f, dest_path);
-//
-//    // Commit the changes,
-//    try {
-//      // Commit,
-//      repository.commit();
-//    }
-//    catch (CommitFaultException e) {
-//      out.println("FAILED: Commit fault");
-//      e.printStackTrace(out);
-//      return;
-//    }
-//
-//    out.println("SUCCESS");
-//  }
-
-
-
-
-
-//  /**
-//   * The invocation point (renamed from 'main' to 'main_old')
-//   */
-//  public static void main_old(String[] args) {
-//
-//    try {
-//
-//      String mwp_home_path = ".";
-//      String client_conf_location = "./client.conf";
-//      String network_conf_location = "./network.conf";
-//
-//      // Get the connection,
-//      MckoiDDBClient client = MckoiDDBClientUtils.connectTCP(
-//                               new File(mwp_home_path, client_conf_location));
-//
-//      // Load the network resource,
-//      NetworkConfigResource network_resource;
-//
-//      try {
-//        URL nc_url = new URL(network_conf_location);
-//        network_resource = NetworkConfigResource.getNetConfig(nc_url);
-//      }
-//      catch (MalformedURLException e) {
-//        // Try as a file,
-//        File net_conf_file = new File(mwp_home_path, network_conf_location);
-//        network_resource = NetworkConfigResource.getNetConfig(net_conf_file);
-//      }
-//
-//      DBSessionCache sessions_cache =
-//                             new DBSessionCache(client, network_resource, 100);
-//
-//      // Create an instance of this class,
-//      WebPlatformAdmin admin =
-//                new WebPlatformAdmin(sessions_cache, client, network_resource);
-//
-//      String command = args[0];
-//
-//      // Initialize the network by setting up the initial paths and classes
-//      // and populating the system tables.
-//      if (command.equalsIgnoreCase("initialize")) {
-//        String system_path_server = args[1];
-//        String log_path_server = args[2];
-//
-//        // PENDING: parse multiple root servers?
-//        admin.initialize(System.out,
-//                      system_path_server, new String[] { system_path_server },
-//                      log_path_server, new String[] { log_path_server } );
-//        System.out.flush();
-//      }
-//
-//      // Initialize a single process path,
-//      else if (command.equalsIgnoreCase("initprocess")) {
-//        String process_path_server = args[1];
-//        
-//        admin.initProcess(System.out,
-//                process_path_server, new String[] { process_path_server });
-//        System.out.flush();
-//      }
-//
-//      // Refreshes the system database with information obtained from the
-//      // network.
-//      else if (command.equalsIgnoreCase("fixsystemtables")) {
-//        admin.populateSystemTables(System.out);
-//      }
-//
-//      // Adds an account to the platform.
-//      else if (command.equalsIgnoreCase("addaccount")) {
-//        String accountfs_path_server = args[1];
-//        String username = args[2];
-//        String password = args[3];
-//
-//        // PENDING: parse multiple root servers?
-//        admin.addAccount(System.out,
-//                accountfs_path_server, new String[] { accountfs_path_server },
-//                username, password);
-//        System.out.flush();
-//      }
-//
-//      // Makes the given account a super user account, enabling it to read
-//      // and write from the system tables and to create system paths.
-//      else if (command.equalsIgnoreCase("makesuperuser")) {
-//        String username = args[1];
-//        admin.makeSuperUser(System.out, username);
-//      }
-//
-//      // Adds a new vhost to the system,
-//      else if (command.equalsIgnoreCase("addvhost")) {
-//        String domain_name = args[1];
-//        String account_name = args[2];
-//
-//        admin.addVHost(System.out, domain_name, account_name);
-//        System.out.flush();
-//      }
-//
-//      // Uploads a war from the local file system to the given location in
-//      // the account's file system.
-//      else if (command.equalsIgnoreCase("uploadwar")) {
-//
-//        String account_name = args[1];
-//        String vhost_expr = args[2];
-//        String context_path = args[3];
-//        String war_fname = args[4];
-//        String resource_name = args[5];
-//
-//        File f = new File(war_fname);
-//        URL war_url = f.toURI().toURL();
-//        System.out.println(war_url);
-//        throw new Error("Deprecated tool - use 'mwp tool' instead.");
-////        admin.uploadApp(System.out, account_name, vhost_expr, context_path, war_url, resource_name);
-//      }
-//
-//      // Uploads an entire project source from the local file system to the
-//      // database.
-//      else if (command.equalsIgnoreCase("uploadproject")) {
-//
-//        String account_name = args[1];
-//        String src_path = args[2];
-//        String dest_path = args[3];
-//
-//        admin.uploadPath(System.out, account_name, src_path, dest_path);
-//
-//      }
-//
-//      else {
-//        System.out.println("Unknown command: " + command);
-//      }
-//
-//    }
-//    catch (NetworkAdminException e) {
-//      e.printStackTrace(System.err);
-//    }
-//    catch (IOException e) {
-//      e.printStackTrace(System.err);
-//    }
-//
-//  }
 
 }

@@ -1,5 +1,6 @@
 
-// A general security policy for OpenJDK-6 JDK installations.
+// A general security policy for OpenJDK installations on Linux.
+// Should also work with Oracle JDK on Linux.
 
 // Assumes following directory structure;
 // ${mckoi.install}

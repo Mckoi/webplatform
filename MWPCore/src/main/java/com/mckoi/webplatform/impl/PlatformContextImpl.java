@@ -62,10 +62,11 @@ public final class PlatformContextImpl implements PlatformContext {
              new MckoiDDBWebPermission("platformContextImpl.setThreadContext");
 
   /**
-   * The map from thread id to thread context.
+   * Thread local member representing contextual information about the
+   * current runtime.
    */
-  private final static HashMap<Long, ThreadContext> thread_context_map =
-                                                                 new HashMap();
+  private final static ThreadLocal<ThreadContext> thread_context =
+                                                          new ThreadLocal<>();
 
   private static final Class[] make_classes;
 
@@ -99,16 +100,12 @@ public final class PlatformContextImpl implements PlatformContext {
    * has been defined then an exception is generated.
    */
   private static ThreadContext getCurrentThreadContext() {
-    synchronized (thread_context_map) {
-      // The current thread id,
-      long thread_id = Thread.currentThread().getId();
-      ThreadContext c = thread_context_map.get(thread_id);
-      // If null, throw a security exception
-      if (c == null) {
-        throw new SecurityException("No context defined for thread.");
-      }
-      return c;
+    ThreadContext c = thread_context.get();
+    // If null, throw a security exception
+    if (c == null) {
+      throw new SecurityException("No context defined for thread.");
     }
+    return c;
   }
 
   /**
@@ -129,32 +126,24 @@ public final class PlatformContextImpl implements PlatformContext {
     // Permission check (prevent non SYSTEM code sources from doing this)
     checkSecurity();
 
-    Thread current_thread = Thread.currentThread();
-
-    // Get current thread id,
-    long thread_id = current_thread.getId();
-
-    synchronized (thread_context_map) {
-      
-      // The current thread id,
-      ThreadContext c = thread_context_map.get(thread_id);
-      // If there is already one defined for this thread, generate an error
-      if (c != null) {
-        throw new SecurityException("Context already defined for thread.");
-      }
-      // Create the context,
-      c = new ThreadContext(is_app_service_context,
-                            sessions_cache,
-                            process_client_service,
-                            process_instance,
-                            account_name,
-                            vhost, protocol,
-                            webapp_name,
-                            logger,
-                            user_class_loader, app_class_loader,
-                            allowed_system_classes);
-      thread_context_map.put(thread_id, c);
+    ThreadContext c = thread_context.get();
+    // If there is already one defined for this thread, generate an error
+    if (c != null) {
+      throw new SecurityException("Context already defined for thread.");
     }
+    // Create the context,
+    c = new ThreadContext(is_app_service_context,
+                          sessions_cache,
+                          process_client_service,
+                          process_instance,
+                          account_name,
+                          vhost, protocol,
+                          webapp_name,
+                          logger,
+                          user_class_loader, app_class_loader,
+                          allowed_system_classes);
+    thread_context.set(c);
+
   }
 
   /**
@@ -215,18 +204,8 @@ public final class PlatformContextImpl implements PlatformContext {
    * no current context.
    */
   static String getCurrentThreadWebApplicationName() {
-    ThreadContext c;
-    synchronized (thread_context_map) {
-      // The current thread id,
-      long thread_id = Thread.currentThread().getId();
-      c = thread_context_map.get(thread_id);
-    }
-    if (c == null) {
-      return null;
-    }
-    else {
-      return c.webapp_name;
-    }
+    ThreadContext c = thread_context.get();
+    return (c == null) ? null : c.webapp_name;
   }
 
   /**
@@ -254,17 +233,14 @@ public final class PlatformContextImpl implements PlatformContext {
     // Permission check (prevent non SYSTEM code sources from doing this)
     checkSecurity();
 
-    synchronized (thread_context_map) {
-      // The current thread id,
-      long thread_id = Thread.currentThread().getId();
-      ThreadContext c = thread_context_map.get(thread_id);
-      // If there is not one defined for this thread, generate an error
-      if (c == null) {
-        throw new SecurityException("No context defined for thread.");
-      }
-      // Remove te context,
-      thread_context_map.remove(thread_id);
+    ThreadContext c = thread_context.get();
+    // If there is not one defined for this thread, generate an error
+    if (c == null) {
+      throw new SecurityException("No context defined for thread.");
     }
+    // Remove the context,
+    thread_context.remove();
+
   }
 
   /**
@@ -272,22 +248,13 @@ public final class PlatformContextImpl implements PlatformContext {
    * current context.
    */
   static String getCurrentThreadAccountName() {
-    ThreadContext c;
-    synchronized (thread_context_map) {
-      // The current thread id,
-      long thread_id = Thread.currentThread().getId();
-      c = thread_context_map.get(thread_id);
-    }
-    if (c == null) {
-      return null;
-    }
-    else {
-      return c.account_name;
-    }
+    ThreadContext c = thread_context.get();
+    return (c == null) ? null : c.account_name;
   }
 
   /**
    * Returns the MWPUserClassLoader currently set for this context.
+   * @return 
    */
   public static MWPUserClassLoader getUserClassLoader() {
     return getCurrentThreadContext().user_class_loader;
@@ -296,6 +263,7 @@ public final class PlatformContextImpl implements PlatformContext {
   /**
    * Returns the system class name validator. NOTE: We expose this under a
    * public interface. Considering the information, not a big deal imo.
+   * @return 
    */
   public static ClassNameValidator getAllowedSystemClasses() {
     return getCurrentThreadContext().system_class_validator;
@@ -309,6 +277,7 @@ public final class PlatformContextImpl implements PlatformContext {
 
   /**
    * Returns the account name of the current thread context.
+   * @return 
    */
   @Override
   public String getAccountName() {
@@ -440,6 +409,8 @@ public final class PlatformContextImpl implements PlatformContext {
    * Returns a FileRepository object used to access the file system of the
    * account of this context. This is the same as
    * 'getFileRepository(getAccountName())'.
+   * 
+   * @return 
    */
   @Override
   public FileRepository getFileRepository() {
@@ -451,6 +422,9 @@ public final class PlatformContextImpl implements PlatformContext {
    * Returns the FileRepository with the given repository id, or null if the
    * repository is not accessible to this account, or the repository does not
    * exist.
+   * 
+   * @param repository_id
+   * @return 
    */
   @Override
   public FileRepository getFileRepository(String repository_id) {
@@ -473,6 +447,9 @@ public final class PlatformContextImpl implements PlatformContext {
    * Returns the FileRepository for the given FileName, or null if the
    * repository is not accessible to this account, the repository does not
    * exist, or there's no repository in the FileName object.
+   * 
+   * @param file_name
+   * @return 
    */
   @Override
   public FileRepository getFileRepositoryFor(FileName file_name) {
@@ -483,6 +460,8 @@ public final class PlatformContextImpl implements PlatformContext {
   /**
    * Returns a SessionAuthenticator object used to authenticate users in this
    * context.
+   * 
+   * @return 
    */
   @Override
   public SessionAuthenticator getSessionAuthenticator() {
@@ -500,6 +479,8 @@ public final class PlatformContextImpl implements PlatformContext {
 
   /**
    * Returns a UserManager object used to manager the users on an account.
+   * 
+   * @return 
    */
   @Override
   public UserManager getUserManager() {
@@ -520,6 +501,8 @@ public final class PlatformContextImpl implements PlatformContext {
   /**
    * Returns an object that builds/updates internal structures based on the
    * state of the source files in the file system.
+   * 
+   * @return 
    */
   @Override
   public BuildSystem getBuildSystem() {
@@ -532,24 +515,6 @@ public final class PlatformContextImpl implements PlatformContext {
     return builder;
   }
 
-//  /**
-//   * {@inheritDoc}
-//   */
-//  @Override
-//  public ProcessClient getProcessClient() {
-//    ThreadContext c = getCurrentThreadContext();
-//    ProcessClient process_client = (ProcessClient) c.getProperty("pc");
-//    if (process_client == null) {
-//      process_client =
-//                  c.process_client_service.getProcessClientFor(c.account_name);
-//      c.setProperty("pc", process_client);
-//    }
-//    return process_client;
-//  }
-
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public AppServiceProcessClient getAppServiceProcessClient() {
     ThreadContext c = getCurrentThreadContext();
@@ -569,9 +534,6 @@ public final class PlatformContextImpl implements PlatformContext {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public InstanceProcessClient getInstanceProcessClient() {
     ThreadContext c = getCurrentThreadContext();
@@ -584,9 +546,6 @@ public final class PlatformContextImpl implements PlatformContext {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public DDBResourceAccess getDDBResourceAccess() {
     ThreadContext c = getCurrentThreadContext();
@@ -614,6 +573,8 @@ public final class PlatformContextImpl implements PlatformContext {
 
   /**
    * Returns the log system object for this context.
+   * 
+   * @return 
    */
   @Override
   public LogSystem getLogSystem() {
@@ -631,6 +592,8 @@ public final class PlatformContextImpl implements PlatformContext {
    * Returns the platform context ClassLoader. This is the class loader used
    * to load user-code and includes all the classes defined in the application
    * context.
+   * 
+   * @return 
    */
   @Override
   public ClassLoader getContextClassLoader() {
@@ -642,6 +605,8 @@ public final class PlatformContextImpl implements PlatformContext {
    * parent of the application class loader). This does not include the
    * classes defined by the user application, but does include any static
    * libraries that all applications are provided.
+   * 
+   * @return 
    */
   @Override
   public ClassLoader getApplicationClassLoader() {
@@ -676,6 +641,9 @@ public final class PlatformContextImpl implements PlatformContext {
   /**
    * Sets the FileRepository to use when the MWPFS URL stream handler requests
    * the given repository_id.
+   * 
+   * @param repository_id
+   * @param fs
    */
   public void setMWPFSURLPathOverride(String repository_id, FileRepository fs) {
     // NOTE: Privileged operation,
@@ -688,6 +656,9 @@ public final class PlatformContextImpl implements PlatformContext {
   /**
    * Sets the ODBTransaction to use when the MWPFS URL stream handler requests
    * the given repository_id.
+   * 
+   * @param repository_id
+   * @param t
    */
   public void setMWPFSURLPathOverride(String repository_id, ODBTransaction t) {
     // NOTE: Privileged operation,
@@ -713,6 +684,8 @@ public final class PlatformContextImpl implements PlatformContext {
    * necessary for this method to be called. Any URL path overrides will be
    * cleared when the thread context is finished (via
    * 'removeCurrentThreadContext()')
+   * 
+   * @param repository_id
    */
   public void clearMWPFSURLPathOverride(String repository_id) {
     // NOTE: Privileged operation,
@@ -747,6 +720,9 @@ public final class PlatformContextImpl implements PlatformContext {
   /**
    * Assigns a unique repository_id for the given FileRepository and makes
    * the repository available to the MWPFS url handler.
+   * 
+   * @param fs
+   * @return 
    */
   public String assignMWPFSURLFileRepository(FileRepository fs) {
     checkSecurity();
@@ -798,7 +774,6 @@ public final class PlatformContextImpl implements PlatformContext {
     private MWPUserClassLoader user_class_loader;
     private ClassLoader app_class_loader;
     private ClassNameValidator system_class_validator;
-//    private StringBuilder stdout_ob;
 
     private Map<String, Object> properties = null;
 
@@ -839,25 +814,10 @@ public final class PlatformContextImpl implements PlatformContext {
 
     private void setProperty(String name, Object ob) {
       if (properties == null) {
-        properties = new HashMap();
+        properties = new HashMap<>();
       }
       properties.put(name, ob);
     }
-
-//    private void putURLPathOverride(String path_name, ODBTransaction t) {
-//      // Set the URL path override property for the path,
-//      setProperty("urlco." + path_name, t);
-//    }
-
-//    private ODBTransaction getURLODBTransaction(String path_name) {
-//      // Check if the path has been overriden. If not, fetch the latest
-//      // transaction for the path from the sessions_cache.
-//      ODBTransaction t = (ODBTransaction) getProperty("urlco." + path_name);
-//      if (t == null) {
-//        t = sessions_cache.getODBTransaction(path_name);
-//      }
-//      return t;
-//    }
 
     private void putMWPFSURLFileRepositoryOverride(
                                      String repository_id, FileRepository fs) {

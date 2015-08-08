@@ -29,8 +29,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import javax.servlet.ServletException;
 import org.eclipse.jetty.server.AbstractHttpConnection;
-import org.eclipse.jetty.server.AsyncContinuation;
-import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 
 /**

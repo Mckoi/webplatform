@@ -243,14 +243,6 @@ class JettyMckoiWebAppContext extends WebAppContext {
     return user_cl;
   }
 
-//  @Override
-//  public String getDefaultsDescriptor() {
-//    org.eclipse.jetty.webapp.WebXmlConfiguration wc; --
-//    System.out.println("getDefaultsDescriptor() ... ");
-//    new Error().printStackTrace();
-//    return super.getDefaultsDescriptor();
-//  }
-
   @Override
   public Resource newResource(String urlOrPath) throws IOException {
 //    System.out.println("JettyMckoiWebAppContext.newResource('" + urlOrPath + "')");
@@ -576,6 +568,7 @@ class JettyMckoiWebAppContext extends WebAppContext {
     }
 
     @Override
+    @Deprecated
     public void setStatus(int sc, String sm) {
       impl_status_code = sc;
       super.setStatus(sc, sm);
@@ -655,12 +648,7 @@ class JettyMckoiWebAppContext extends WebAppContext {
       }
       else {
         FileInfo finfo = getFileSystem().getFileInfo(resource_path);
-        if (finfo != null) {
-          return true;
-        }
-        else {
-          return false;
-        }
+        return finfo != null;
       }
     }
 

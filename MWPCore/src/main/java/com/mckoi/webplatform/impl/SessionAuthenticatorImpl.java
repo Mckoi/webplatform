@@ -285,7 +285,7 @@ final class SessionAuthenticatorImpl implements SessionAuthenticator {
     ODBObject session_index = t.getNamedItem("sessions");
 
     // The list of references to delete,
-    ArrayList<Reference> references = new ArrayList(70);
+    ArrayList<Reference> references = new ArrayList<>(70);
 
     boolean end_reached = false;
     while (!end_reached) {
@@ -337,7 +337,7 @@ final class SessionAuthenticatorImpl implements SessionAuthenticator {
     ODBObject session_index = t.getNamedItem("sessions");
 
     // The list of cookies,
-    ArrayList<String> cookies = new ArrayList(70);
+    ArrayList<String> cookies = new ArrayList<>(70);
 
     ODBList user_idx = session_index.getList("userIdx");
 

@@ -28,6 +28,7 @@ package com.mckoi.webplatform.impl;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A LogPage is a set of log lines of a specific type of log event, generated
@@ -48,12 +49,12 @@ class LogPage {
   /**
    * This list contains the current contents of the log page.
    */
-  private final ArrayList<LogPageEventImpl> entries;
+  private final List<LogPageEventImpl> entries;
 
   /**
    * A dictionary of unique words on this page.
    */
-  private final HashMap<String, DictionaryId> dictionary = new HashMap();
+  private final Map<String, DictionaryId> dictionary = new HashMap<>();
 
   /**
    * An id for the dictionary.
@@ -65,7 +66,7 @@ class LogPage {
    */
   LogPage(String log_type) {
     this.log_type = log_type;
-    this.entries = new ArrayList(512);
+    this.entries = new ArrayList<>(512);
   }
 
   /**
@@ -177,7 +178,7 @@ class LogPage {
   }
 
 
-  private static DictionaryId NULL_DICTIONARY_ID = new DictionaryId(0, null);
+  private static final DictionaryId NULL_DICTIONARY_ID = new DictionaryId(0, null);
 
   /**
    * The dictionary id + value (a silly hack to intern the strings).

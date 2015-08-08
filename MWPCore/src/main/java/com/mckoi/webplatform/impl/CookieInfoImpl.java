@@ -54,6 +54,7 @@ final class CookieInfoImpl implements CookieInfo {
   /**
    * Returns the authenticated username.
    */
+  @Override
   public String getAuthenticatedUser() {
     return username;
   }
@@ -61,6 +62,7 @@ final class CookieInfoImpl implements CookieInfo {
   /**
    * Returns the timestamp the cookie was created or renewed.
    */
+  @Override
   public long getTimestamp() {
     return timestamp;
   }

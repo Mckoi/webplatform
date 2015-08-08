@@ -81,7 +81,7 @@ class DDBResourceAccessImpl implements DDBResourceAccess {
     this.sessions_cache = sessions_cache;
     this.account_name = account_name;
 
-    this.account_privs = new HashSet();
+    this.account_privs = new HashSet<>();
   }
 
   /**
@@ -100,7 +100,7 @@ class DDBResourceAccessImpl implements DDBResourceAccess {
       ODBList accounts_idx = accounts.getList("accountIdx");
       ODBObject account_ob = accounts_idx.getObject(account_name);
 
-      Set<MckoiDDBPath> inc_path_set = new TreeSet();
+      Set<MckoiDDBPath> inc_path_set = new TreeSet<>();
 
       // Value contains priv information for the user,
       String value = account_ob.getString("value");

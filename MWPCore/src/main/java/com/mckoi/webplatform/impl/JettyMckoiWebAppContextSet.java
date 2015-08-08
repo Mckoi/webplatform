@@ -136,8 +136,8 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
     this.account_name = account_name;
     this.system_timer = system_timer;
     this.account_logger = account_logger;
-    this.lookups = new ArrayList();
-    this.stop_queue = new ArrayList();
+    this.lookups = new ArrayList<>();
+    this.stop_queue = new ArrayList<>();
 
     this.local_temp_folder = local_temp_folder;
     this.general_allowed_sys_classes = general_allowed_sys_classes;
@@ -182,7 +182,7 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
         DataFile webapps_file = wa_finfo.getDataFile();
 
         // The new lookups list,
-        ArrayList<WALookup> new_lookups = new ArrayList();
+        ArrayList<WALookup> new_lookups = new ArrayList<>();
 
         // The property set representing the web apps information,
         PropertySet pset = new PropertySet(webapps_file);
@@ -265,8 +265,6 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
                           account_logger,
                           allowed_system_classes, classloaders,
                           webapp_name, local_temp_folder);
-//            // Set the server,
-//            context.setServer(getServer());
 
             // Create the lookup object,
             WALookup lookup =
@@ -281,8 +279,8 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
 
         // Update the lookups object,
         synchronized (lookups) {
-          ArrayList<WALookup> final_lookups = new ArrayList();
-          ArrayList<Integer> touched_indexes = new ArrayList();
+          ArrayList<WALookup> final_lookups = new ArrayList<>();
+          ArrayList<Integer> touched_indexes = new ArrayList<>();
           // For each new lookup,
           for (WALookup lookup : new_lookups) {
             // If the current lookups list already contains an entry with the
@@ -353,7 +351,7 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
     public void run() {
 
       boolean is_empty;
-      ArrayList<WALookup> to_stop = new ArrayList();
+      ArrayList<WALookup> to_stop = new ArrayList<>();
 
       synchronized (lookups) {
         if (min_stop_queue_clear_ts < System.currentTimeMillis()) {
@@ -390,55 +388,12 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
   @Override
   protected void doStart() throws Exception {
 
-//    // Start the account logger,
-//    account_logger.start();
-
     // Set the minimum time that a re-initialization check is performed
     // (2 seconds from now).
     next_check_ts = System.currentTimeMillis() + (2 * 1000);
 
     // Initialize the various web application contexts,
     initializeWebApps();
-
-//    // Load the contexts object from the account,
-//    DataFile contexts_file =
-//                 account_filesystem.getDataFile("/system/contexts.properties");
-//
-//    if (contexts_file.size() > 0) {
-//      PropertySet pset = new PropertySet(contexts_file);
-//
-//      String webapp_list = pset.getProperty("webapp_list", "");
-//      List<String> apps = StringUtil.explode(webapp_list, "|");
-//
-//      for (String app : apps) {
-//        String vhost_expr =
-//                  pset.getProperty("app." + app + ".vhost_expression", "*:*");
-//        String context_path =
-//                  pset.getProperty("app." + app + ".context_path", "/");
-//        String webapp_resource_dir =
-//                  pset.getProperty("app." + app + ".resource");
-//
-//        String resource_dir;
-//        if (webapp_resource_dir != null) {
-//          resource_dir = "/apps/" + webapp_resource_dir + "/";
-//        }
-//        else {
-//          resource_dir = "/apps/";
-//        }
-//
-//        int proto_delim = vhost_expr.lastIndexOf(":");
-//        if (proto_delim == -1) {
-//          throw new MWPRuntimeException("No protocol deliminator");
-//        }
-//        String protocol_expr = vhost_expr.substring(proto_delim + 1);
-//        String host_expr = vhost_expr.substring(0, proto_delim);
-//
-//        addHandler(new JettyMckoiWebAppContext(account_name,
-//                        host_expr, protocol_expr, context_path, resource_dir,
-//                        account_logger));
-//      }
-//
-//    }
 
     super.doStart();
   }
@@ -447,8 +402,6 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
   protected void doStop() throws Exception {
     super.doStop();
 
-//    // Stop the logger,
-//    account_logger.stop();
     // Force the logger to flush
     account_logger.forceFlush();
 
@@ -499,19 +452,11 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
       // has a path prefix of '/mail/', the '/' application will be picked for
       // any request other than '/mail/[something]'.
       for (WALookup lookup : lookups) {
-//        System.out.println("- " + rhost);
-//        System.out.println(lookup.domain);
-//        System.out.println("# " + target);
-//        System.out.println(lookup.path);
 
         if (rhost.equals(lookup.domain)) {
           String lproto = lookup.protocol;
-//          System.out.println("  PROTO " + rscheme);
-//          System.out.println("  " + lookup.protocol);
           // Match protocol,
           if (lproto.equals("*") || lproto.equals(rscheme)) {
-//            System.out.println("    PATH " + target);
-//            System.out.println("    " + lookup.path);
             // Finally see if the target starts with the matched path,
             if (target.startsWith(lookup.path)) {
               int path_str_length = lookup.path.length();

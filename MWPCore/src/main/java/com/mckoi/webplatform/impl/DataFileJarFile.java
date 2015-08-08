@@ -131,6 +131,9 @@ public class DataFileJarFile extends JarFile {
 
   /**
    * Get the Jar entry, including the manifest file.
+   * 
+   * @param name
+   * @return 
    */
   public JarEntry realGetJarEntry(String name) {
     return (JarEntry) getEntry(name);
@@ -163,7 +166,7 @@ public class DataFileJarFile extends JarFile {
 
       if (man_entry != null) {
         man = new Manifest(getInputStream(man_entry));
-        manifest_ref = new SoftReference(man);
+        manifest_ref = new SoftReference<>(man);
       }
     }
     return man;

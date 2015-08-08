@@ -64,6 +64,7 @@ class LogPageEventImpl implements LogPageEvent {
   /**
    * Returns the timestamp of this event.
    */
+  @Override
   public long getTimestamp() {
     return timestamp;
   }
@@ -71,8 +72,17 @@ class LogPageEventImpl implements LogPageEvent {
   /**
    * Returns the event as a string.
    */
+  @Override
   public String[] getEventValues() {
     return event_vals.clone();
+  }
+
+  /**
+   * Returns the number of values in this event.
+   */
+  @Override
+  public int getValueCount() {
+    return event_vals.length;
   }
 
   /**
@@ -104,16 +114,10 @@ class LogPageEventImpl implements LogPageEvent {
   }
 
   /**
-   * Returns the number of values in this event.
-   */
-  public int getValueCount() {
-    return event_vals.length;
-  }
-
-  /**
    * Returns this event as a simple string readable by a human. It's not
    * intended for this to be parsable.
    */
+  @Override
   public String asString() {
     StringBuilder b = new StringBuilder();
     for (String val : event_vals) {

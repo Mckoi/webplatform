@@ -40,14 +40,15 @@ import javax.servlet.http.HttpServletResponse;
 
 public class ConfigErrorServlet extends HttpServlet {
 
+  @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse response)
                                          throws ServletException, IOException {
     response.sendError(500, "Configuration Error");
     String error_msg = this.getInitParameter("errormsg");
-    PrintWriter out = response.getWriter();
-    out.println(error_msg);
-    out.flush();
-    out.close();
+    try (PrintWriter out = response.getWriter()) {
+      out.println(error_msg);
+      out.flush();
+    }
   }
 
 }

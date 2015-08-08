@@ -140,7 +140,7 @@ final class AccountUserManager implements UserManager {
     ODBList emails_idx = users.getList("emailIdx");
     long start = emails_idx.indexOf(email);
     if (start < 0) {
-      return new ArrayList(0);
+      return new ArrayList<>(0);
     }
     long end = emails_idx.lastIndexOf(email) + 1;
 

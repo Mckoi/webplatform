@@ -30,7 +30,6 @@ import com.mckoi.network.CommitFaultException;
 import com.mckoi.odb.ClassValidationException;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.odb.util.FileInfo;
-import java.io.File;
 import java.util.AbstractList;
 import java.util.List;
 import java.util.RandomAccess;

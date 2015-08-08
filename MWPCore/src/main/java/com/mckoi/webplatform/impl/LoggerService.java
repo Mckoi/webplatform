@@ -76,7 +76,7 @@ public final class LoggerService {
   /**
    * The map of events to log page handlers.
    */
-  private final HashMap<String, LogPage> event_handlers;
+  private final Map<String, LogPage> event_handlers;
 
   private boolean is_started = false;
 
@@ -88,6 +88,9 @@ public final class LoggerService {
   /**
    * Constructor. Generates a SecurityException if stack frame not permitted
    * to create/start or stop this.
+   * @param sessions_cache
+   * @param log_path
+   * @param system_timer
    */
   public LoggerService(DBSessionCache sessions_cache,
                       String log_path, Timer system_timer) {
@@ -95,7 +98,7 @@ public final class LoggerService {
     this.sessions_cache = sessions_cache;
     this.log_path = log_path;
     this.system_timer = system_timer;
-    this.event_handlers = new HashMap();
+    this.event_handlers = new HashMap<>();
   }
 
   /**
@@ -134,62 +137,6 @@ public final class LoggerService {
 
   }
 
-//  public void start() {
-//    checkSecurity();
-//    if (is_started) {
-//      throw new RuntimeException("Already started");
-//    }
-//    system_timer.scheduleAtFixedRate(log_flush, (10 * 1000), (30 * 1000));
-//    is_started = true;
-//  }
-//
-//  public void stop() {
-//    checkSecurity();
-//    if (!is_started) {
-//      throw new RuntimeException("Not started");
-//    }
-//    try {
-//      // Flush and stop,
-//      log_flush.cancel();
-//      try {
-//        ArrayList<LogPage> log_pages = new ArrayList();
-//        ArrayList<String> log_types = new ArrayList();
-//        synchronized (event_handlers) {
-//          for (String log_type : event_handlers.keySet()) {
-//            LogPage log_page = event_handlers.get(log_type);
-//            long first_timestamp = log_page.getFirstTimestamp();
-//            // If there's something in the log page and it happened longer than
-//            // 30 seconds ago, then flush the page,
-//            if (first_timestamp > -1) {
-//              // Add to the log pages list and remove from the map,
-//              log_pages.add(log_page);
-//              log_types.add(log_type);
-//            }
-//          }
-//
-//          // Remove them from the map,
-//          for (String log_type : log_types) {
-//            event_handlers.remove(log_type);
-//          }
-//
-//        }
-//        // Flush these pages,
-//        if (log_pages.size() > 0) {
-//          LogPage[] page_arr = log_pages.toArray(new LogPage[log_pages.size()]);
-//          // Flush
-//          flushPages(page_arr);
-//        }
-//      }
-//      catch (Throwable e) {
-//        // Ignore, print to system console,
-//        e.printStackTrace(System.out);
-//      }
-//    }
-//    finally {
-//      is_started = false;
-//    }
-//  }
-
   /**
    * Throws an exception if the log name is invalid.
    */
@@ -198,7 +145,6 @@ public final class LoggerService {
       throw new MWPRuntimeException("Log name too large");
     }
     else if (log_name.contains("=")) {
-//    else if (log_name.contains(".") || log_name.contains("=")) {
       throw new MWPRuntimeException("Log name contains invalid character");
     }
   }
@@ -216,8 +162,8 @@ public final class LoggerService {
       }
 
       try {
-        ArrayList<LogPage> log_pages = new ArrayList();
-        ArrayList<String> log_types = new ArrayList();
+        ArrayList<LogPage> log_pages = new ArrayList<>();
+        ArrayList<String> log_types = new ArrayList<>();
         synchronized (event_handlers) {
           for (String log_type : event_handlers.keySet()) {
             LogPage log_page = event_handlers.get(log_type);
@@ -465,6 +411,12 @@ public final class LoggerService {
 
   /**
    * Same as 'log' only there's a security check.
+   * 
+   * @param level
+   * @param log_type
+   * @param message
+   * @param args
+   * @return 
    */
   public LogPageEvent secureLog(Level level, String log_type,
                                 String message, String... args) {

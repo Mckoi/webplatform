@@ -50,18 +50,12 @@ public class SuperUserPlatformContextImpl implements SuperUserPlatformContext {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public MckoiDDBAccess getMckoiDDBAccess() {
     checkSUAccess();
     return PlatformContextImpl.getSecureMckoiDDBAccess();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public NetworkAccess getNetworkAccess() {
     checkSUAccess();

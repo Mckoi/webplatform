@@ -25,7 +25,6 @@
 
 package com.mckoi.webplatform.impl;
 
-import com.mckoi.appcore.SystemStatics;
 import com.mckoi.odb.*;
 import com.mckoi.webplatform.LogEventsSet;
 import com.mckoi.webplatform.LogPageEvent;
