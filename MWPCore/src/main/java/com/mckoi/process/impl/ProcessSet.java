@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * An in-memory map of all process_ids managed on the process service. This
@@ -49,13 +50,13 @@ class ProcessSet {
   /**
    * The map of all processes to ProcessInstanceImpl objects.
    */
-  private final ConcurrentHashMap<ProcessId, ProcessInstanceImpl> process_map;
+  private final ConcurrentMap<ProcessId, ProcessInstanceImpl> process_map;
 
   /**
    * Constructor.
    */
   ProcessSet() {
-    this.process_map = new ConcurrentHashMap();
+    this.process_map = new ConcurrentHashMap<>();
   }
 
   /**
