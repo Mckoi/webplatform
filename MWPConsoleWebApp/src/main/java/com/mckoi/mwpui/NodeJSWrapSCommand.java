@@ -156,7 +156,7 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
                     js_system.getGlobalObject(), (GJSObject) module_function,
                             new Object[] { node_process_ob, internal_ob } );
 
-        module_function = loadNativeModule("sys/nodemin");
+        module_function = loadNativeModule("mckoi/nodemin");
         js_system.callFunction(
                     js_system.getGlobalObject(), (GJSObject) module_function,
                             new Object[] { node_process_ob } );

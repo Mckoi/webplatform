@@ -303,13 +303,13 @@
 
     process.__defineGetter__('stdout', function() {
       if (stdout) return stdout;
-      stdout = NativeModule.require('sys/stdstream').stdout;
+      stdout = NativeModule.require('mckoi/stdstream').stdout;
       return stdout;
     });
 
     process.__defineGetter__('stderr', function() {
       if (stderr) return stderr;
-      stderr = NativeModule.require('sys/stdstream').stderr;
+      stderr = NativeModule.require('mckoi/stdstream').stderr;
       return stderr;
     });
 
