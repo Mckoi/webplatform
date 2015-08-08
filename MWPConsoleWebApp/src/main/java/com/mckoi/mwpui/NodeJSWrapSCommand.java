@@ -69,31 +69,7 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
 
   private boolean is_active = false;
   
-//  /**
-//   * Constructor.
-//   */
-//  NodeJSWrapSCommand(String reference, FileName lib_path, FileName script_fn) {
-//    super(reference);
-//    String script_file_name = script_fn.toString();
-//
-//    FileName script_module_id;
-//    if (script_file_name.endsWith(".mjs")) {
-//      script_module_id = new FileName(
-//                 script_file_name.substring(0, script_file_name.length() - 4));
-//    }
-//    else if (script_file_name.endsWith(".js")) {
-//      script_module_id = new FileName(
-//                 script_file_name.substring(0, script_file_name.length() - 3));
-//    }
-//    else {
-//      script_module_id = script_fn;
-//    }
-//
-//    FileName script_path = script_module_id.getPath();
-//    node_source_loader = new GJSNodeSourceLoader(lib_path, script_path);
-//    shared_process_state = new GJSProcessSharedState(this);
-//
-//  }
+  private boolean enable_benchmarks = false;
 
   NodeJSWrapSCommand(String reference, FileName lib_path) {
     super(reference);
@@ -132,76 +108,6 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
   public boolean isActive() {
     return is_active;
   }
-
-//  private static void printScriptableInfo(String type, int indent, Scriptable s) {
-//    System.out.print(TextUtils.pad(indent));
-//    System.out.print(type);
-//    if (s == null) {
-//      System.out.println("NONE");
-//    }
-//    else {
-//      Object[] ids = s.getIds();
-//      System.out.print(s.getClassName());
-//      System.out.print(" ");
-//      System.out.println(Arrays.asList(ids));
-//    }
-//  }
-  
-//  private static void debugScopes(int indent, String type, Scriptable scope, List hit) {
-//    printScriptableInfo(type, indent, scope);
-//    if (scope == null) {
-//      return;
-//    }
-//    for (Object ob : hit) {
-//      if (ob == scope) {
-//        System.out.print(TextUtils.pad(indent));
-//        System.out.println("Repeating");
-//        return;
-//      }
-//    }
-//    hit.add(scope);
-//    
-//    Scriptable prototype = scope.getPrototype();
-//    Scriptable parent_scope = scope.getParentScope();
-//    debugScopes(indent + 2, "PARENT ", parent_scope, hit);
-//    debugScopes(indent + 2, "PROTO ", prototype, hit);
-//  }
-  
-  
-//  private static void debugScopes(Scriptable scope) {
-//    System.out.println(" @@@@@ PROTOTYPE CHAIN @@@@@");
-//    List<Scriptable> chain = new ArrayList();
-//    Scriptable cur = scope;
-//    while (cur != null) {
-//      chain.add(0, cur);
-//      cur = cur.getPrototype();
-//    }
-//    int indent = 2;
-//    for (Scriptable s : chain) {
-//      Object[] ids = s.getIds();
-//      System.out.print(TextUtils.pad(indent));
-//      System.out.print(s.getClassName());
-//      System.out.print(" ");
-//      System.out.println(Arrays.asList(ids));
-//      indent += 2;
-//    }
-//    System.out.println(" @@@@@ PARENT CHAIN @@@@@");
-//    chain.clear();
-//    cur = scope;
-//    while (cur != null) {
-//      chain.add(0, cur);
-//      cur = cur.getParentScope();
-//    }
-//    indent = 2;
-//    for (Scriptable s : chain) {
-//      Object[] ids = s.getIds();
-//      System.out.print(TextUtils.pad(indent));
-//      System.out.print(s.getClassName());
-//      System.out.print(" ");
-//      System.out.println(Arrays.asList(ids));
-//      indent += 2;
-//    }
-//  }
 
   /**
    * Loads a native module id using the node source loader. The source code
@@ -342,9 +248,14 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
     // Parse the options,
     String engine_arg = "";
     for (String exec_arg : exec_args_v) {
-      if (exec_arg.startsWith("--engine=") ||
-          exec_arg.startsWith("-engine=")) {
-        engine_arg = exec_arg.substring(exec_arg.lastIndexOf("=") + 1);
+      String arg = exec_arg;
+      if (arg.startsWith("--engine=") ||
+          arg.startsWith("-engine=")) {
+        engine_arg = arg.substring(arg.lastIndexOf("=") + 1);
+      }
+      else if (exec_arg.equals("--benchmark") ||
+               exec_arg.equals("-benchmark")) {
+        enable_benchmarks = true;
       }
     }
     
@@ -454,7 +365,13 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
       js_system.releaseContext();
 
       long end_time = System.currentTimeMillis();
-      System.out.println("Script 'process' time: " + (end_time - time_start));
+      if (enable_benchmarks) {
+        out.print("Script 'process' time: ");
+        out.println(
+                TextUtils.formatTimeFrame((end_time - time_start) * 1000000),
+                "info");
+      }
+
     }
 
   }
@@ -526,7 +443,13 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
       js_system.releaseContext();
 
       long end_time = System.currentTimeMillis();
-      System.out.println("Script 'handle' time: " + (end_time - time_start));
+      if (enable_benchmarks) {
+        out.print("Script 'handle' time: ");
+        out.println(
+                TextUtils.formatTimeFrame((end_time - time_start) * 1000000),
+                "info");
+      }
+
     }
 
   }

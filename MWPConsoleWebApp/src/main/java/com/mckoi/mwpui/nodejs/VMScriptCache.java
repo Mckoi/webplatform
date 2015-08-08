@@ -103,7 +103,7 @@ public class VMScriptCache {
     }
 
     if (scode == null) {
-      System.out.println("FETCHED: " + module_fname);
+//      System.out.println("FETCHED: " + module_fname);
       DataFile dfile = fs.getDataFile(fname);
       scode = StreamUtils.stringValueOfUTF8Stream(
                                           DataFileUtils.asInputStream(dfile));
