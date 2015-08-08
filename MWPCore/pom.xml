@@ -16,12 +16,6 @@
     installation.
   </description>
 
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-  </parent>
-
   <licenses>
     <license>
       <name>GNU General Public License, Version 3</name>
@@ -31,8 +25,8 @@
   </licenses>
 
   <scm>
-    <url>http://git.mckoi.com:8900/?p=mwpcore.git</url>
-    <connection>scm:git://git.mckoi.com/git/mwpcore.git</connection>
+    <url>https://github.com/Mckoi/webplatform.git</url>
+    <connection>scm:git:ssh://github.com/Mckoi/webplatform.git</connection>
   </scm>
 
   <developers>
@@ -55,21 +49,6 @@
           <encoding>${project.build.sourceEncoding}</encoding>
         </configuration>
       </plugin>
-
-      <!-- Build the distribution assembly -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.3</version>
-        <configuration>
-          <descriptors>
-            <descriptor>assembly.xml</descriptor>
-          </descriptors>
-          <finalName>MWPNodeInstall</finalName>
-          <appendAssemblyId>false</appendAssemblyId>
-        </configuration>
-      </plugin>
-
     </plugins>
 
     <!-- Include legal documents -->
@@ -161,14 +140,6 @@
       <groupId>com.mckoi.platform</groupId>
       <artifactId>MWPMain</artifactId>
       <version>[1.0-SNAPSHOT,)</version>
-    </dependency>
-
-    <!-- MWPUIApp dependency is necessary for assembly -->
-    <dependency>
-      <groupId>com.mckoi.platform</groupId>
-      <artifactId>MWPUIApp</artifactId>
-      <version>[1.0-SNAPSHOT,)</version>
-      <type>war</type>
     </dependency>
 
   </dependencies>

@@ -15,12 +15,6 @@
     services to run on a server.
   </description>
   
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-  </parent>
-
   <licenses>
     <license>
       <name>GNU General Public License, Version 3</name>
