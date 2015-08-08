@@ -1,0 +1,75 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.mckoi.platform</groupId>
+  <artifactId>ServerInstallAssembly</artifactId>
+  <name>Server Install Maven Assembly</name>
+  <version>1.0</version>
+  
+  <packaging>pom</packaging>
+  
+  <url>http://www.mckoi.com/</url>
+  <description>
+    Maven Assembly for creating the Server Installation Binary.
+  </description>
+
+  <scm>
+    <url>https://github.com/Mckoi/webplatform.git</url>
+    <connection>scm:git:ssh://github.com/Mckoi/webplatform.git</connection>
+  </scm>
+
+  <developers>
+    <developer>
+      <id>Tobias Downer</id>
+      <name>Tobias Downer</name>
+      <email>toby@mckoi.com</email>
+    </developer>
+  </developers>
+
+
+
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <!-- Build the distribution assembly -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.5.5</version>
+          <configuration>
+            <descriptors>
+              <descriptor>assembly.xml</descriptor>
+            </descriptors>
+            <finalName>MWPServerInstall</finalName>
+            <appendAssemblyId>false</appendAssemblyId>
+          </configuration>
+        </plugin>
+
+      </plugins>
+    </pluginManagement>
+
+  </build>
+
+  <dependencies>
+
+    <!-- MWPMain for assembly -->
+    <dependency>
+      <groupId>com.mckoi.platform</groupId>
+      <artifactId>MWPCore</artifactId>
+      <version>[1.0-SNAPSHOT,)</version>
+    </dependency>
+
+    <!-- MWPUIApp dependency for assembly -->
+   <dependency>
+      <groupId>com.mckoi.platform</groupId>
+      <artifactId>MWPUIApp</artifactId>
+      <version>[1.0-SNAPSHOT,)</version>
+      <type>war</type>
+    </dependency>
+
+  </dependencies>
+
+</project>

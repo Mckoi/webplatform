@@ -32,6 +32,7 @@
     <module>MWPClient</module>
     <module>MWPConsoleWebApp</module>
     <module>MWPTestSuiteApp</module>
+    <module>ServerInstallAssembly</module>
   </modules>
 
 
