@@ -71,3 +71,8 @@ log viewer and database viewer.
 A slightly modified version of Jasper that allows for the Mckoi Web Platform
 to target JSP source and compiled files in a none native file system (so we can
 support JSP files stored within a MckoiDDB file system).
+
+### MWPTestSuiteApp: Unit tests (Webapp)
+
+A .war web application that runs only on the Mckoi Web Platform that runs a
+series of unit tests on features of the entire platform.
