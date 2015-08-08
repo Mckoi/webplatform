@@ -217,6 +217,8 @@ public class RhinoJSSystem extends AbstractGJSSystem {
     }
   }
 
+  private static final Object[] EMPTY_OBJECT_ARRAY = new Object[0];
+
   /**
    * Wraps the given arguments (from the Rhino engine) as GJS values and
    * returns the new arguments array.
@@ -226,7 +228,7 @@ public class RhinoJSSystem extends AbstractGJSSystem {
    */
   final Object[] wrapArgsAsGJS(Object[] rhino_args) {
     if (rhino_args.length == 0) {
-      return rhino_args;
+      return EMPTY_OBJECT_ARRAY;
     }
     int len = rhino_args.length;
     Object[] arg2 = new Object[len];
@@ -287,7 +289,8 @@ public class RhinoJSSystem extends AbstractGJSSystem {
    */
   final Object[] wrapArgsAsRhino(Object[] gjs_args) {
     if (gjs_args.length == 0) {
-      return gjs_args;
+      // We have to return an array of java.lang.Object type,
+      return EMPTY_OBJECT_ARRAY;
     }
     int len = gjs_args.length;
     Object[] arg2 = new Object[len];
