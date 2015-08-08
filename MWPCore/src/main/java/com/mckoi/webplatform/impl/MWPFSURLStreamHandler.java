@@ -62,6 +62,11 @@ import java.util.*;
 
 public class MWPFSURLStreamHandler extends URLStreamHandler {
 
+  /**
+   * Set to true for verbose output of access to this URI.
+   */
+  private final static boolean DBG_OUTPUT = false;
+
   @Override
   protected URLConnection openConnection(URL u) throws IOException {
 
@@ -101,8 +106,6 @@ public class MWPFSURLStreamHandler extends URLStreamHandler {
   // ------
 
   private static class FileRepoURLConnection extends URLConnection {
-
-    private final static boolean DBG_OUTPUT = false;
 
     private final FileRepository file_system;
     
@@ -163,7 +166,7 @@ public class MWPFSURLStreamHandler extends URLStreamHandler {
     private void populateFields() {
       if (fields_map == null) {
         internalCheckConnect();
-        HashMap<String, List<String>> fields = new HashMap();
+        HashMap<String, List<String>> fields = new HashMap<>();
 
         long size = file.size();
 
@@ -276,8 +279,6 @@ public class MWPFSURLStreamHandler extends URLStreamHandler {
         throw new IOException(
                        MessageFormat.format("Not found: {0}", url.getFile()));
       }
-//      System.out.println("%%%% getInputStream on " + url.toString());
-//      new Error().printStackTrace();
       return DataFileUtils.asInputStream(file);
     }
 

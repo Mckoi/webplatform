@@ -436,8 +436,8 @@ public class MWPCoreProcess extends AbstractCoreProcess {
         net_if = NetworkInterface.getByName(net_interface_name);
         if (net_if == null) {
           String err_msg = MessageFormat.format(
-              "The 'net_interface' property in client.conf does not match a " +
-              "network interface on this machine. net_interface = '{0}'",
+              "The ''net_interface'' property in client.conf does not match a " +
+              "network interface on this machine. net_interface = ''{0}''",
               net_interface_name);
           System.out.println("ERROR: " + err_msg);
           throw new RuntimeException(err_msg);

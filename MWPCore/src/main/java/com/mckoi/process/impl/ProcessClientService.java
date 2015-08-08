@@ -51,6 +51,7 @@ import java.security.SecureRandom;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -131,8 +132,8 @@ public final class ProcessClientService {
    * Whenever a process terminated message is received, the process id is
    * added to this set, which is used during the maintenance task.
    */
-  private final Map<ProcessId, Boolean> process_id_terminated_set =
-                                                      new ConcurrentHashMap();
+  private final ConcurrentMap<ProcessId, Boolean> process_id_terminated_set =
+                                                    new ConcurrentHashMap<>();
 
   /**
    * The list of pending function results.
@@ -192,11 +193,11 @@ public final class ProcessClientService {
 
     this.output_queue = new QueueList();
     this.input_queue = new QueueList();
-    this.broadcast_queues = new HashMap(512);
-    this.process_result_list = new LinkedList();
+    this.broadcast_queues = new HashMap<>(512);
+    this.process_result_list = new LinkedList<>();
 
     this.sessions_cache = sessions_cache;
-    this.connections = new HashMap(256);
+    this.connections = new HashMap<>(256);
     this.process_env = new PCSProcessEnvironment();
     this.thread_pool = shared_thread_pool;
 
@@ -221,8 +222,8 @@ public final class ProcessClientService {
 //        System.out.println(report());
 
         // Purge all the broadcast queues of data older than 2 minutes.
-        List<BroadcastQueue> to_maintain = new ArrayList(256);
-        List<ProcessChannel> to_maintain_keys = new ArrayList(256);
+        List<BroadcastQueue> to_maintain = new ArrayList<>(256);
+        List<ProcessChannel> to_maintain_keys = new ArrayList<>(256);
         synchronized (broadcast_queues) {
           for (ProcessChannel chan : broadcast_queues.keySet()) {
             to_maintain.add(broadcast_queues.get(chan));
@@ -339,6 +340,7 @@ public final class ProcessClientService {
 
   /**
    * Opens this service.
+   * @throws java.io.IOException
    */
   public void open() throws IOException {
 
@@ -360,6 +362,7 @@ public final class ProcessClientService {
 
   /**
    * Closes this service.
+   * @throws java.io.IOException
    */
   public void close() throws IOException {
     selector.close();
@@ -370,7 +373,7 @@ public final class ProcessClientService {
   /**
    * The input thread runnable.
    */
-  private Runnable input_runnable = new Runnable() {
+  private final Runnable input_runnable = new Runnable() {
     @Override
     public void run() {
       // This simply cycles through every OP_READ key on the selector and
@@ -414,7 +417,7 @@ public final class ProcessClientService {
   /**
    * The output thread runnable.
    */
-  private Runnable output_runnable = new Runnable() {
+  private final Runnable output_runnable = new Runnable() {
     @Override
     public void run() {
       // Consume from the output_queue and send the messages to the respective
@@ -440,7 +443,7 @@ public final class ProcessClientService {
         // servers.
         // The set of touched connections,
         Map<ProcessClientConnection, QueueList> touched_connections =
-                                                                  new HashMap();
+                                                              new HashMap<>();
         synchronized (connections) {
 
           while (queue_item != null) {
@@ -791,7 +794,7 @@ public final class ProcessClientService {
                                 new ProcessChannel(process_id, channel_number);
         // Put the message in the appropriate queue,
         if (to_broadcast == null) {
-          to_broadcast = new HashMap();
+          to_broadcast = new HashMap<>();
         }
         QueueList chan_queue = to_broadcast.get(process_channel);
         if (chan_queue == null) {
@@ -818,7 +821,7 @@ public final class ProcessClientService {
                                 new ProcessChannel(process_id, channel_number);
         // Put in the ack list,
         if (to_ack == null) {
-          to_ack = new ArrayList();
+          to_ack = new ArrayList<>();
         }
         to_ack.add(process_channel);
       }
@@ -889,7 +892,7 @@ public final class ProcessClientService {
         if (ares != null) {
           ares.setPMessage(msg.getMessage());
           if (to_notify == null) {
-            to_notify = new ArrayList();
+            to_notify = new ArrayList<>();
           }
           to_notify.add(ares);
         }
@@ -1122,7 +1125,7 @@ public final class ProcessClientService {
       ODBList path_idx = paths_ob.getList("pathIdx");
       ODBList sysprocess_names = path_idx.tail("sysprocess00");
       // Extract all the sysprocess path names,
-      List<String> pp_list = new ArrayList();
+      List<String> pp_list = new ArrayList<>();
       for (ODBObject sysprocess_name : sysprocess_names) {
         String path_name = sysprocess_name.getString("path");
         // If it's a sysprocess path,
@@ -1139,7 +1142,7 @@ public final class ProcessClientService {
       ODBList roleserver_idx = roles_ob.getList("roleserverIdx");
       ODBList processes_rs_idx = roleserver_idx.tail("process.");
       // All the process servers,
-      List<ProcessServiceAddress> pm_list = new ArrayList();
+      List<ProcessServiceAddress> pm_list = new ArrayList<>();
       for (ODBObject role : processes_rs_idx) {
         String roleserver = role.getString("roleserver");
         // If it's a process role,
@@ -1203,7 +1206,7 @@ public final class ProcessClientService {
     // Make 'process_machines', a list of available process servers,
     List<ProcessServiceAddress> process_machines = process_machines_list;
     if (no_populate != null && !no_populate.isEmpty()) {
-      List<ProcessServiceAddress> mod_list = new ArrayList();
+      List<ProcessServiceAddress> mod_list = new ArrayList<>();
       Iterator<ProcessServiceAddress> i = process_machines.iterator();
       while (i.hasNext()) {
         ProcessServiceAddress addr = i.next();
@@ -1448,6 +1451,11 @@ public final class ProcessClientService {
    * Returns the process info for the given process id, and checks that the
    * process is owned by the given account_name. If it's not owned by the
    * account, or the process is invalid, returns null.
+   * 
+   * @param account_name
+   * @param process_id
+   * @return 
+   * @throws com.mckoi.process.ProcessUnavailableException 
    */
   public ProcessInfo getProcessInfo(String account_name, ProcessId process_id)
                                           throws ProcessUnavailableException {
@@ -1482,6 +1490,9 @@ public final class ProcessClientService {
   /**
    * Returns a com.mckoi.process.ProcessClient implementation for
    * the given account.
+   * 
+   * @param account_name
+   * @return 
    */
   public ProcessClient getProcessClientFor(String account_name) {
     return new PCSProcessClient(account_name);
@@ -1490,6 +1501,9 @@ public final class ProcessClientService {
   /**
    * Returns a com.mckoi.process.AppServiceProcessClient implementation for
    * the given account.
+   * 
+   * @param account_name
+   * @return 
    */
   public AppServiceProcessClient getAppServiceProcessClientFor(
                                                         String account_name) {
@@ -1555,7 +1569,7 @@ public final class ProcessClientService {
           // Ok, so try a different machine,
           // Add this machine to the set of machine we don't populate on,
           if (dont_populate_machines == null) {
-            dont_populate_machines = new HashSet();
+            dont_populate_machines = new HashSet<>();
           }
           dont_populate_machines.add(machine);
         }
@@ -1637,7 +1651,13 @@ public final class ProcessClientService {
    * Invokes the function with the given process id provided the process
    * owner matches the account name given. The process owner is verified by
    * either parsing the process record, or querying the process server before
-   * invoking the function.
+   * invoking the function
+   * 
+   * @param account_name
+   * @param process_id
+   * @param msg
+   * @param reply_expected
+   * @return
    */
   public ProcessResult invokeFunction(
                String account_name, ProcessId process_id, ProcessMessage msg,
@@ -1720,6 +1740,9 @@ public final class ProcessClientService {
 
   /**
    * 
+   * @param account_name
+   * @param process_id
+   * @param signal
    */
   public void sendSignal(String account_name,
                          ProcessId process_id, String[] signal) {
@@ -1766,6 +1789,10 @@ public final class ProcessClientService {
 
   /**
    * 
+   * @param account_name
+   * @param session_state
+   * @return 
+   * @throws com.mckoi.process.ProcessUnavailableException 
    */
   public ChannelConsumer getChannelConsumer(
                       String account_name, ChannelSessionState session_state)
@@ -1787,6 +1814,10 @@ public final class ProcessClientService {
 
   /**
    * 
+   * @param account_name
+   * @param process_channel
+   * @return 
+   * @throws com.mckoi.process.ProcessUnavailableException 
    */
   public ChannelConsumer getChannelConsumer(
                   String account_name, ProcessChannel process_channel)
@@ -1807,6 +1838,11 @@ public final class ProcessClientService {
 
   /**
    * 
+   * @param account_name
+   * @param process_channel
+   * @param sequence_value
+   * @return 
+   * @throws com.mckoi.process.ProcessUnavailableException 
    */
   public ChannelConsumer getChannelConsumer(
                   String account_name,
@@ -1828,6 +1864,9 @@ public final class ProcessClientService {
 
   /**
    * 
+   * @param account_name
+   * @param query
+   * @return 
    */
   public ProcessResult invokeServersQuery(
                                     String account_name, ServersQuery query) {
@@ -1912,7 +1951,7 @@ public final class ProcessClientService {
         process_machine_to_query = getAllProcessMachines();
       }
       List<ProcessResult> results =
-              new ArrayList(process_machine_to_query.size());
+              new ArrayList<>(process_machine_to_query.size());
 
       for (ProcessServiceAddress machine : process_machine_to_query) {
 
@@ -2111,7 +2150,8 @@ public final class ProcessClientService {
     private final int call_id;
     private final ProcessId process_id;
 
-    private final ArrayList<ProcessResultNotifier> notifiers = new ArrayList(2);
+    private final ArrayList<ProcessResultNotifier> notifiers =
+                                                        new ArrayList<>(2);
     private PMessage reply = null;
 
     private ProcessResultImpl(ExecutorService thread_pool,
@@ -2201,7 +2241,7 @@ public final class ProcessClientService {
       // If there's something to notify then dispatch it,
       List<ProcessResultNotifier> to_notify;
       synchronized (notifiers) {
-        to_notify = new ArrayList(notifiers.size());
+        to_notify = new ArrayList<>(notifiers.size());
         to_notify.addAll(notifiers);
       }
       // Dispatch to the thread pool,
@@ -2542,7 +2582,7 @@ public final class ProcessClientService {
         }
       }
 
-      List<PMessage> fail_messages = new ArrayList(Math.max(fail_count, 8));
+      List<PMessage> fail_messages = new ArrayList<>(Math.max(fail_count, 8));
 
       // For each timed out message,
       QueueMessage msg = to_fail.getFirst();
@@ -2665,7 +2705,7 @@ queue_empty_loop:
                   // network interface.
                   else if (!current_interface.equals(network_interface)) {
                     String err_msg = MessageFormat.format(
-                        "Machine address has a scope that doesn't match " +
+                        "Machine address has a scope that doesn''t match " +
                         "assigned network interface: {0}", addr);
                     LOG.log(Level.SEVERE, err_msg);
                     throw new IOException(err_msg);
@@ -2780,7 +2820,6 @@ queue_empty_loop:
                     }
                   }
                   nio_connection.flushSendMessages();
-                  not_flushed_msg = null;
                 }
                 else {
                   // Couldn't send the message because connection state isn't 0, so

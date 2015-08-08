@@ -88,7 +88,7 @@ class LogSystemImpl implements LogSystem {
     // Cap at 32 types
     int sz = Math.min(32, (int) log_list.size());
     // Turn it into an ArrayList,
-    ArrayList<String> log_types = new ArrayList(sz);
+    ArrayList<String> log_types = new ArrayList<>(sz);
     for (int i = 0; i < sz; ++i) {
       // Get the type name
       String type_name = log_list.getObject(i).getString("name");
@@ -132,7 +132,7 @@ class LogSystemImpl implements LogSystem {
       log_system.log(lvl, log_type, message, args);
     }
     else {
-      throw new MWPRuntimeException("Unable to log to: " + log_type);
+      throw new MWPRuntimeException("Unable to log to: {0}", log_type);
     }
   }
 

@@ -100,8 +100,8 @@ public class TestClientFixture {
       SystemBuildStatics.buildSystemCompilerSymbols();
 
       // Client.conf properties,
-      final String network_conf_location = NETWORK_CONF_LOC.toString();
-      final String client_config_file = CLIENT_CONF_LOC.toString();
+      final String network_conf_location = NETWORK_CONF_LOC;
+      final String client_config_file = CLIENT_CONF_LOC;
 
       // PENDING: Give option to load from URL?
       client_conf_p = new Properties();
@@ -142,8 +142,8 @@ public class TestClientFixture {
         net_if = NetworkInterface.getByName(net_interface_name);
         if (net_if == null) {
           String err_msg = MessageFormat.format(
-              "The 'net_interface' property in client.conf does not match a " +
-              "network interface on this machine. net_interface = '{0}'",
+              "The ''net_interface'' property in client.conf does not match a " +
+              "network interface on this machine. net_interface = ''{0}''",
               net_interface_name);
           System.out.println("ERROR: " + err_msg);
           throw new RuntimeException(err_msg);
@@ -197,6 +197,9 @@ public class TestClientFixture {
 
   /**
    * Creates a ProcessClientService.
+   * 
+   * @return 
+   * @throws java.io.IOException
    */
   public ProcessClientService createProcessClientService() throws IOException{
 

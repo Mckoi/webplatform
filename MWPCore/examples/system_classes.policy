@@ -50,6 +50,7 @@ packages {
   "java.nio.channels.spi",
   "java.nio.charset",
   "java.nio.charset.spi",
+  "java.nio.file",
   "java.security",
   "java.security.acl",
   "java.security.cert",
