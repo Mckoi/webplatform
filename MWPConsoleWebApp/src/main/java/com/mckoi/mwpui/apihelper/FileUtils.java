@@ -47,6 +47,10 @@ public class FileUtils {
    * <p>
    * Assumes the given FileName repository id is the same as the given
    * repository id.
+   * 
+   * @param fs
+   * @param name
+   * @return 
    */
   public static List<FileInfo> getFileList(FileRepository fs, FileName name) {
 
@@ -68,6 +72,10 @@ public class FileUtils {
    * <p>
    * Assumes the given FileName repository id is the same as the given
    * repository id.
+   * 
+   * @param fs
+   * @param name
+   * @return 
    */
   public static List<FileInfo> getDirectoryList(
                                             FileRepository fs, FileName name) {
@@ -85,10 +93,13 @@ public class FileUtils {
   /**
    * Converts an array of FileInfo objects into a list of FileInfo objects
    * sorted lexicographically.
+   * 
+   * @param arr
+   * @return 
    */
   public static List<FileInfo> asSortedFileInfoList(FileInfo[] arr) {
 
-    ArrayList<FileInfo> out_list = new ArrayList(arr.length);
+    ArrayList<FileInfo> out_list = new ArrayList<>(arr.length);
     out_list.addAll(Arrays.asList(arr));
     Collections.sort(out_list, new FileInfoNameComparator());
     return out_list;
@@ -98,6 +109,10 @@ public class FileUtils {
   /**
    * Assuming list1 and list2 are sorted lexicographically, produces a sorted
    * list of unique items that are in either list.
+   * 
+   * @param list1
+   * @param list2
+   * @return 
    */
   public static Collection<FileInfo> mergeFileLists(
                       Collection<FileInfo> list1, Collection<FileInfo> list2) {
@@ -113,7 +128,7 @@ public class FileUtils {
       return list1;
     }
 
-    ArrayList<FileInfo> out_list = new ArrayList(128);
+    ArrayList<FileInfo> out_list = new ArrayList<>(128);
 
     FileInfo top1 = null;
     FileInfo top2 = null;
@@ -185,6 +200,10 @@ public class FileUtils {
    * <p>
    * Returns a Collection of FileInfo objects from the source list. The
    * collection arranges the FileInfo objects lexicographically.
+   * 
+   * @param list
+   * @param expr
+   * @return 
    */
   public static Collection<FileInfo> filterByWildCardExpr(
                                final List<FileInfo> list, final String expr) {
@@ -309,11 +328,7 @@ public class FileUtils {
       @Override
       public boolean match(FileInfo file) {
         String item_name = file.getItemName();
-        // Break condition if the prefix is not part of the item name,
-        if (pre_string_sz != 0 && !item_name.startsWith(pre_string)) {
-          return true;
-        }
-        return false;
+        return (pre_string_sz != 0 && !item_name.startsWith(pre_string));
       }
 
     };
@@ -329,12 +344,16 @@ public class FileUtils {
    * type. This has a limit on the size of items that may be sorted, and
    * throws a RuntimeException if it is exceeded. This will not modify the
    * original list or collection.
+   * 
+   * @param collection
+   * @param type
+   * @return 
    */
   public static List<FileInfo> sortFileInfoListBy(
                                Collection<FileInfo> collection, String type) {
 
     // First copy into an array list,
-    ArrayList<FileInfo> out_list = new ArrayList(128);
+    ArrayList<FileInfo> out_list = new ArrayList<>(128);
     int i = 0;
     for (FileInfo fi : collection) {
       out_list.add(fi);
@@ -344,21 +363,22 @@ public class FileUtils {
       }
     }
 
-    Comparator c;
-    if (type.equals("name")) {
-      c = new FileInfoNameComparator();
-    }
-    else if (type.equals("timestamp")) {
-      c = new FileInfoModifyTimeComparator();
-    }
-    else if (type.equals("mime")) {
-      c = new FileInfoMimeComparator();
-    }
-    else if (type.equals("size")) {
-      c = new FileInfoSizeComparator();
-    }
-    else {
-      throw new RuntimeException("Unknown sort type");
+    Comparator<FileInfo> c;
+    switch (type) {
+      case "name":
+        c = new FileInfoNameComparator();
+        break;
+      case "timestamp":
+        c = new FileInfoModifyTimeComparator();
+        break;
+      case "mime":
+        c = new FileInfoMimeComparator();
+        break;
+      case "size":
+        c = new FileInfoSizeComparator();
+        break;
+      default:
+        throw new RuntimeException("Unknown sort type");
     }
 
     // Sort the list and return,
@@ -383,6 +403,10 @@ public class FileUtils {
 
     /**
      * Constructor.
+     * 
+     * @param list
+     * @param match_filter
+     * @param end_filter
      */
     public FilteredFileInfoCollection(List<FileInfo> list,
                      FileInfoFilter match_filter, FileInfoFilter end_filter) {
@@ -494,7 +518,8 @@ public class FileUtils {
   /**
    * Comparator for FileInfo names.
    */
-  public static class FileInfoToStringNameComparator implements Comparator {
+  public static class FileInfoToStringNameComparator
+                                              implements Comparator<Object> {
 
     @Override
     public int compare(Object o1, Object o2) {

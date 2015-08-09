@@ -317,11 +317,18 @@ public class SCommandConsole extends DefaultSCommand
         List<FileInfo> file_list = fs.getFileList(complete_path);
         List<FileInfo> dir_list = fs.getSubDirectoryList(complete_path);
 
-        List<FileInfo> match_file_list =
-                           findMatchingCompleteList(file_list, complete_item);
-        List<FileInfo> match_dir_list =
-                           findMatchingCompleteList(dir_list, complete_item);
+        // Default to empty list if file_list or dir_list is null
+        // (complete_path) is no longer valid.
+        List<FileInfo> match_file_list = Collections.emptyList();
+        List<FileInfo> match_dir_list = Collections.emptyList();
+        if (file_list != null) {
+          match_file_list = findMatchingCompleteList(file_list, complete_item);
+        }
+        if (dir_list != null) {
+          match_dir_list = findMatchingCompleteList(dir_list, complete_item);
+        }
 
+        // Merge the lists together,
         Collection<FileInfo> out =
                  com.mckoi.mwpui.apihelper.FileUtils.mergeFileLists(
                                               match_file_list, match_dir_list);
