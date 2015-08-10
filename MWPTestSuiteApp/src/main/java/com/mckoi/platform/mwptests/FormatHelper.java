@@ -38,12 +38,12 @@ public class FormatHelper {
    */
   public static String jsonErrorOutput(Throwable ex) throws IOException {
     try {
-      StringBuilder ex_out = new StringBuilder();
       Writer so = new StringWriter();
       try (PrintWriter pout = new PrintWriter(so)) {
         ex.printStackTrace(pout);
+        pout.flush();
       }
-      String stack_trace = ex_out.toString();
+      String stack_trace = so.toString();
       JSONStringer json_out = new JSONStringer();
       json_out.object();
       json_out.key("ERROR");

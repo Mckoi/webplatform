@@ -26,6 +26,7 @@
     
       var count_order = 0;
       var counter_failed = false;
+      var expecting_close = false;
 
       var connection = new WebSocket(ws_url);
       connection.binaryType = 'arraybuffer';
@@ -34,7 +35,12 @@
         connection.send('HANDSHAKE');
       };
       connection.onclose = function(e) {
-        ui.pass("WebSocket(1) client-side closed");
+        if (expecting_close) {
+          ui.pass("WebSocket(1) client-side closed");
+        }
+        else {
+          ui.fail("Unexpected close");
+        }
         var close_code = e.code;
         var close_reason = e.reason;
         var close_was_clean = e.wasClean;
@@ -51,6 +57,7 @@
           var arr = new Int8Array(msg);
           ui.pass("Binary Object Received");
           // Close
+          expecting_close = true;
           connection.close(1000, "OK");
         }
         else {
@@ -75,6 +82,9 @@
             }
             connection.send('GET BINARY');
           }
+          else {
+            ui.fail("Unexpected server message: " + msg);
+          }
         }
       };
 
@@ -86,16 +96,23 @@
     
       var count_order = 0;
       var counter_failed = false;
+      var expecting_close = false;
 
       var connection = new WebSocket(ws_url);
       connection.binaryType = 'arraybuffer';
 
       connection.onopen = function() {
         ui.pass("WebSocket(2) Open");
+        expecting_close = true;
         connection.send('REMOTE CLOSE');
       };
       connection.onclose = function(e) {
-        ui.pass("WebSocket(2) Server-side closed");
+        if (expecting_close) {
+          ui.pass("WebSocket(2) Server-side closed");
+        }
+        else {
+          ui.fail("Unexpected close");
+        }
         var close_code = e.code;
         var close_reason = e.reason;
         var close_was_clean = e.wasClean;

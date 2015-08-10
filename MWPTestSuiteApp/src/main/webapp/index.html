@@ -45,6 +45,13 @@ ul.test_result_list li.fail {
   background-color: #dd3333;
   color: white;
 }
+pre.env_output {
+  white-space: pre-wrap;       /* CSS 3 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
 
 </style>
 
@@ -69,6 +76,18 @@ defineTest = function(fun) {
     cur_define_callback = ondefine;
   };
 
+  var fetchJSONObject = function(url, onfetch) {
+    function ljson_load(xmlhttp) {
+      onfetch(JSON.parse(xmlhttp.responseText));
+    }
+    function ljson_error(xmlhttp) {
+      info_box_el.innerHTML =
+                      "<p class='error'>Unable to load: " + url + "</p>";
+    }
+    loadPage(url, ljson_load, ljson_error);
+  };
+
+
   // The onload function,
   var onloadfunction = function() {
     
@@ -77,15 +96,12 @@ defineTest = function(fun) {
     test_output_el = document.querySelector(".test_output");
     
     // Load the data,
-    function ljson_load(xmlhttp) {
-      var test_list = JSON.parse(xmlhttp.responseText);
-      setupForTests(test_list);
-    }
-    function ljson_error(xmlhttp) {
-      info_box_el.innerHTML =
-          "<p class='error'>Unable to load: webtests/list.json</p>";
-    }
-    loadPage("webtests/list.json", ljson_load, ljson_error);
+    fetchJSONObject("webtests/list.json", function(test_list) {
+      fetchJSONObject("Env", function(env_data) {
+        setupForEnv(env_data);
+        setupForTests(test_list);
+      });
+    });
     
   };
 
@@ -178,7 +194,16 @@ defineTest = function(fun) {
 
   var cases_checkbox;
   var cases_li;
+  var run_button;
 
+  function uiDisabled(b) {
+    run_button.disabled = b;
+    for (var cb in cases_checkbox) {
+      cases_checkbox[cb].disabled = b;
+    }
+  }
+
+  // Put the UI into an initial default state,
   function clearTests(test_case_list) {
     
     cases_checkbox = {};
@@ -206,21 +231,7 @@ defineTest = function(fun) {
       cases_li[test_name] = test_output_el.querySelector(".test_" + test_name);
     }
 
-  }
-
-  // Sets up with the list of test cases,
-  function setupForTests(test_case_list) {
-    
-    clearTests(test_case_list);
-    
-    var run_button = test_output_el.querySelector(".start_tests");
-
-    function uiDisabled(b) {
-      run_button.disabled = b;
-      for (var cb in cases_checkbox) {
-        cases_checkbox[cb].disabled = b;
-      }
-    }
+    run_button = test_output_el.querySelector(".start_tests");
 
     // On 'Run Tests' button,
     function startTestAction() {
@@ -247,6 +258,19 @@ defineTest = function(fun) {
 
   }
 
+  // Sets up with the list of test cases,
+  function setupForTests(test_case_list) {
+    clearTests(test_case_list);
+  }
+
+  function setupForEnv(env_data) {
+    var str_out = "";
+    for (var key in env_data) {
+      str_out += (key + ": " + env_data[key] + "\n");
+    }
+    var elout = document.querySelector(".env_output");
+    elout.appendChild(document.createTextNode(str_out));
+  }
 
 })();
 
@@ -262,6 +286,7 @@ defineTest = function(fun) {
   HTML client-server features only, such as continuations, WebSockets,
   Servlets, JSP, etc.
 </p>
+<pre class="env_output"></pre>
 </div>
 <div class="test_output">
 </div>

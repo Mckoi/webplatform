@@ -16,6 +16,7 @@
 package com.mckoi.platform.mwptests.servlets;
 
 import java.io.IOException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
@@ -25,6 +26,7 @@ import org.eclipse.jetty.websocket.WebSocketServlet;
  *
  * @author Tobias Downer
  */
+@WebServlet(name = "WebSocketTest", urlPatterns = {"/WSock"})
 public class WebSocketTest extends WebSocketServlet {
 
   @Override

@@ -7,26 +7,6 @@
 
     <display-name>MWP Test Suite</display-name>
 
-    <servlet>
-        <servlet-name>MainServlet</servlet-name>
-        <servlet-class>com.mckoi.platform.mwptests.servlets.MainServlet</servlet-class>
-        <async-supported>true</async-supported>
-    </servlet>
-    <servlet>
-        <servlet-name>WebSocketTest</servlet-name>
-        <servlet-class>com.mckoi.platform.mwptests.servlets.WebSocketTest</servlet-class>
-        <async-supported>true</async-supported>
-    </servlet>
-
-    <servlet-mapping>
-        <servlet-name>MainServlet</servlet-name>
-        <url-pattern>/Main</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
-        <servlet-name>WebSocketTest</servlet-name>
-        <url-pattern>/WSock</url-pattern>
-    </servlet-mapping>
-
     <session-config>
         <session-timeout>
             30
