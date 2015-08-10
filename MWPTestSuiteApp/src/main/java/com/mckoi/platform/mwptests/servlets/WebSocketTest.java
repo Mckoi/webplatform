@@ -16,8 +16,6 @@
 package com.mckoi.platform.mwptests.servlets;
 
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
@@ -32,7 +30,6 @@ public class WebSocketTest extends WebSocketServlet {
   @Override
   public WebSocket doWebSocketConnect(
                               HttpServletRequest request, String protocol) {
-    System.out.println("connect: " + protocol);
     return new WSEvents();
   }
   
@@ -43,27 +40,37 @@ public class WebSocketTest extends WebSocketServlet {
     @Override
     public void onOpen(Connection connection) {
       this.connection = connection;
-      System.out.println("onOpen " + connection);
     }
 
     @Override
     public void onClose(int closeCode, String message) {
       this.connection = null;
-      System.out.println("onClose " + closeCode + " " + message);
     }
 
     @Override
     public void onMessage(String data) {
-      System.out.println("onMessage " + data);
-      if (data.equals("INIT")) {
-        try {
+      try {
+        if (data.equals("HANDSHAKE")) {
+          connection.sendMessage("HANDSHAKE RET");
+        }
+        else if (data.equals("START COUNTER")) {
+          for (int i = 0; i < 10; ++i) {
+            connection.sendMessage("count=" + Integer.toString(i));
+          }
+          connection.sendMessage("COUNT RET");
+        }
+        else if (data.equals("GET BINARY")) {
           byte[] buf = new byte[100];
-          connection.sendMessage("INIT CONFIRMED!");
           connection.sendMessage(buf, 0, buf.length);
         }
-        catch (IOException ex) {
-          throw new RuntimeException(ex);
+        else if (data.equals("REMOTE CLOSE")) {
+          connection.close();
         }
+        
+        
+      }
+      catch (IOException ex) {
+        throw new RuntimeException(ex);
       }
     }
     

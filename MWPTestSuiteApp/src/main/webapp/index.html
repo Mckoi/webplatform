@@ -29,11 +29,21 @@ ul.test_result_list {
   margin-left: 0px;
   padding-left: 0px;
 }
-ul.test_result_list li.test_result {
+ul.test_result_list li {
   font-family: monospace;
   font-size: 1.15em;
+  padding: 2px 6px 2px 26px;
+  text-indent: -20px;
+}
+ul.test_result_list li.info {
   background-color: #dddccc;
-  padding: 2px 6px 2px 6px;
+}
+ul.test_result_list li.pass {
+  background-color: #66dc66;
+}
+ul.test_result_list li.fail {
+  background-color: #dd3333;
+  color: white;
 }
 
 </style>
@@ -115,6 +125,29 @@ defineTest = function(fun) {
     xmlhttp.send(null);
   }
 
+  function UIContext(element) {
+    if (!(this instanceof UIContext)) throw new Error();
+    this.element = element;
+    this.result_list = element.querySelector('.test_result_list');
+    if (this.result_list === null)
+      throw new Error('DOM format error (test_result_list class element not found)');
+  }
+  var addMessage = function(result_list, msg, classname) {
+    var li_el = document.createElement('li');
+    li_el.className = classname;
+    li_el.appendChild(document.createTextNode(msg));
+    result_list.appendChild(li_el);
+  };
+  UIContext.prototype.info = function(msg) {
+    addMessage(this.result_list, msg, 'info');
+  };
+  UIContext.prototype.fail = function(msg) {
+    addMessage(this.result_list, 'FAIL: ' + msg, 'fail');
+  };
+  UIContext.prototype.pass = function(msg) {
+    addMessage(this.result_list, 'Pass: ' + msg, 'pass');
+  };
+
   var script_cache = {};
 
   // Runs a test, output to 'element'
@@ -123,14 +156,16 @@ defineTest = function(fun) {
 
     var file = "webtests/" + test_case + ".js";
     
+    var ui = new UIContext(element);
+    
     var cval = script_cache[file];
     if (cval) {
-      cval(element, on_complete);
+      cval(ui, on_complete);
     }
     else {
       defineCallback(file, function(cval) {
         script_cache[file] = cval;
-        cval(element, on_complete);
+        cval(ui, on_complete);
       });
       // Load the script,
       var head= document.getElementsByTagName('head')[0];
@@ -141,8 +176,13 @@ defineTest = function(fun) {
     }
   }
 
-  // Sets up with the list of test cases,
-  function setupForTests(test_case_list) {
+  var cases_checkbox;
+  var cases_li;
+
+  function clearTests(test_case_list) {
+    
+    cases_checkbox = {};
+    cases_li = {};
     
     var h = "";
     h = "<p class='run_para'><input type='button' class='start_tests' value='Run Tests'/></p>";
@@ -154,24 +194,28 @@ defineTest = function(fun) {
          "<li class='test_" + test_name + "'><ul class='test_result_list'>" +
          "<li><input class='cb_" + test_name + "' type='checkbox' name='test_select' value='" + test_name + "' checked='checked' />" + test_name + "</li>" +
 //         "<li class='test_result'>Hey, this will have the test results here!</li>" +
-//         "<li class='test_result'>Another line item here that's really long, and we just using it to test to see what happens when it wraps....</li>" +
          "</ul></li>";
     }
     h += "</ul>";
     
     test_output_el.innerHTML = h;
 
-    var cases_checkbox = {};
-    var cases_li = {};
     for (var i = 0; i < test_case_list.length; ++i) {
       var test_name = test_case_list[i];
       cases_checkbox[test_name] = test_output_el.querySelector(".cb_" + test_name);
       cases_li[test_name] = test_output_el.querySelector(".test_" + test_name);
     }
+
+  }
+
+  // Sets up with the list of test cases,
+  function setupForTests(test_case_list) {
+    
+    clearTests(test_case_list);
     
     var run_button = test_output_el.querySelector(".start_tests");
 
-    function uiEnabled(b) {
+    function uiDisabled(b) {
       run_button.disabled = b;
       for (var cb in cases_checkbox) {
         cases_checkbox[cb].disabled = b;
@@ -180,13 +224,14 @@ defineTest = function(fun) {
 
     // On 'Run Tests' button,
     function startTestAction() {
+      clearTests(test_case_list);
       // Disable all the components,
-      uiEnabled(true);
+      uiDisabled(true);
 
       var i = 0;
       var runit = function() {
         if (i >= test_case_list.length) {
-          uiEnabled(false);
+          uiDisabled(false);
         }
         else {
           var test_name = test_case_list[i];

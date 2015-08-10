@@ -1,10 +1,9 @@
 
 (function() {
 
-  defineTest(function(element, oncomplete) {
+  defineTest(function(ui, oncomplete) {
 
-    console.log("OK, we are running the async_servlet test...");
-
+    ui.info("Hi, this is a result from 'asyn_servlet.js'");
 
     // Complete the test,
     oncomplete();
