@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 Tobias Downer.
+-->
+<html>
+<head>
+<title>Mckoi Web Platform Tests</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body {
+  max-width: 800px;
+  font-family: sans-serif;
+}
+p.warning {
+  padding: 6px 6px 6px 6px;
+  color: #ffffff;
+  background: #881111;
+}
+p.error {
+  padding: 6px 6px 6px 6px;
+  color: #ffffff;
+  background-color: #881111;
+}
+ul.test_result_list {
+  list-style: none;
+  margin-left: 0px;
+  padding-left: 0px;
+}
+ul.test_result_list li.test_result {
+  font-family: monospace;
+  font-size: 1.15em;
+  background-color: #dddccc;
+  padding: 2px 6px 2px 6px;
+}
+
+</style>
+
+<script>
+
+var cur_define_callback = null;
+// Make a global function called 'define',
+defineTest = function(fun) {
+  var to_call = cur_define_callback;
+  cur_define_callback = null;
+  to_call(fun);
+};
+
+
+(function() {
+
+  var this_url;
+  var info_box_el;  
+  var test_output_el;
+
+  var defineCallback = function(file, ondefine) {
+    cur_define_callback = ondefine;
+  };
+
+  // The onload function,
+  var onloadfunction = function() {
+    
+    this_url = window.location.href;
+    info_box_el = document.querySelector(".info_box");
+    test_output_el = document.querySelector(".test_output");
+    
+    // Load the data,
+    function ljson_load(xmlhttp) {
+      var test_list = JSON.parse(xmlhttp.responseText);
+      setupForTests(test_list);
+    }
+    function ljson_error(xmlhttp) {
+      info_box_el.innerHTML =
+          "<p class='error'>Unable to load: webtests/list.json</p>";
+    }
+    loadPage("webtests/list.json", ljson_load, ljson_error);
+    
+  };
+
+  // Register onload function,
+  if(window.attachEvent) {
+    window.attachEvent('onload', onloadfunction);
+  }
+  else {
+    if(window.onload) {
+      var curronload = window.onload;
+      var newonload = function() {
+        curronload();
+        onloadfunction();
+      };
+      window.onload = newonload;
+    }
+    else {
+      window.onload = onloadfunction;
+    }
+  }
+
+  // AJAX,
+  function loadPage(url_page, on_load, on_error) {
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onload = function() {
+      if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+        on_load(xmlhttp);
+      }
+      else {
+        on_error(xmlhttp);
+      }
+    };
+    xmlhttp.onerror = function(e) {
+      on_error(xmlhttp);
+    };
+    xmlhttp.open("GET", url_page, true);
+    xmlhttp.send(null);
+  }
+
+  var script_cache = {};
+
+  // Runs a test, output to 'element'
+  function runTest(test_case, element, on_complete) {
+    console.log("Running Test: " + test_case);
+
+    var file = "webtests/" + test_case + ".js";
+    
+    var cval = script_cache[file];
+    if (cval) {
+      cval(element, on_complete);
+    }
+    else {
+      defineCallback(file, function(cval) {
+        script_cache[file] = cval;
+        cval(element, on_complete);
+      });
+      // Load the script,
+      var head= document.getElementsByTagName('head')[0];
+      var script= document.createElement('script');
+      script.type= 'text/javascript';
+      script.src= file;
+      head.appendChild(script);
+    }
+  }
+
+  // Sets up with the list of test cases,
+  function setupForTests(test_case_list) {
+    
+    var h = "";
+    h = "<p class='run_para'><input type='button' class='start_tests' value='Run Tests'/></p>";
+    
+    h += "<ul>";
+    for (var i = 0; i < test_case_list.length; ++i) {
+      var test_name = test_case_list[i];
+      h +=
+         "<li class='test_" + test_name + "'><ul class='test_result_list'>" +
+         "<li><input class='cb_" + test_name + "' type='checkbox' name='test_select' value='" + test_name + "' checked='checked' />" + test_name + "</li>" +
+//         "<li class='test_result'>Hey, this will have the test results here!</li>" +
+//         "<li class='test_result'>Another line item here that's really long, and we just using it to test to see what happens when it wraps....</li>" +
+         "</ul></li>";
+    }
+    h += "</ul>";
+    
+    test_output_el.innerHTML = h;
+
+    var cases_checkbox = {};
+    var cases_li = {};
+    for (var i = 0; i < test_case_list.length; ++i) {
+      var test_name = test_case_list[i];
+      cases_checkbox[test_name] = test_output_el.querySelector(".cb_" + test_name);
+      cases_li[test_name] = test_output_el.querySelector(".test_" + test_name);
+    }
+    
+    var run_button = test_output_el.querySelector(".start_tests");
+
+    function uiEnabled(b) {
+      run_button.disabled = b;
+      for (var cb in cases_checkbox) {
+        cases_checkbox[cb].disabled = b;
+      }
+    }
+
+    // On 'Run Tests' button,
+    function startTestAction() {
+      // Disable all the components,
+      uiEnabled(true);
+
+      var i = 0;
+      var runit = function() {
+        if (i >= test_case_list.length) {
+          uiEnabled(false);
+        }
+        else {
+          var test_name = test_case_list[i];
+          var cli_el = cases_li[test_name];
+          ++i;
+          runTest(test_name, cli_el, runit);
+        }
+      };
+      runit();
+
+    }
+    run_button.onclick = startTestAction;
+
+  }
+
+
+})();
+
+</script>
+
+    
+</head>
+<body>
+
+<h2>Web Application Test Fixture</h2>
+<div class="info_box">
+<p>This page launches the web framework unit tests. These unit tests are for
+  HTML client-server features only, such as continuations, WebSockets,
+  Servlets, JSP, etc.
+</p>
+</div>
+<div class="test_output">
+</div>
+
+</body>
+</html>

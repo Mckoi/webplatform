@@ -16,14 +16,19 @@
 
 package com.mckoi.platform.mwptests.servlets;
 
+import com.mckoi.platform.mwptests.FormatHelper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.json.JSONException;
+import org.json.JSONStringer;
 
 /**
+ * Unit tests for Web application server functionality only, such as
+ * WebSockets, JSP, etc.
  *
  * @author Tobias Downer
  */
@@ -33,10 +38,41 @@ public class MainServlet extends HttpServlet {
                   HttpServletRequest request, HttpServletResponse response)
                                         throws ServletException, IOException {
 
+    // Get the test parameter,
+    String[] test_param = request.getParameterValues("case");
+    if (test_param == null) {
+      response.sendError(
+          HttpServletResponse.SC_BAD_REQUEST, "No 'case' parameter");
+      return;
+    }
+    // If multiple parameters,
+    if (test_param.length > 1) {
+      response.sendError(
+          HttpServletResponse.SC_BAD_REQUEST, "Multiple 'case' parameters");
+      return;
+    }
+
+    // The test case,
+    String test_case = test_param[0];
+
     response.setContentType("text/plain;charset=UTF-8");
 
     try (PrintWriter out = response.getWriter()) {
-      out.println("MainServlet is online!");
+      JSONStringer json_s = new JSONStringer();
+      json_s.object();
+      json_s.key("case").value(test_case);
+      
+      
+      
+      
+      json_s.endObject();
+      out.append(json_s.toString());
+    }
+    catch (JSONException ex) {
+      // Format exception as return message,
+      String json_err = FormatHelper.jsonErrorOutput(ex);
+      response.sendError(
+          HttpServletResponse.SC_INTERNAL_SERVER_ERROR, json_err);
     }
 
   }

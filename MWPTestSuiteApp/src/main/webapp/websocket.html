@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--
+Copyright 2015 Tobias Downer.
+-->
+<html>
+  <head>
+    <title>Web Socket Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+
+(function() {
+
+  var url = window.location.href;
+  var file_part = url.substring(0, url.lastIndexOf("/"));
+  var ws_url = "";
+  if (file_part.startsWith("http://")) {
+    ws_url = "ws://" + file_part.substring(7);
+  }
+  else if (file_part.startsWith("https://")) {
+    ws_url = "wss://" + file_part.substring(8);
+  }
+  ws_url = ws_url + "/WSock";
+
+  console.log("Web Socket: %s", ws_url);
+  var connection = new WebSocket(ws_url);
+  connection.binaryType = 'arraybuffer';
+  connection.onopen = function() {
+    console.log("Connection open!");
+    connection.send('INIT');
+  };
+  connection.onclose = function(e) {
+    var close_code = e.code;
+    var close_reason = e.reason;
+    var close_was_clean = e.wasClean;
+    console.log("Connection closed: %s '%s' %s", close_code, close_reason, close_was_clean);
+  };
+  connection.onmessage = function(e) {
+    var msg = e.data;
+    if (msg instanceof ArrayBuffer) {
+      var arr = new Int8Array(msg);
+      console.log("RECEIVED BINARY: %s", arr);
+    }
+    else {
+      console.log("RECEIVED TEXT: " + msg);
+    }
+    if (msg === "INIT CONFIRMED!") {
+      connection.close(1000, "Ok");
+    }
+  };
+  
+  
+
+})();
+
+</script>
+    
+  </head>
+  <body>
+    <div class="mainbody"></div>
+  </body>
+</html>
