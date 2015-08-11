@@ -11,6 +11,24 @@ body {
   color: #000000;
 }
 
+
+/* START Login Panel Styles */
+div#mwplogin {
+  padding: 4px 12px 12px 12px;
+  font-family: sans-serif;
+}
+div#mwplogin #login_form {
+  padding: 3px 8px 3px 8px;
+}
+div#mwplogin .infield {
+  padding: 1px 0px 1px 0px;
+}
+div#mwplogin .smtfield {
+  padding: 10px 0px 6px 0px;
+}
+/* END Login Panel Styles */
+
+
 /* The main div */
 div.mwpenv_main {
   width: 100%;

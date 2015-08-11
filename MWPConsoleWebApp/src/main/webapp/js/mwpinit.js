@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* global eval, GUIWidgets */
+
 // The mwpenv global object,
 var MWPENV = new function() {
 
@@ -49,52 +51,52 @@ var MWPENV = new function() {
     xmlhttp.open(get_post, source, true);
     xmlhttp.send(post_string);
     xmlhttp.onreadystatechange = function() {
-      if (xmlhttp.readyState == 4) {
-        if (xmlhttp.status == 200) {
+      if (xmlhttp.readyState === 4) {
+        if (xmlhttp.status === 200) {
           callback_success(xmlhttp.responseText);
         }
         else {
           callback_fail(xmlhttp.status);
         }
       }
-    }
-  }
+    };
+  };
 
   this.globalEval = function(src) {
     // For IE
     if (window.execScript) window.execScript(src);
     // Every other browser,
     else eval.call(null, src);
-  }
+  };
 
-  function notify(evt, arg1, arg2, arg3) {
+  var notify = function(evt, arg1, arg2, arg3) {
     // Copy the list locally,
-    var ll = listeners.slice(0);
+    var ll = listeners.slice(0, listeners.length);
     for (var i = 0; i < ll.length; ++i) {
       ll[i](evt, arg1, arg2, arg3);
     }
-  }
+  };
 
   this.notifyScriptPending = function(src_location) {
     pendingscripts[src_location] = "P";
     notify("script_pending", src_location);
-  }
+  };
   this.notifyScriptLoaded = function(src_location, src_code) {
     delete pendingscripts[src_location];
     loadedscripts[src_location] = "L";
     notify("script_loaded", src_location, src_code);
-  }
+  };
   this.notifyScriptFail = function(src_location, status) {
     delete pendingscripts[src_location];
     notify("script_fail", src_location, status);
-  }
+  };
 
   this.isScriptPending = function(src_location) {
     return pendingscripts[src_location] !== undefined;
-  }
+  };
   this.isScriptLoaded = function(src_location) {
     return loadedscripts[src_location] !== undefined;
-  }
+  };
 
   this.addListener = function(listener) {
     var i = listeners.length;
@@ -104,7 +106,7 @@ var MWPENV = new function() {
       }
     }
     listeners.push(listener);
-  }
+  };
   this.removeListener = function(listener) {
     var i = listeners.length;
     while (i--) {
@@ -113,25 +115,25 @@ var MWPENV = new function() {
         return;
       }
     }
-  }
+  };
 
   this.onScriptLoad = function(src_location, action) {
     if (!this.isScriptLoaded(src_location)) {
       var loadlistener = function(evt, arg1) {
-        if (evt == "script_loaded") {
+        if (evt === "script_loaded") {
           if (arg1 === src_location) {
             action();
             MWPENV.removeListener(loadlistener);
           }
         }
-      }
+      };
       MWPENV.addListener(loadlistener);
     }
     // Already loaded,
     else {
       action();
     }
-  }
+  };
 
   this.requireScript = function(scriptsource) {
     if (!MWPENV.isScriptPending(scriptsource) &&
@@ -139,12 +141,12 @@ var MWPENV = new function() {
 
       MWPENV.notifyScriptPending(scriptsource);
 
-      if (MWPENV.useScriptElementForLoad == true) {
+      if (MWPENV.useScriptElementForLoad === true) {
         var load_success2 = function(sourcecode) {
           if (!MWPENV.isScriptLoaded(scriptsource)) {
             MWPENV.notifyScriptLoaded(scriptsource, sourcecode);
           }
-        }
+        };
         var oHead = document.getElementsByTagName('head')[0];
         var oScript = mdom.create('script');
         oScript.type = 'text/javascript';
@@ -158,11 +160,11 @@ var MWPENV = new function() {
         oScript.onload = load_success2;
         // IE 6 & 7
         oScript.onreadystatechange = function() {
-          if (this.readyState == 'loaded' ||
-              this.readyState == 'complete') {
+          if (this.readyState === 'loaded' ||
+              this.readyState === 'complete') {
             load_success2();
           }
-        }
+        };
         oHead.appendChild(oScript);
       }
       else {
@@ -171,14 +173,40 @@ var MWPENV = new function() {
             MWPENV.globalEval(sourcecode);
             MWPENV.notifyScriptLoaded(scriptsource, sourcecode);
           }
-        }
+        };
         var load_fail = function(status) {
           MWPENV.notifyScriptFail(scriptsource, status);
-        }
+        };
         MWPENV.ajaxAsyncLoad("GET", scriptsource, null, load_success, load_fail);
       }
     }
-  }
+  };
+
+  /**
+   * Loads a template file from the source file. A template file can be
+   * installed into a document element.
+   */
+  this.loadTemplate = function(source_file, onload, onerror) {
+    if (!onerror) {
+      onerror = function(status) {
+        console.log("Load Template (%s) failed: %s", source_file, status);
+        throw new Error("Template load error: " + source_file);
+      };
+    }
+    this.ajaxAsyncLoad("GET", source_file, null, onload, onerror);
+  };
+
+  /**
+   * Installs the given template to the given dom element. The template
+   * parameter is an object returned by the 'loadTemplate' function. The
+   * dom_ele is an element in the document hierarchy. Any content in the
+   * dom_ele is deleted by this call.
+   */
+  this.installTemplate = function(template, dom_ele) {
+    if (!dom_ele) dom_ele = document.body;
+    dom_ele.innerHTML = template;
+  };
+
 };
 
 // Utilities
@@ -193,66 +221,7 @@ var MWPUTILS = new function() {
 
   this.toHTMLEntity = function(html_str) {
     return toHTMLEntityInternal(html_str);
-  }
-
-//  /**
-//   * Given a quoted string, removes the surrounding quotes.
-//   */
-//  this.unquote = function(str) {
-//    var match = QUOTED.exec(str);
-//    if (match) {
-//      return match[1];
-//    }
-//    return str;
-//  }
-//
-//  /**
-//   * The HTMLWriter class.
-//   */
-//  this.HTMLWriter = function() {
-//    var html_out = "";
-//    function sanityCheck(str) {
-//      var sz = str.length;
-//      for (var i = 0; i < sz; ++i) {
-//        var ch = str[i];
-//        if (ch === '\\' ||
-//            ch === '/' ||
-//            ch === '\'' ||
-//            ch === '"' ||
-//            ch === '<' ||
-//            ch === '>') {
-//          throw "Illegal character";
-//        }
-//      }
-//      return str;
-//    }
-//    this.print = function(str, style) {
-//      if (style) {
-//        if (str) {
-//          html_out += "<span class='";
-//          html_out += sanityCheck(style);
-//          html_out += "'>";
-//          html_out += toHTMLEntityInternal(str);
-//          html_out += "</span>";
-//        }
-//      }
-//      else {
-//        if (str) html_out += toHTMLEntityInternal(str);
-//      }
-//    }
-//    this.println = function(str, style) {
-//      this.print(str, style);
-//      html_out += "<br />";
-//    }
-//    this.printAsHtml = function(unformatted) {
-//      print(unformatted);
-//    }
-//    this.toDOM = function() {
-//      var div = mdom.create("div.base");
-//      div.innerHTML = html_out;
-//      return div;
-//    }
-//  }
+  };
 
 };
 
@@ -280,11 +249,11 @@ function loadScripts(scripts_array, callback) {
   var loaded = {};
 
   var l = function(evt, arg1) {
-    if (evt == "script_loaded") {
+    if (evt === "script_loaded") {
       loaded[arg1] = "L";
       check();
     }
-  }
+  };
   MWPENV.addListener(l);
   for (var i = 0; i < scripts_array.length; ++i) {
     var scriptsource = scripts_array[i];
@@ -301,11 +270,11 @@ function loadScripts(scripts_array, callback) {
     for (var i = 0; i < scripts_array.length; ++i) {
       if (loaded[scripts_array[i]] === "L") ++count;
     }
-    if (count == scripts_array.length) {
+    if (count === scripts_array.length) {
       MWPENV.removeListener(l);
       callback();
     }
-  }
+  };
 
   check();
 
@@ -452,7 +421,7 @@ function addCSS(css_fname) {
         tblock = current_sel.firstChild;
         tblock.className="mwpconsole_sitem";
         tblock.style.height = "16px";
-        tblock.style.width = "20px"
+        tblock.style.width = "20px";
         tblock.style.left = "7px";
       }
       var outer = getSelectorItem(frame_name);
@@ -460,7 +429,7 @@ function addCSS(css_fname) {
       tblock = outer.firstChild;
       tblock.className="mwpconsole_sitem mwpconsole_sitem_selected";
       tblock.style.height = "18px";
-      tblock.style.width = "23px"
+      tblock.style.width = "23px";
       tblock.style.left = "4px";
       current_sel = outer;
     };
@@ -601,7 +570,7 @@ function addCSS(css_fname) {
     // Scrolls to the end of the page.
     var timeout_uid = null;
     function scrollToElement(ele) {
-      if (timeout_uid != null) {
+      if (timeout_uid !== null) {
         clearTimeout(timeout_uid);
       }
       timeout_uid = setTimeout(function() {
@@ -620,13 +589,13 @@ function addCSS(css_fname) {
     var last_tab_index = -1;
     
     function doTabOperation() {
-      if (last_tab_complete_db == null) return;
+      if (last_tab_complete_db === null) return;
       var sz = last_tab_complete_db.length - 1;
-      if (sz == 0) return;
+      if (sz === 0) return;
       ++last_tab_index;
       if (last_tab_index >= sz) last_tab_index = 0;
       var complete_str = last_tab_complete_db[last_tab_index + 1];
-      if (complete_str.slice(-1) == "/")
+      if (complete_str.slice(-1) === "/")
           complete_str = complete_str.substring(0, complete_str.length - 1);
       var start_str = last_tab_complete_db[0];
       promptinput.value = "" + start_str + complete_str;
@@ -634,8 +603,8 @@ function addCSS(css_fname) {
     
     function doTabCompletion(prompt_text) {
       // Do we need to query?
-      if (last_tab_complete_db == null) {
-        if (last_tab_complete_prompt == null) {
+      if (last_tab_complete_db === null) {
+        if (last_tab_complete_prompt === null) {
           // Set the last tab complete prompt text,
           last_tab_complete_prompt = prompt_text;
           // Send the tab complete call if prompt text is different that the
@@ -706,11 +675,11 @@ function addCSS(css_fname) {
 
     function getSelectedText() {
       var text = "";
-      if (typeof window.getSelection != "undefined") {
+      if (typeof window.getSelection !== "undefined") {
         text = window.getSelection().toString();
       }
-      else if (typeof document.selection != "undefined" &&
-                  document.selection.type == "Text") {
+      else if (typeof document.selection !== "undefined" &&
+                  document.selection.type === "Text") {
         text = document.selection.createRange().text;
       }
       return text;
@@ -808,17 +777,17 @@ function addCSS(css_fname) {
         if (!prompt_focus) return true;
 
         // Only don't reset if tab was pressed,
-        if (e.keyCode != 9) {
+        if (e.keyCode !== 9) {
           last_tab_complete_db = null;
           last_tab_complete_prompt = null;
         }
 
         // If 'enter' pressed,
-        if (e.keyCode == 13) {
+        if (e.keyCode === 13) {
           var command = promptinput.value;
-          if (password == false && trim(command) != "") {
+          if (password === false && trim(command) !== "") {
             var sz = commands_history.length;
-            if (sz == 0 || commands_history[sz - 1] != command) {
+            if (sz === 0 || commands_history[sz - 1] !== command) {
               // Record the input on the prompt line,
               commands_history.push(command);
             }
@@ -846,10 +815,10 @@ function addCSS(css_fname) {
         if (!prompt_focus) return true;
 
         // If 'tab' pressed (tab-completion)
-        if (e.keyCode == 9) {
+        if (e.keyCode === 9) {
           // No modifiers,
-          if (e.shiftKey == false && e.ctrlKey == false &&
-              e.altKey == false) {
+          if (e.shiftKey === false && e.ctrlKey === false &&
+              e.altKey === false) {
 
             // Perform the tab completion,
             doTabCompletion(promptinput.value);
@@ -861,17 +830,17 @@ function addCSS(css_fname) {
         }
 
         // backspace and delete reset tab completion,
-        if (e.keyCode == 8 || e.keyCode == 46 ||
-            e.keyCode == 37 || e.keyCode == 39) {
+        if (e.keyCode === 8 || e.keyCode === 46 ||
+            e.keyCode === 37 || e.keyCode === 39) {
           // Reset tab completion,
           last_tab_complete_db = null;
           last_tab_complete_prompt = null;
         }
         
         // If 'up' pressed,
-        if (e.keyCode == 38) {
+        if (e.keyCode === 38) {
           sz = commands_history.length;
-          if (comm_history_i == -1) comm_history_i = sz;
+          if (comm_history_i === -1) comm_history_i = sz;
           comm_history_i -= 1;
           if (comm_history_i < 0) comm_history_i = 0;
           if (comm_history_i >= sz) comm_history_i = sz - 1;
@@ -884,9 +853,9 @@ function addCSS(css_fname) {
           return false;
         }
         // If 'down' pressed
-        else if (e.keyCode == 40) {
+        else if (e.keyCode === 40) {
           sz = commands_history.length;
-          if (comm_history_i == -1) comm_history_i = sz;
+          if (comm_history_i === -1) comm_history_i = sz;
           comm_history_i += 1;
           if (comm_history_i < 0) comm_history_i = 0;
           if (comm_history_i >= sz) comm_history_i = sz - 1;
@@ -899,12 +868,12 @@ function addCSS(css_fname) {
           return false;
         }
         // If CTRL pressed,
-        else if (e.ctrlKey == true) {
+        else if (e.ctrlKey === true) {
           // CTRL - c
-          if (e.keyCode == 67) {
+          if (e.keyCode === 67) {
             // If there's no selection on the input,
             // NOTE: Doesn't work on IE <= 8
-            if (promptinput.selectionStart == promptinput.selectionEnd) {
+            if (promptinput.selectionStart === promptinput.selectionEnd) {
               // Capture this (sends kill signal),
               if (interact_function) {
                 interact_function("kill");
@@ -944,7 +913,7 @@ function addCSS(css_fname) {
 
     this.addprompt = function(prompt_text) {
       cur_prompt_text = prompt_text;
-      if (prompt_text || prompt_text == '') {
+      if (prompt_text || prompt_text === '') {
         prompttext.innerHTML = "";
         prompttext.appendChild(document.createTextNode(prompt_text));
       }
@@ -986,7 +955,7 @@ function addCSS(css_fname) {
     };
 
     this.newline = function() {
-      if (curline != null && line_empty) {
+      if (curline !== null && line_empty) {
         curline.innerHTML = "<br/>";
       }
       curline = mdom.create("div.base");
@@ -1001,13 +970,13 @@ function addCSS(css_fname) {
     };
 
     this.printdom = function(dom, style) {
-      if (curline == null) {
+      if (curline === null) {
         this.newline();
       }
       if (dom) {
         line_empty = false;
         var node;
-        if (style && style != '') {
+        if (style && style !== '') {
           node = mdom.create( {tag: "span", cl: style});
           node.appendChild(dom);
         }
@@ -1021,7 +990,7 @@ function addCSS(css_fname) {
 
     this.print = function(text, style) {
       var dom;
-      if (text && text != '') {
+      if (text && text !== '') {
         dom = document.createTextNode(text);
       }
       this.printdom(dom, style);
@@ -1034,7 +1003,7 @@ function addCSS(css_fname) {
 
     this.printhtml = function(html, style) {
       var dom;
-      if (html && html != '') {
+      if (html && html !== '') {
         dom = mdom.create("span");
         dom.innerHTML = html;
         processDOMElements(dom);
@@ -1048,9 +1017,9 @@ function addCSS(css_fname) {
     };
 
     this.printException = function(stack_trace) {
-      if (stack_trace && stack_trace != '') {
+      if (stack_trace && stack_trace !== '') {
         var le = stack_trace.indexOf("\n");
-        if (le == -1) {
+        if (le === -1) {
           this.println(stack_trace, "error");
         }
         else {
@@ -1082,9 +1051,9 @@ function addCSS(css_fname) {
           this.printdom(dom);
 
           // Give some logic to the button,
-          expand_button.setAction(function() {
+          expand_button.setAction( function() {
             var i = expand_button.rotateVisibleWidget();
-            body_dom.style.display = ((i == 1) ? "block" : "none");
+            body_dom.style.display = ((i === 1) ? "block" : "none");
             scrollToElement(dom);
           });
           
@@ -1150,7 +1119,7 @@ function addCSS(css_fname) {
     };
 
     this.printpromptline = function(text) {
-      if (password == true) {
+      if (password === true) {
         this.println(cur_prompt_text);
       }
       else {
@@ -1160,7 +1129,7 @@ function addCSS(css_fname) {
 
     // Sets prompt into password mode (repeats chars as '*')
     this.setpromptpassword = function(status) {
-      if (status == true) {
+      if (status === true) {
         promptinput.setAttribute("type", "password");
         password = true;
       }
@@ -1173,7 +1142,7 @@ function addCSS(css_fname) {
     // Receives tab completion information from the process,
     this.doInteractReply = function(msg) {
 //      console.log("Received interact reply: " + msg);
-      if (msg.slice(0, 13) == "*tabcomplete ") {
+      if (msg.slice(0, 13) === "*tabcomplete ") {
         // Evan the JSON,
         last_tab_complete_db = eval(msg.substring(13));
         last_tab_index = -1;
@@ -1213,7 +1182,7 @@ function addCSS(css_fname) {
 
                 // Return false indicating link action not performed,
                 return false;
-              }
+              };
 
               active_a_els.push(child);
             }
@@ -1255,14 +1224,10 @@ function addCSS(css_fname) {
     for (var param in params) {
       var pval = params[param];
       // Sanity checks,
-      if (param.indexOf('=') != -1 || param.indexOf('\n') != -1) {
+      if (param.indexOf('=') !== -1 || param.indexOf('\n') !== -1) {
         throw "Invalid character in associative array key";
       }
       pv = pv + param + "=" + pval.length + "|" + pval;
-//      if (pv != "") {
-//        pv = pv + "&";
-//      }
-//      pv = pv + encodeURIComponent(param) + "=" + encodeURIComponent(pval);
     }
     return pv;
   }
@@ -1274,15 +1239,15 @@ function addCSS(css_fname) {
     xmlhttp.open("POST", uri, true);
     xmlhttp.setRequestHeader("Content-type", "text/plain");// "application/x-www-form-urlencoded");
     xmlhttp.onreadystatechange = function() {
-      if (xmlhttp.readyState == 4) {
-        if (xmlhttp.status == 200) {
+      if (xmlhttp.readyState === 4) {
+        if (xmlhttp.status === 200) {
           callback_success(xmlhttp.responseText);
         }
         else {
           callback_fail(xmlhttp.status);
         }
       }
-    }
+    };
     xmlhttp.send(post_ob);
   }
 
@@ -1292,7 +1257,7 @@ function addCSS(css_fname) {
     var delim = 0;
     while (true) {
       var ndelim = str.indexOf('\n', delim);
-      if (ndelim == -1) {
+      if (ndelim === -1) {
         out.push(str.substring(delim));
         return out;
       }
@@ -1335,7 +1300,7 @@ function addCSS(css_fname) {
           sendMap(panel_group, frame_name, process_id_str,
                   {"c":msg_arr[p - 1]}, send_pos);
         }
-      }
+      };
       send_pos();
     };
 
@@ -1557,7 +1522,7 @@ function addCSS(css_fname) {
       var block_end = p + block_sz;
 
       // Dispatch the packet to the pane,
-      if (block_name.charAt(0) == 'F') {
+      if (block_name.charAt(0) === 'F') {
         var frame_name = block_name.substring(1);
         processTerminalBlock(panel_group, process_id_str,
                              frame_name, cmd.substring(p, block_end));
@@ -1581,7 +1546,7 @@ function addCSS(css_fname) {
         function(success_text) {
           var console_pane = panel_group.getPane("0");
           var lines = explodeLines(success_text);
-          if (lines[0]=="OK") {
+          if (lines[0] === "OK") {
             var new_session_state = lines[1];
             var pdelim = lines[0].length + 1 + lines[1].length + 1;
             processConsoleCommands(panel_group, process_id_str,
@@ -1589,7 +1554,7 @@ function addCSS(css_fname) {
             // Recurse AJAX,
             doConsoleUpdateLoop(panel_group, process_id_str, new_session_state);
           }
-          else if (lines[0]=="FAIL:Exception") {
+          else if (lines[0] === "FAIL:Exception") {
             console_pane.println("Server communication exception", "error");
             printException(console_pane, lines);
             setTimeout(function() {
@@ -1631,7 +1596,7 @@ function addCSS(css_fname) {
       function(success_text) {
         var console_pane = panel_group.getPane("0");
         var lines = explodeLines(success_text);
-        if (lines[0]=="OK") {
+        if (lines[0] === "OK") {
           // Display any immediate response,
           var pdelim = lines[0].length + 1;
 //          var pane = panel_group.getPane(frame);
@@ -1641,7 +1606,7 @@ function addCSS(css_fname) {
             ok_action(result_txt);
           }
         }
-        else if (lines[0]=="FAIL:Exception") {
+        else if (lines[0] === "FAIL:Exception") {
           console_pane.println(
                         "(" + frame + ") Exception on command", "error");
           printException(console_pane, lines);
@@ -1718,13 +1683,13 @@ function addCSS(css_fname) {
     var action_function = function(command) {
       // Send the command to the server,
       sendCommand(panel_group, "0", process_id_str, command);
-    }
+    };
     var close_function = function() {
       panel_group.removePane("0");
-    }
+    };
     var interact_function = function(feature) {
       sendInteractSignal(panel_group, "0", process_id_str, feature);
-    }
+    };
     // Handle terminal commands,
     pane.init(action_function, close_function, interact_function);
 
@@ -1739,102 +1704,109 @@ function addCSS(css_fname) {
 
   // --
 
-  var error_div;
-  var form;
-  var child_window;
-
-  function tryLogin(user, pass) {
-    // Use AJAX POST to authenticate the user,
-    doAJAXPost(
-        "Auth",
-        {"user":user,
-          "pass":pass,
-          "action":"main"},
-        // Success message,
-        function(success_text) {
-          disableForm(form, false);
-          var lines = explodeLines(success_text);
-          // If authorization failed,
-          if (lines[0] == "FAIL:AUTH") {
-            error_div.innerHTML =
-              "Authorization failed. " +
-              "Make sure you entered the correct username and password.<br/>";
-          }
-          else if (lines[0] == "OK") {
-            var process_id_str = lines[1];
-            var session_state = lines[2];
-            startConsole(process_id_str, session_state);
-          }
-        },
-        // Fail message,
-        function(fail_code) {
-          disableForm(form, false);
-          error_div.innerHTML =
-              "Server error: " + fail_code + "<br/>";
-        }
-    );
-  }
-
-
-  function disableForm(form, status) {
-    if (form) {
-      form.user.disabled = status;
-      form.pass.disabled = status;
-      form.btn.disabled = status;
-    }
-  }
-
   function loginFunction() {
+
+    var error_div;
+    var form;
+    var child_window;
+
+    function tryLogin(user, pass) {
+      // Use AJAX POST to authenticate the user,
+      doAJAXPost(
+          "Auth",
+          {"user":user,
+            "pass":pass,
+            "action":"main"},
+          // Success message,
+          function(success_text) {
+            disableForm(form, false);
+            var lines = explodeLines(success_text);
+            // If authorization failed,
+            if (lines[0] === "FAIL:AUTH") {
+              error_div.innerHTML =
+                "Authorization failed. " +
+                "Make sure you entered the correct username and password.<br/>";
+            }
+            else if (lines[0] === "OK") {
+              var process_id_str = lines[1];
+              var session_state = lines[2];
+              startConsole(process_id_str, session_state);
+            }
+          },
+          // Fail message,
+          function(fail_code) {
+            disableForm(form, false);
+            error_div.innerHTML =
+                "Server error: " + fail_code + "<br/>";
+          }
+      );
+    }
+
+    function disableForm(form, status) {
+      if (form) {
+        form.user.disabled = status;
+        form.pass.disabled = status;
+        form.btn.disabled = status;
+      }
+    }
+
+//    // Display the login div,
+//    document.getElementById("mwplogin").style.display = "block";
+
+    // Load the login template,
+    MWPENV.loadTemplate('templates/login.html', function(template) {
+      // Install it,
+      MWPENV.installTemplate(template, document.body);
+      // Set it up,
+      
+      form = document.getElementById("login_form");
+      error_div = document.getElementById("error_report");
+
+      // The popup link id,
+      var link_popup_a = document.getElementById("link_popup_a");
+
+      // If this is a popup window then remove the link to make a popup,
+      if (opener) {
+        link_popup_a.style.display = "none";
+      }
+
+      form.onsubmit = function(e) {
+
+        error_div.innerHTML = "";
+        // Disable the form inputs,
+        disableForm(form, true);
+
+        tryLogin(form.user.value, form.pass.value, true);
+
+        // Prevent the default action,
+        return false;
+      };
+
+      link_popup_a.onclick = function(e) {
+        // Open popup,
+        child_window = window.open(
+            "mwp.html", "Mckoi Web Platform",
+            "height=700,width=1000,left=10,right=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=no");
+        // Remove the link to make the popup,
+
+        // Make a new page with a link that focuses the window when clicked,
+        document.body.innerHTML = "<a href='#' id='link_popup_b'>Click here to go to the Mckoi Web Platform window</a>";
+        document.getElementById("link_popup_b").onclick = function(e) {
+          child_window.focus();
+          return false;
+        };
+        return false;
+      };
+      
+    });
 
 //    // If you want to login automatically then you can use the following
 //    // code,
 //    tryLogin("admin", "zxc");
 //    return;
 
-    // Display the login div,
-    document.getElementById("mwplogin").style.display = "block";
-
-    form = document.getElementById("login_form");
-    error_div = document.getElementById("error_report");
-
-    // The popup link id,
-    var link_popup_a = document.getElementById("link_popup_a");
-
-    // If this is a popup window then remove the link to make a popup,
-    if (opener) {
-      link_popup_a.style.display = "none";
-    }
-
-    form.onsubmit = function(e) {
-
-      error_div.innerHTML = "";
-      // Disable the form inputs,
-      disableForm(form, true);
-
-      tryLogin(form.user.value, form.pass.value, true);
-
-      // Prevent the default action,
-      return false;
-    }
-
-    link_popup_a.onclick = function(e) {
-      // Open popup,
-      child_window = window.open(
-          "mwp.html", "Mckoi Web Platform",
-          "height=800,width=900,left=10,right=10,resizable=yes,scrollbars=yes,toolbar=yes,menubar=no,location=no,directories=no,status=no");
-      // Remove the link to make the popup,
-      
-      // Make a new page with a link that focuses the window when clicked,
-      document.body.innerHTML = "<a href='#' id='link_popup_b'>Click here to go to the Mckoi Web Platform window</a>";
-      document.getElementById("link_popup_b").onclick = function(e) {
-        child_window.focus();
-        return false;
-      };
-      return false;
-    }
-
   }
 
   window.onload = loginFunction;
 
-})()
+})();
