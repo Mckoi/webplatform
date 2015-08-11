@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+'use strict';
+
 // Browser DOM extentions for the Mckoi UI.
 // This wraps the native DOM system and provides some additional convenience
 // functions for constructing DOM trees.
@@ -46,7 +48,7 @@
   function mdom_createElement(tag) {
     var d = tag.indexOf(".");
     var dom;
-    if (d == -1) {
+    if (d === -1) {
       dom = document.createElement(tag);
     }
     else {
@@ -72,7 +74,7 @@
       }
     }
     return null;
-  }
+  };
 
   //
   // Traverses the children of a DOM tree and finds and returns all the
@@ -80,7 +82,7 @@
   //
   var findAllClassName = function(dom, cl_name) {
     var found;
-    if (dom.className == cl_name) {
+    if (dom.className === cl_name) {
       found = [ dom ];
     }
     else {
@@ -100,12 +102,12 @@
       }
     }
     return found;
-  }
+  };
 
 
 
   var MDom = function() {
-  }
+  };
   
   MDom.isArray = isArray;
   MDom.findId = findId;
@@ -147,7 +149,7 @@
     }
     
     throw "MDom: Invalid create";
-  }
+  };
 
 
 
@@ -164,7 +166,7 @@
       }
     }
     return dom;
-  }
+  };
 
 
   // Expose the 'MDom' function globally,

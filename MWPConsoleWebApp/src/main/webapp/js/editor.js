@@ -15,6 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* global GUIWidgets, MWPENV */
+
+'use strict';
+
 // Client side Editor UI
 
 // Load point;
@@ -129,8 +133,8 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
   // --- Init ---
 
   // Set any CSS,
-  addCSS("css/codemirror.css");
-  addCSS("css/cm2theme/dusk.css");  // This is the default theme,
+  MWPENV.addCSS("css/codemirror.css");
+  MWPENV.addCSS("css/cm2theme/dusk.css");  // This is the default theme,
 
   var main_scripts = [
     CODEMIRROR_LOC + "/lib/codemirror.js",
@@ -146,8 +150,8 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
 
   // Nest libs behind main_scripts. This ensures we load codemirror before
   // the dependent libraries.
-  loadScripts(main_scripts, function() {
-    loadScripts(support_scripts, function() {
+  MWPENV.loadScripts(main_scripts, function() {
+    MWPENV.loadScripts(support_scripts, function() {
       // Invoke the editor after the libraries are loaded,
       var editor = new Main();
       editor.run();
@@ -195,15 +199,15 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
 
     var lockComm = function() {
       ++lock_comm;
-    }
+    };
     
     var unlockComm = function() {
       --lock_comm;
-    }
+    };
     
     var commLocked = function() {
       return (lock_comm > 0)
-    }
+    };
 
     // The list of all syntax types,
     var getTextTypesList = function() {
@@ -212,12 +216,12 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         out.push(type);
       }
       return out;
-    }
+    };
 
     var setTitleText = function(title) {
       title_label.setText(title);
       title_text = title;
-    }
+    };
 
     var setMimeType = function(mime) {
       // The default,
@@ -227,7 +231,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         var map = TYPE_MAP[key];
         if (map) {
           var mime_types = map["mime"];
-          if (arrayContains(mime_types, mime)) {
+          if (MWPENV.arrayContains(mime_types, mime)) {
             m_key = key;
             m_map = map;
             break;
@@ -237,7 +241,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       // Ok, 'm_map' is the object,
       mime_pulldown.select(m_key);
       mime_map = m_map;
-    }
+    };
 
     // Modal dialog that enables when closed,
     var modalDialog = function(dinf) {
@@ -247,9 +251,9 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       dialog.close = function() {
         original_close();
         setEnabled(true);
-      }
+      };
       return dialog;
-    }
+    };
 
     // Disables/Enables controls
     var setEnabled = function(enabled) {
@@ -259,17 +263,17 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       else {
         code_mirror.setOption("readOnly", "nocursor");
       }
-    }
+    };
 
     // Set the theme,
     var setTheme = function(theme_name) {
-      if (theme_name != current_theme) {
+      if (theme_name !== current_theme) {
         // Add the CSS with the theme name,
-        addCSS("css/cm2theme/" + theme_name + ".css");
+        MWPENV.addCSS("css/cm2theme/" + theme_name + ".css");
         code_mirror.setOption("theme", theme_name);
         current_theme = theme_name;
       }
-    }
+    };
 
     // On text change event,
     var contentChanged = function() {
@@ -277,7 +281,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         needs_save = true;
         title_label.setBold(true);
       }
-    }
+    };
 
     // Resets the document 'needs save' indicator.
     var resetNeedsSave = function() {
@@ -285,7 +289,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         needs_save = false;
         title_label.setBold(false);
       }
-    }
+    };
 
     var close_action = function(widget, div) {
       // Return if communication locked,
@@ -304,10 +308,10 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
           confirm_label:"Exit"
         };
         var dialog = modalDialog(dinf);
-        dialog.confirm_action = function() { comm.send("close"); }
+        dialog.confirm_action = function() { comm.send("close"); };
         dialog.show();
       }
-    }
+    };
 
     var save_action = function(widget, div) {
       // Return if communication locked,
@@ -344,7 +348,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         unlockComm();
       };
       comm.sendSet(msgs, complete_action);
-    }
+    };
 
     var about_action = function(widget, div) {
       setEnabled(false);
@@ -362,7 +366,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       var dialog = modalDialog(dinf);
       
       dialog.show();
-    }
+    };
 
 //    var help_action = function(widget, div) {
 //      // PENDING
@@ -372,9 +376,9 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       // Mime type of the editor,
       var mime_type = code_mirror.getOption("mode");
       // This commenting only works for C like and javascript,
-      if ( !( mime_type == TYPE_MAP.java.mime[0] ||
-              mime_type == TYPE_MAP.jscript.mime[0] ||
-              mime_type == TYPE_MAP.json.mime[0] ) ) {
+      if ( !( mime_type === TYPE_MAP.java.mime[0] ||
+              mime_type === TYPE_MAP.jscript.mime[0] ||
+              mime_type === TYPE_MAP.json.mime[0] ) ) {
         return;
       }
 
@@ -383,7 +387,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
 
       var type;
 
-      var end_line = ((to_pos.line != from_pos.line && to_pos.ch == 0) ?
+      var end_line = ((to_pos.line !== from_pos.line && to_pos.ch === 0) ?
                       to_pos.line : to_pos.line + 1);
       var i_pos = {};
       for (var line = from_pos.line; line < end_line; ++line) {
@@ -392,25 +396,25 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         var line_str;
         if (!type) {
           line_str = code_mirror.getLine(line);
-          if (line_str.slice(0, 2) != "//") {
+          if (line_str.slice(0, 2) !== "//") {
             type = "com";
           }
           else {
             type = "unc";
           }
         }
-        if (type == "com") {
+        if (type === "com") {
           code_mirror.replaceRange("//", i_pos);
         }
         else {
           line_str = code_mirror.getLine(line);
-          if (line_str.slice(0, 2) == "//") {
+          if (line_str.slice(0, 2) === "//") {
             var rm_pos = { line: line, ch: 2 };
             code_mirror.replaceRange("", i_pos, rm_pos);
           }
         }
       }
-    }
+    };
 
     // called when file type is changed,
     var change_file_type = function(item_string) {
@@ -425,7 +429,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         // Load each lib in the order they are presented,
         var f = function() {
           if (ri < requires.length) {
-            loadScript(requires[ri], function() {
+            MWPENV.loadScript(requires[ri], function() {
               ++ri;
               f();
             });
@@ -436,17 +440,13 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
           }
         };
         f();
-//        loadScripts(ob.requires, function() {
-//          // After loaded,
-//          code_mirror.setOption("mode", base_mime);
-//        });
       }
-    }
+    };
 
     var focusTextArea = function() {
       code_mirror.refresh();
       code_mirror.focus();
-    }
+    };
 
     // Run function,
     var setup = function() {
@@ -528,11 +528,11 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
 
       var default_theme_action = function() {
         setTheme(default_theme);
-      }
+      };
       var change_theme_action = function(widget) {
         var theme_name = widget.getLabelText()[0].toLowerCase();
         setTheme(theme_name);
-      }
+      };
 
       var theme_menu = GUIWidgets.createMenu();
       theme_menu.addItem(null, [ "Default" ], default_theme_action);
@@ -620,14 +620,14 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       // Override the pane focus behaviour,
       pane.doFocus = function() {
         focusTextArea();
-      }
+      };
 
       // Set the value of code_mirror to the file content,
       code_mirror.setValue("");
 
       focusTextArea();
 
-    }
+    };
 
     // Handles reply/event from server,
     var processReceive = function(command) {
@@ -638,16 +638,16 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         setup();
       }
       // Set the default theme,
-      else if (code == "th-") {
+      else if (code === "th-") {
         default_theme = command.substring(3);
         setTheme(default_theme);
       }
       // Disable the component (user can not do anything),
-      else if (code == "dis") {
+      else if (code === "dis") {
         setEnabled(false);
       }
       // Enables the component,
-      else if (code == "ena") {
+      else if (code === "ena") {
         setEnabled(true);
       }
       // Clear the content,
@@ -667,7 +667,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
         setMimeType(command.substring(3));
       }
       // Load complete,
-      else if (code == "lc-") {
+      else if (code === "lc-") {
         resetNeedsSave();
         code_mirror.clearHistory();
       }
@@ -675,7 +675,7 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       else if (code === "cs-") {
         resetNeedsSave();
       }
-    }
+    };
 
     // Send init to server, then wait for instructions on how to proceed,
     this.run = function() {
@@ -683,8 +683,8 @@ var MckoiEditor = function(pane, comm, frame_name, process_id_str, args_str) {
       comm.onreceive = processReceive;
       // Send the init command to the frame,
       comm.send("init");
-    }
+    };
 
   }
 
-}
+};

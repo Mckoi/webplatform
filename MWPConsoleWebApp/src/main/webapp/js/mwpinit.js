@@ -15,37 +15,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+'use strict';
+
 /* global eval, GUIWidgets */
 
 // The mwpenv global object,
-var MWPENV = new function() {
+this.MWPENV = {};
 
-  this.applications = {};
-  this.terminal_apps = {};
-  this.css_files = {};
-
-  // Set to true for testing only. If true, we dynamically insert a
-  // <script> element to load scripts. This doesn't work on all
-  // browsers. If false, an HTTTP request and 'eval' is used, which
-  // works on all browsers.
-  this.useScriptElementForLoad = true;
-//  var addTimestampForLoad = true;
-//  var useScriptElementForLoad = false;
-  this.addTimestampForLoad = false;
-
-  // This string is appended to all css and js resources loaded dynamically if
-  // 'addTimestampForLoad' is false. If you are having caching problems then
-  // change this version number to see if it fixes things.
-  this.timestampString = "000g";
+(function() {
 
   var pendingscripts = {};
   var loadedscripts = {};
   var listeners = [];
 
-  this.ts_code = new Date().getTime();
+  MWPENV.applications = {};
+  MWPENV.terminal_apps = {};
+  MWPENV.css_files = {};
+
+  // Set to true for testing only. If true, we dynamically insert a
+  // <script> element to load scripts. This doesn't work on all
+  // browsers. If false, an HTTTP request and 'eval' is used, which
+  // works on all browsers.
+  MWPENV.useScriptElementForLoad = true;
+//  var addTimestampForLoad = true;
+//  var useScriptElementForLoad = false;
+  MWPENV.addTimestampForLoad = false;
+
+  // This string is appended to all css and js resources loaded dynamically if
+  // 'addTimestampForLoad' is false. If you are having caching problems then
+  // change this version number to see if it fixes things.
+  MWPENV.timestampString = "000h";
+
+  MWPENV.ts_code = new Date().getTime();
 
   // General utility
-  this.ajaxAsyncLoad = function(get_post, source, post_string,
+  MWPENV.ajaxAsyncLoad = function(get_post, source, post_string,
                                 callback_success, callback_fail) {
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.open(get_post, source, true);
@@ -62,7 +66,7 @@ var MWPENV = new function() {
     };
   };
 
-  this.globalEval = function(src) {
+  MWPENV.globalEval = function(src) {
     // For IE
     if (window.execScript) window.execScript(src);
     // Every other browser,
@@ -77,28 +81,28 @@ var MWPENV = new function() {
     }
   };
 
-  this.notifyScriptPending = function(src_location) {
+  MWPENV.notifyScriptPending = function(src_location) {
     pendingscripts[src_location] = "P";
     notify("script_pending", src_location);
   };
-  this.notifyScriptLoaded = function(src_location, src_code) {
+  MWPENV.notifyScriptLoaded = function(src_location, src_code) {
     delete pendingscripts[src_location];
     loadedscripts[src_location] = "L";
     notify("script_loaded", src_location, src_code);
   };
-  this.notifyScriptFail = function(src_location, status) {
+  MWPENV.notifyScriptFail = function(src_location, status) {
     delete pendingscripts[src_location];
     notify("script_fail", src_location, status);
   };
 
-  this.isScriptPending = function(src_location) {
+  MWPENV.isScriptPending = function(src_location) {
     return pendingscripts[src_location] !== undefined;
   };
-  this.isScriptLoaded = function(src_location) {
+  MWPENV.isScriptLoaded = function(src_location) {
     return loadedscripts[src_location] !== undefined;
   };
 
-  this.addListener = function(listener) {
+  MWPENV.addListener = function(listener) {
     var i = listeners.length;
     while (i--) {
       if (listeners[i] === listener) {
@@ -107,7 +111,7 @@ var MWPENV = new function() {
     }
     listeners.push(listener);
   };
-  this.removeListener = function(listener) {
+  MWPENV.removeListener = function(listener) {
     var i = listeners.length;
     while (i--) {
       if (listeners[i] === listener) {
@@ -117,8 +121,8 @@ var MWPENV = new function() {
     }
   };
 
-  this.onScriptLoad = function(src_location, action) {
-    if (!this.isScriptLoaded(src_location)) {
+  MWPENV.onScriptLoad = function(src_location, action) {
+    if (!MWPENV.isScriptLoaded(src_location)) {
       var loadlistener = function(evt, arg1) {
         if (evt === "script_loaded") {
           if (arg1 === src_location) {
@@ -135,7 +139,7 @@ var MWPENV = new function() {
     }
   };
 
-  this.requireScript = function(scriptsource) {
+  MWPENV.requireScript = function(scriptsource) {
     if (!MWPENV.isScriptPending(scriptsource) &&
         !MWPENV.isScriptLoaded(scriptsource)) {
 
@@ -186,14 +190,14 @@ var MWPENV = new function() {
    * Loads a template file from the source file. A template file can be
    * installed into a document element.
    */
-  this.loadTemplate = function(source_file, onload, onerror) {
+  MWPENV.loadTemplate = function(source_file, onload, onerror) {
     if (!onerror) {
       onerror = function(status) {
         console.log("Load Template (%s) failed: %s", source_file, status);
         throw new Error("Template load error: " + source_file);
       };
     }
-    this.ajaxAsyncLoad("GET", source_file, null, onload, onerror);
+    MWPENV.ajaxAsyncLoad("GET", source_file, null, onload, onerror);
   };
 
   /**
@@ -202,15 +206,85 @@ var MWPENV = new function() {
    * dom_ele is an element in the document hierarchy. Any content in the
    * dom_ele is deleted by this call.
    */
-  this.installTemplate = function(template, dom_ele) {
+  MWPENV.installTemplate = function(template, dom_ele) {
     if (!dom_ele) dom_ele = document.body;
     dom_ele.innerHTML = template;
   };
 
-};
+  // Loads all the scripts dynamically and calls the callback function when
+  // all the scripts are loaded.
+  MWPENV.loadScripts = function(scripts_array, callback) {
+    var loaded = {};
+
+    var l = function(evt, arg1) {
+      if (evt === "script_loaded") {
+        loaded[arg1] = "L";
+        check();
+      }
+    };
+    MWPENV.addListener(l);
+    for (var i = 0; i < scripts_array.length; ++i) {
+      var scriptsource = scripts_array[i];
+      if (!MWPENV.isScriptLoaded(scriptsource)) {
+        MWPENV.requireScript(scriptsource);
+      }
+      else {
+        loaded[scriptsource] = "L";
+      }
+    }
+
+    var check = function() {
+      var count = 0;
+      for (var i = 0; i < scripts_array.length; ++i) {
+        if (loaded[scripts_array[i]] === "L") ++count;
+      }
+      if (count === scripts_array.length) {
+        MWPENV.removeListener(l);
+        callback();
+      }
+    };
+
+    check();
+
+  };
+
+  MWPENV.loadScript = function(script_name, callback) {
+    MWPENV.loadScripts([ script_name ], callback);
+  };
+
+  // Adds a CSS entry to the document head if it hasn't already been added.
+  MWPENV.addCSS = function(css_fname) {
+    if (MWPENV.css_files[css_fname] === undefined) {
+      var headID = document.getElementsByTagName("head")[0];
+      var newCSS = mdom.create("link");
+      newCSS.rel = "stylesheet";
+
+      var css_cache_name = css_fname;
+      if (MWPENV.addTimestampForLoad)
+        css_cache_name = css_cache_name + "?" + MWPENV.ts_code;
+      else
+        css_cache_name = css_cache_name + "?" + MWPENV.timestampString;
+
+      newCSS.href = css_cache_name;
+      headID.appendChild(newCSS);
+      MWPENV.css_files[css_fname] = "L";
+    }
+  };
+
+  // General 'array contains' method,'
+  MWPENV.arrayContains = function(a, obj) {
+    var i = a.length;
+    while (i--) {
+      if (a[i] === obj) return true;
+    }
+    return false;
+  };
+
+})();
 
 // Utilities
-var MWPUTILS = new function() {
+this.MWPUTILS = {};
+(function() {
 
   // Regex for a quoted string
   var QUOTED = /^\"(.*)\"$/;
@@ -219,89 +293,21 @@ var MWPUTILS = new function() {
     return html_str.replace(/&/g, "&amp;").replace(/>/g, "&gt;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
   }
 
-  this.toHTMLEntity = function(html_str) {
+  MWPUTILS.toHTMLEntity = function(html_str) {
     return toHTMLEntityInternal(html_str);
   };
 
-};
+})();
 
 
 
 
 
-// General 'array contains' method,'
-function arrayContains(a, obj) {
-  var i = a.length;
-  while (i--) {
-    if (a[i] === obj) return true;
-  }
-  return false;
-}
 
-// Loads the given script dynamically if it's not already loaded.
-function requireScript(scriptsource) {
-  MWPENV.requireScript(scriptsource);
-}
+//// Loads the given script dynamically if it's not already loaded.
+//this.requireScript = MWPENV.requireScript;
 
-// Loads all the scripts dynamically and calls the callback function when
-// all the scripts are loaded.
-function loadScripts(scripts_array, callback) {
-  var loaded = {};
-
-  var l = function(evt, arg1) {
-    if (evt === "script_loaded") {
-      loaded[arg1] = "L";
-      check();
-    }
-  };
-  MWPENV.addListener(l);
-  for (var i = 0; i < scripts_array.length; ++i) {
-    var scriptsource = scripts_array[i];
-    if (!MWPENV.isScriptLoaded(scriptsource)) {
-      requireScript(scriptsource);
-    }
-    else {
-      loaded[scriptsource] = "L";
-    }
-  }
-
-  var check = function() {
-    var count = 0;
-    for (var i = 0; i < scripts_array.length; ++i) {
-      if (loaded[scripts_array[i]] === "L") ++count;
-    }
-    if (count === scripts_array.length) {
-      MWPENV.removeListener(l);
-      callback();
-    }
-  };
-
-  check();
-
-}
-
-function loadScript(script_name, callback) {
-  loadScripts([ script_name ], callback);
-}
-
-// Adds a CSS entry to the document head if it hasn't already been added.
-function addCSS(css_fname) {
-  if (MWPENV.css_files[css_fname] === undefined) {
-    var headID = document.getElementsByTagName("head")[0];
-    var newCSS = mdom.create("link");
-    newCSS.rel = "stylesheet";
-    
-    var css_cache_name = css_fname;
-    if (MWPENV.addTimestampForLoad)
-      css_cache_name = css_cache_name + "?" + MWPENV.ts_code;
-    else
-      css_cache_name = css_cache_name + "?" + MWPENV.timestampString;
-    
-    newCSS.href = css_cache_name;
-    headID.appendChild(newCSS);
-    MWPENV.css_files[css_fname] = "L";
-  }
-}
+  
 
 
 
@@ -1761,6 +1767,8 @@ function addCSS(css_fname) {
       
       form = document.getElementById("login_form");
       error_div = document.getElementById("error_report");
+
+      form.elements.namedItem("user").focus();
 
       // The popup link id,
       var link_popup_a = document.getElementById("link_popup_a");
