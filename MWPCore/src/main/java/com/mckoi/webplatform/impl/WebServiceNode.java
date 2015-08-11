@@ -41,6 +41,7 @@ import java.util.Timer;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.log.JavaUtilLog;
 
 /**
@@ -233,6 +234,12 @@ public class WebServiceNode {
       }
 
       System.out.println("  Temp Directory = " + local_temp_folder);
+
+      // Set the Jetty version property,
+      String property = System.getProperty("jetty.version");
+      if (property == null) {
+        System.setProperty("jetty.version", Server.getVersion());
+      }
 
     }
     catch (Exception e) {
