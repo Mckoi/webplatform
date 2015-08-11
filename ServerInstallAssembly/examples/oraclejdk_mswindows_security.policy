@@ -172,6 +172,7 @@ grant USER {
   permission java.util.PropertyPermission "java.vendor", "read";
   permission java.util.PropertyPermission "java.vendor.url", "read";
   permission java.util.PropertyPermission "java.class.version", "read";
+  permission java.util.PropertyPermission "jetty.version", "read";
   permission java.util.PropertyPermission "os.name", "read";
   permission java.util.PropertyPermission "os.version", "read";
   permission java.util.PropertyPermission "os.arch", "read";

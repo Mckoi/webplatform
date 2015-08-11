@@ -75,6 +75,8 @@ packages {
   "javax.activity",
   "javax.annotation",
   "javax.annotation.processing",
+  "javax.annotation.security",
+  "javax.annotation.sql",
   "javax.crypto",
   "javax.crypto.interfaces",
   "javax.crypto.spec",
@@ -82,6 +84,11 @@ packages {
   "javax.lang.model.element",
   "javax.lang.model.type",
   "javax.lang.model.util",
+  "javax.mail",
+  "javax.mail.event",
+  "javax.mail.internet",
+  "javax.mail.search",
+  "javax.mail.util",
   "javax.naming",
   "javax.naming.directory",
   "javax.naming.event",
@@ -94,6 +101,10 @@ packages {
   "javax.security.auth.callback",
   "javax.security.auth.kerberos",
   "javax.security.auth.login",
+  "javax.security.auth.message",
+  "javax.security.auth.message.callback",
+  "javax.security.auth.message.config",
+  "javax.security.auth.message.module",
   "javax.security.auth.spi",
   "javax.security.auth.x500",
   "javax.security.cert",
@@ -221,6 +232,8 @@ packages {
 
   // Jetty Continuations
   "org.eclipse.jetty.continuation",
+  // Jetty WebSockets
+  "org.eclipse.jetty.websocket",
 
   // ---- Review these: should these be 'system' packages? ----
 
@@ -238,6 +251,41 @@ packages {
   //   This is repackaging/refactoring of some Apache Ant file tools,
 
   "com.mckoi.webplatform.anttools",
+
+  // Again, technically it's bad form to include these.
+
+  "org.json",
+  "junit.extensions",
+  "junit.framework",
+  "junit.runner",
+  "junit.textui",
+  "org.junit",
+  "org.junit.experimental",
+  "org.junit.experimental.categories",
+  "org.junit.experimental.max",
+  "org.junit.experimental.results",
+  "org.junit.experimental.runners",
+  "org.junit.experimental.theories",
+  "org.junit.experimental.theories.internal",
+  "org.junit.experimental.theories.suppliers",
+  "org.junit.internal",
+  "org.junit.internal.builders",
+  "org.junit.internal.matchers",
+  "org.junit.internal.requests",
+  "org.junit.internal.runners",
+  "org.junit.internal.runners.model",
+  "org.junit.internal.runners.rules",
+  "org.junit.internal.runners.statements",
+  "org.junit.matchers",
+  "org.junit.rules",
+  "org.junit.runner",
+  "org.junit.runner.manipulation",
+  "org.junit.runner.notification",
+  "org.junit.runners",
+  "org.junit.runners.model",
+  "org.hamcrest",
+  "org.hamcrest.core",
+  "org.hamcrest.internal",
 
 }
 
