@@ -98,20 +98,33 @@
 
     <!-- Jetty dependencies -->
 
+<!--    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>9.2.13.v20150730</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <version>9.2.13.v20150730</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-continuation</artifactId>
+      <version>9.2.13.v20150730</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-websocket</artifactId>
+      <version>8.1.17.v20150415</version>
+    </dependency>-->
+
+
+
     <dependency>
       <groupId>org.eclipse.jetty.aggregate</groupId>
       <artifactId>jetty-all-server</artifactId>
       <version>8.1.17.v20150415</version>
-<!--      <version>8.1.7.v20120910</version> -->
-<!--      <version>7.6.7.v20120910</version> -->
-<!--      <version>7.6.1.v20120215</version> -->
-<!--      <version>7.4.5.v20110725</version> -->
-
-      <!-- Exclude the eclipse orbit javax.servlet api
-            (we use the official 2.1 one) -->
-      <exclusions>
-      </exclusions>
-
     </dependency>
 
     <!-- For Servlet 3 annotations processing -->

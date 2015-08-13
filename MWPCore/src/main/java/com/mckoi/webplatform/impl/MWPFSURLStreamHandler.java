@@ -79,23 +79,30 @@ public class MWPFSURLStreamHandler extends URLStreamHandler {
     }
     String repository_id = fname.substring(1, delim);
 
-    // Check the thread has the privs to access this file system,
-    PlatformContextImpl ctx = new PlatformContextImpl();
-    if (!ctx.isRepositoryAccessible(repository_id)) {
-      throw new SecurityException(
-                             "Not accessible repository id: " + repository_id);
+    try {
+      // Check the thread has the privs to access this file system,
+      PlatformContextImpl ctx = new PlatformContextImpl();
+      if (!ctx.isRepositoryAccessible(repository_id)) {
+        throw new SecurityException(
+                               "Not accessible repository id: " + repository_id);
+      }
+
+      // Fetch the file repository,
+      FileRepository file_system = ctx.getMWPFSURLFileRepository(repository_id);
+
+//      // DEBUGGIN,
+//      if (repository_id.startsWith("$") &&
+//          (fname.endsWith(".jar") || fname.endsWith(".zip")) ) {
+//        new Error(u.toString()).printStackTrace();
+//      }
+
+      return new FileRepoURLConnection(u, file_system);
+
     }
-
-    // Fetch the file repository,
-    FileRepository file_system = ctx.getMWPFSURLFileRepository(repository_id);
-
-//    // DEBUGGIN,
-//    if (repository_id.startsWith("$") &&
-//        (fname.endsWith(".jar") || fname.endsWith(".zip")) ) {
-//      new Error(u.toString()).printStackTrace();
-//    }
-
-    return new FileRepoURLConnection(u, file_system);
+    catch (SecurityException e) {
+      e.printStackTrace(System.err);
+      throw e;
+    }
 
   }
 

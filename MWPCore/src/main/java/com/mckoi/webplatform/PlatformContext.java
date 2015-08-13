@@ -39,21 +39,29 @@ public interface PlatformContext {
 
   /**
    * Returns the current version of the platform context.
+   * 
+   * @return 
    */
   public Version getVersion();
 
   /**
    * Returns the account name of the current thread context.
+   * 
+   * @return 
    */
   public String getAccountName();
 
   /**
    * Returns the name of this web application context.
+   * 
+   * @return 
    */
   public String getWebApplicationName();
 
   /**
    * Returns a LogControl object for this web application context.
+   * 
+   * @return 
    */
   public LogControl getLogControl();
 
@@ -61,6 +69,8 @@ public interface PlatformContext {
    * Returns a FileRepository object used to access the file system of the
    * account of this context. This is the same as
    * 'getFileRepository(getAccountName())'.
+   * 
+   * @return 
    */
   public FileRepository getFileRepository();
 
@@ -68,6 +78,9 @@ public interface PlatformContext {
    * Returns the FileRepository with the given repository id, or null if the
    * repository is not accessible to this account, the repository does not
    * exist, or there's no repository in the FileName object.
+   * 
+   * @param repository_id
+   * @return 
    */
   public FileRepository getFileRepository(String repository_id);
 
@@ -75,23 +88,32 @@ public interface PlatformContext {
    * Returns the FileRepository for the given FileName, or null if the
    * repository is not accessible to this account, the repository does not
    * exist, or there's no repository in the FileName object.
+   * 
+   * @param file_name
+   * @return 
    */
   public FileRepository getFileRepositoryFor(FileName file_name);
 
   /**
    * Returns a SessionAuthenticator object used to authenticate users in this
    * context.
+   * 
+   * @return 
    */
   public SessionAuthenticator getSessionAuthenticator();
 
   /**
    * Returns a UserManager object used to manager the users on an account.
+   * 
+   * @return 
    */
   public UserManager getUserManager();
 
   /**
    * Returns an object that builds/updates internal structures based on the
    * state of the source files in the file system.
+   * 
+   * @return 
    */
   public BuildSystem getBuildSystem();
 
@@ -100,6 +122,8 @@ public interface PlatformContext {
    * the MckoiDDB data model API's. This method may fail if the user is not
    * permitted to access the system in this way. The returned object may also
    * be restricted in what can be done with the data.
+   * 
+   * @return 
    */
   public DDBResourceAccess getDDBResourceAccess();
 
@@ -109,6 +133,8 @@ public interface PlatformContext {
    * Returns the platform context ClassLoader. This is the class loader used
    * to load user-code and includes all the classes defined in the application
    * context.
+   * 
+   * @return 
    */
   public ClassLoader getApplicationClassLoader();
 
@@ -117,6 +143,8 @@ public interface PlatformContext {
    * parent of the application class loader). This does not include the
    * classes defined by the user application, but does include any static
    * libraries that all applications are provided.
+   * 
+   * @return 
    */
   public ClassLoader getContextClassLoader();
 
@@ -128,6 +156,8 @@ public interface PlatformContext {
    * <p>
    * This method will work depending on the situation of the context -
    * specifically it is only available to application services.
+   * 
+   * @return 
    */
   public AppServiceProcessClient getAppServiceProcessClient();
 
@@ -137,6 +167,8 @@ public interface PlatformContext {
    * <p>
    * This method will work depending on the situation of the context -
    * specifically it is only available to a process operation.
+   * 
+   * @return 
    */
   public InstanceProcessClient getInstanceProcessClient();
 
@@ -144,6 +176,8 @@ public interface PlatformContext {
 
   /**
    * Returns the log system for this context.
+   * 
+   * @return 
    */
   public LogSystem getLogSystem();
 

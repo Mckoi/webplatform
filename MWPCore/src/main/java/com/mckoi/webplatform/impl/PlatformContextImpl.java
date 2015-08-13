@@ -109,6 +109,13 @@ public final class PlatformContextImpl implements PlatformContext {
   }
 
   /**
+   * Returns true if this thread already has a context defined for it.
+   */
+  static boolean hasThreadContextDefined() {
+    return thread_context.get() != null;
+  }
+
+  /**
    * Creates a thread context for the current thread with the given details.
    */
   public static void setCurrentThreadContext(
@@ -612,6 +619,33 @@ public final class PlatformContextImpl implements PlatformContext {
   public ClassLoader getApplicationClassLoader() {
     return getCurrentThreadContext().app_class_loader;
   }
+
+//  @Override
+//  public ContextDispatcher createContextDispatcher() {
+//
+//    ThreadContext thread_ctx = getCurrentThreadContext();
+//
+//    boolean is_app_service_context = thread_ctx.is_app_service_context;
+//    DBSessionCache sessions_cache = thread_ctx.sessions_cache;
+//    ProcessClientService process_client_server = thread_ctx.process_client_service;
+//    ProcessInstance process_instance = thread_ctx.process_instance;
+//    String account_name = thread_ctx.account_name;
+//    String vhost_name = thread_ctx.vhost_name;
+//    String protocol = thread_ctx.protocol;
+//    String webapp_name = thread_ctx.webapp_name;
+//    LoggerService log_system = thread_ctx.log_system;
+//    MWPUserClassLoader user_class_loader = thread_ctx.user_class_loader;
+//    ClassLoader app_class_loader = thread_ctx.app_class_loader;
+//    ClassNameValidator system_class_validator = thread_ctx.system_class_validator;
+//
+//    return new ContextDispatcherImpl(
+//            is_app_service_context,
+//            sessions_cache, process_client_server, process_instance,
+//            account_name, vhost_name, protocol, webapp_name,
+//            log_system, user_class_loader, app_class_loader,
+//            system_class_validator
+//    );
+//  }
 
   // ----- Super User methods -----
   
