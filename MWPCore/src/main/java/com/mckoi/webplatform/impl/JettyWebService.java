@@ -32,9 +32,13 @@ import com.mckoi.mwpcore.SSLExtraConfig;
 import com.mckoi.process.impl.ProcessClientService;
 import java.io.File;
 import java.util.Timer;
+import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.Connector;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
-import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 /**
@@ -118,7 +122,6 @@ class JettyWebService {
 
     // Create the Jetty context,
     this.server = new JettyMckoiServer();
-    this.server.setGracefulShutdown(4500);
   }
 
   /**
@@ -169,7 +172,7 @@ class JettyWebService {
   void startHTTP(String http_address, int http_port_i) {
     if (current_http_connector == null) {
       
-      Connector http_connector = new SelectChannelConnector();
+      ServerConnector http_connector = new ServerConnector(server);
       http_connector.setHost(http_address);
       http_connector.setPort(http_port_i);  // default: 80
       server.addConnector(http_connector);
@@ -196,11 +199,7 @@ class JettyWebService {
 
     if (current_https_connector == null) {
 
-      // Configure the secure https connector,
-      SslSelectChannelConnector ssl_connector = new SslSelectChannelConnector();
-      ssl_connector.setHost(https_address);
-      ssl_connector.setPort(https_port_i);  // default: 443
-      SslContextFactory cf = ssl_connector.getSslContextFactory();
+      SslContextFactory cf = new SslContextFactory();
       cf.setKeyStorePath(key_store_file);
       cf.setKeyStorePassword(key_store_pwd);
       cf.setKeyManagerPassword(key_store_manager_pwd);
@@ -209,25 +208,36 @@ class JettyWebService {
       if (cipher_patterns != null) {
         cf.addExcludeCipherSuites(cipher_patterns);
       }
-      // Renegotiation allowed,
-      Boolean renegotiation = ssl_extras.getRenegotiationAllowed();
-      if (renegotiation != null) {
-        cf.setAllowRenegotiate(renegotiation);
-      }
+//      // Renegotiation allowed,
+//      Boolean renegotiation = ssl_extras.getRenegotiationAllowed();
+//      if (renegotiation != null) {
+//        cf.setAllowRenegotiate(renegotiation);
+//      }
       // Protocols to exclude,
       String[] protocols = ssl_extras.getExcludedProtocols();
       if (protocols != null) {
         cf.addExcludeProtocols(protocols);
       }
 
-      server.addConnector(ssl_connector);
+      HttpConfiguration https_config = new HttpConfiguration();
+//      https_config.setSecurePort(https_port_i);  // default: 443
+      https_config.addCustomizer(new SecureRequestCustomizer());
+
+      ServerConnector https_connector =
+          new ServerConnector(server,
+              new SslConnectionFactory(cf, HttpVersion.HTTP_1_1.asString()),
+              new HttpConnectionFactory(https_config));
+      https_connector.setHost(https_address);
+      https_connector.setPort(https_port_i);
+
+      server.addConnector(https_connector);
       try {
-        ssl_connector.start();
+        https_connector.start();
       }
       catch (Exception e) {
         throw new RuntimeException(e);
       }
-      current_https_connector = ssl_connector;
+      current_https_connector = https_connector;
 
     }
     else {

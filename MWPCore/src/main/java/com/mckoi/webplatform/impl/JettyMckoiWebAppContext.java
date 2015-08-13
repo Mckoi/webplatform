@@ -40,6 +40,10 @@ import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ReadableByteChannel;
 import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.List;
@@ -686,11 +690,6 @@ class JettyMckoiWebAppContext extends WebAppContext {
     }
 
     @Override
-    public OutputStream getOutputStream() throws IOException, SecurityException {
-      throw new SecurityException();
-    }
-
-    @Override
     public URL getURL() {
       URL url;
       try {
@@ -771,7 +770,7 @@ class JettyMckoiWebAppContext extends WebAppContext {
     }
 
     @Override
-    public void release() {
+    public void close() {
     }
 
     @Override
@@ -787,7 +786,8 @@ class JettyMckoiWebAppContext extends WebAppContext {
                 MessageFormat.format("Resource {0} not found", resource_path));
       }
       file.position(start);
-      // PENDING: We should possibly add this functionality to DataFile.
+      // PENDING: We should possibly add this functionality to DataFile so
+      //   we don't need to have this buffer.
       byte[] buf = new byte[1024];
       while (count > 0) {
         int to_read = (int) Math.min(buf.length, count);
@@ -795,6 +795,16 @@ class JettyMckoiWebAppContext extends WebAppContext {
         out.write(buf, 0, to_read);
         count -= to_read;
       }
+    }
+
+    @Override
+    public ReadableByteChannel getReadableByteChannel() throws IOException {
+      DataFile file = getFileSystem().getDataFile(resource_path);
+      if (file == null) {
+        throw new FileNotFoundException(
+                MessageFormat.format("Resource {0} not found", resource_path));
+      }
+      return new DataFileReadableByteChannel(file);
     }
 
     @Override
@@ -810,6 +820,62 @@ class JettyMckoiWebAppContext extends WebAppContext {
     @Override
     public String toString() {
       return "mwpfs:/" + account_name + resource_path;
+    }
+
+  }
+
+  /**
+   * A non-blocking implementation of ReadableByteChannel that reads the content
+   * of the file into a ByteBuffer.
+   */
+  private static class DataFileReadableByteChannel implements ReadableByteChannel {
+
+    private volatile boolean is_open;
+    private final DataFile dfile;
+
+    public DataFileReadableByteChannel(DataFile dfile) {
+      this.dfile = dfile;
+      this.is_open = true;
+    }
+
+    @Override
+    public int read(ByteBuffer dst) throws IOException {
+      if (!is_open) {
+        throw new ClosedChannelException();
+      }
+      int read_length = dst.remaining();
+      long position = dfile.position();
+      long size = dfile.size();
+      // End of stream,
+      if (position >= size) {
+        return -1;
+      }
+      // What we're going to read,
+      final int read_amount = (int) Math.min(read_length, size - position);
+      int count = read_amount;
+      // PENDING: We should possibly add this functionality to DataFile so
+      //   we don't need to have this buffer.
+      byte[] buf = new byte[1024];
+      while (is_open && count > 0) {
+        int to_read = Math.min(buf.length, count);
+        dfile.get(buf, 0, to_read);
+        dst.put(buf, 0, to_read);
+        count -= to_read;
+      }
+      if (!is_open) {
+        throw new AsynchronousCloseException();
+      }
+      return read_amount;
+    }
+
+    @Override
+    public boolean isOpen() {
+      return is_open;
+    }
+
+    @Override
+    public void close() throws IOException {
+      is_open = false;
     }
 
   }

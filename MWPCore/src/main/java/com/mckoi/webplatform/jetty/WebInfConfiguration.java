@@ -5,10 +5,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.eclipse.jetty.util.IO;
 import org.eclipse.jetty.util.PatternMatcher;
 import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 import org.eclipse.jetty.webapp.WebAppClassLoader;
@@ -24,20 +26,17 @@ import org.eclipse.jetty.webapp.WebAppContext;
 public class WebInfConfiguration
                         extends org.eclipse.jetty.webapp.WebInfConfiguration {
 
+    private static final Logger LOG = Log.getLogger(org.eclipse.jetty.webapp.WebInfConfiguration.class);
 
     @Override
     public void preConfigure(final WebAppContext context) throws Exception
     {
-        // Look for a work directory
-        File work = findWorkDirectory(context);
-        if (work != null)
-            makeTempDirectory(work, context, false);
-
         //Make a temp directory for the webapp if one is not already set
         resolveTempDirectory(context);
 
         //Extract webapp if necessary
         unpack (context);
+
 
         //Apply an initial ordering to the jars which governs which will be scanned for META-INF
         //info and annotations. The ordering is based on inclusion patterns.
@@ -109,6 +108,9 @@ public class WebInfConfiguration
             }
         }
         webInfJarNameMatcher.match(webInfPattern, uris, true); //null is inclusive, no pattern == all jars match
+       
+        //No pattern to appy to classes, just add to metadata
+        context.getMetaData().setWebInfClassesDirs(findClassDirs(context));
     }
 
 
@@ -118,7 +120,8 @@ public class WebInfConfiguration
         //cannot configure if the context is already started
         if (context.isStarted())
         {
-            if (Log.isDebugEnabled()){Log.debug("Cannot configure webapp "+context+" after it is started");}
+            if (LOG.isDebugEnabled())
+                LOG.debug("Cannot configure webapp "+context+" after it is started");
             return;
         }
 
@@ -139,8 +142,9 @@ public class WebInfConfiguration
         }
 
         // Look for extra resource
-        List<Resource> resources = (List<Resource>)context.getAttribute(RESOURCE_URLS);
-        if (resources!=null)
+        @SuppressWarnings("unchecked")
+        Set<Resource> resources = (Set<Resource>)context.getAttribute(RESOURCE_DIRS);
+        if (resources!=null && !resources.isEmpty())
         {
             Resource[] collection=new Resource[resources.size()+1];
             int i=0;
@@ -154,17 +158,16 @@ public class WebInfConfiguration
     @Override
     public void deconfigure(WebAppContext context) throws Exception
     {
-        // delete temp directory if we had to create it or if it isn't called work
-        Boolean tmpdirConfigured = (Boolean)context.getAttribute(TEMPDIR_CONFIGURED);
-
-        if (context.getTempDirectory()!=null && (tmpdirConfigured == null || !tmpdirConfigured.booleanValue()) && !isTempWorkDirectory(context.getTempDirectory()))
+        //if we're not persisting the temp dir contents delete it
+        if (!context.isPersistTempDirectory())
         {
             IO.delete(context.getTempDirectory());
-            context.setTempDirectory(null);
         }
-
-        context.setAttribute(TEMPDIR_CONFIGURED, null);
-        context.setAttribute(context.TEMPDIR, null);
+        
+        //if it wasn't explicitly configured by the user, then unset it
+        Boolean tmpdirConfigured = (Boolean)context.getAttribute(TEMPDIR_CONFIGURED);
+        if (tmpdirConfigured != null && !tmpdirConfigured) 
+            context.setTempDirectory(null);
 
         //reset the base resource back to what it was before we did any unpacking of resources
         context.setBaseResource(_preUnpackBaseResource);

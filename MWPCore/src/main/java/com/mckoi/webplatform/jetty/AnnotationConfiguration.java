@@ -18,12 +18,17 @@
 package com.mckoi.webplatform.jetty;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.eclipse.jetty.annotations.AnnotationParser;
 import org.eclipse.jetty.annotations.ClassNameResolver;
+import org.eclipse.jetty.util.MultiException;
 import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 import org.eclipse.jetty.util.resource.Resource;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 /**
  * An implementation of org.eclipse.jetty.annotations.AnnotationConfiguration
@@ -38,64 +43,149 @@ import org.eclipse.jetty.util.resource.Resource;
 public class AnnotationConfiguration
               extends org.eclipse.jetty.annotations.AnnotationConfiguration {
 
-  @Override
-  protected AnnotationParser createAnnotationParser() {
-    // Bit of a hack here.
-    // The Jetty AnnotationParser class converts the resource into a
-    // java.io.File to parse out the last part of the file name. This will not
-    // work in the Mckoi system because 'getFile' always returns null, and
-    // it generates an error. We fix the class.
-    return new MWPAnnotationParser();
-  }
+    private static final Logger LOG = Log.getLogger(
+                  org.eclipse.jetty.annotations.AnnotationConfiguration.class);
 
-  
+    @Override
+    protected AnnotationParser createAnnotationParser() {
+        // Bit of a hack here.
+        // The Jetty AnnotationParser class converts the resource into a
+        // java.io.File to parse out the last part of the file name. This will not
+        // work in the Mckoi system because 'getFile' always returns null, and
+        // it generates an error. We fix the class.
+        return new MWPAnnotationParser();
+    }
+
+    /**
+     * Perform scanning of classes for annotations
+     * 
+     * @param context
+     * @throws Exception
+     */
+    protected void scanForAnnotations (WebAppContext context)
+    throws Exception
+    {
+        AnnotationParser parser = createAnnotationParser();
+        _parserTasks = new ArrayList<ParserTask>();
+
+        long start = 0; 
+
+
+        if (LOG.isDebugEnabled())
+            LOG.debug("Annotation scanning commencing: webxml={}, metadatacomplete={}, configurationDiscovered={}, multiThreaded={}, maxScanWait={}", 
+                      context.getServletContext().getEffectiveMajorVersion(), 
+                      context.getMetaData().isMetaDataComplete(),
+                      context.isConfigurationDiscovered(),
+                      isUseMultiThreading(context),
+                      getMaxScanWait(context));
+
+             
+        parseContainerPath(context, parser);
+        //email from Rajiv Mordani jsrs 315 7 April 2010
+        //    If there is a <others/> then the ordering should be
+        //          WEB-INF/classes the order of the declared elements + others.
+        //    In case there is no others then it is
+        //          WEB-INF/classes + order of the elements.
+        parseWebInfClasses(context, parser);
+        parseWebInfLib (context, parser); 
+        
+        start = System.nanoTime();
+        
+        //execute scan, either effectively synchronously (1 thread only), or asynchronously (limited by number of processors available) 
+        final MultiException me = new MultiException();
+    
+        for (final ParserTask p:_parserTasks)
+        {
+            try
+            {
+                p.call();
+            }
+            catch (Exception e)
+            {
+                me.add(e);
+            }
+        }
+       
+        if (LOG.isDebugEnabled())
+        {
+            for (ParserTask p:_parserTasks)
+                LOG.debug("Scanned {} in {}ms", p.getResource(), TimeUnit.MILLISECONDS.convert(p.getStatistic().getElapsed(), TimeUnit.NANOSECONDS));
+
+            LOG.debug("Scanned {} container path jars, {} WEB-INF/lib jars, {} WEB-INF/classes dirs in {}ms for context {}",
+                    _containerPathStats.getTotal(), _webInfLibStats.getTotal(), _webInfClassesStats.getTotal(),
+                    (TimeUnit.MILLISECONDS.convert(System.nanoTime()-start, TimeUnit.NANOSECONDS)),
+                    context);
+        }
+
+        me.ifExceptionThrow();   
+    }
+
   // ---- 
   
   /**
    * Our modified AnnotationParser parses out the class name.
    */
   private static class MWPAnnotationParser extends AnnotationParser {
-    
+
     private static final Logger LOG = Log.getLogger(AnnotationParser.class);
 
-    @Override
-    public void parse(Resource dir, ClassNameResolver resolver)
-                                                        throws Exception {
-
+    /**
+     * Parse all classes in a directory
+     * 
+     * @param dir
+     * @param resolver
+     * @throws Exception
+     */
+    protected void parseDir (Set<? extends Handler> handlers, Resource dir, ClassNameResolver resolver)
+    throws Exception
+    {
+        //skip dirs whose name start with . (ie hidden)
         if (!dir.isDirectory() || !dir.exists() || dir.getName().startsWith("."))
             return;
 
+        if (LOG.isDebugEnabled()) {LOG.debug("Scanning dir {}", dir);};
 
+        MultiException me = new MultiException();
+        
         String[] files=dir.list();
         for (int f=0;files!=null && f<files.length;f++)
         {
-            try 
+            Resource res = dir.addPath(files[f]);
+            if (res.isDirectory()) {
+                parseDir(handlers, res, resolver);
+            }
+            else
             {
-                Resource res = dir.addPath(files[f]);
-                if (res.isDirectory())
-                    parse(res, resolver);
-                else
+                //we've already verified the directories, so just verify the class file name
+                String fullname = res.getName();
+                File res_file = res.getFile();
+                String filename = (res_file == null) ? fullname : res_file.getName();
+                if (isValidClassFileName(filename))
                 {
-                    String fullname = res.getName();
-                    File res_file = res.getFile();
-                    String filename = (res_file == null) ? fullname : res_file.getName();
-
-                    if (isValidClassFileName(filename))
+                    try
                     {
-                        if ((resolver == null)|| (!resolver.isExcluded(fullname) && (!isParsed(fullname) || resolver.shouldOverride(fullname))))
+                        String name = res.getName();
+                        if ((resolver == null)|| (!resolver.isExcluded(name) && (!isParsed(name) || resolver.shouldOverride(name))))
                         {
                             Resource r = Resource.newResource(res.getURL());
-                            scanClass(r.getInputStream());
+                            if (LOG.isDebugEnabled()) {LOG.debug("Scanning class {}", r);};
+                            scanClass(handlers, dir, r.getInputStream());
                         }
-
+                    }                  
+                    catch (Exception ex)
+                    {
+                        if (LOG.isDebugEnabled()) LOG.debug("Error scanning file "+files[f], ex);
+                        me.add(new RuntimeException("Error scanning file "+files[f],ex));
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                LOG.warn(Log.EXCEPTION,ex);
+                else
+                {
+                   if (LOG.isDebugEnabled()) LOG.debug("Skipping scan on invalid file {}", res);
+                }
             }
         }
+
+        me.ifExceptionThrow();
     }
 
     /**
@@ -106,7 +196,7 @@ public class AnnotationConfiguration
      * <li> it isn't a dot file or in a hidden directory </li>
      * <li> the name of the class at least begins with a valid identifier for a class name </li>
      * </ul>
-     * @param path
+     * @param name
      * @return
      */
     private boolean isValidClassFileName (String name)
@@ -123,7 +213,7 @@ public class AnnotationConfiguration
         }
 
         //skip any classfiles that are not a valid java identifier
-        int c0 = 0;
+        int c0 = 0;      
         int ldir = name.lastIndexOf('/', name.length()-6);
         c0 = (ldir > -1 ? ldir+1 : c0);
         if (!Character.isJavaIdentifierStart(name.charAt(c0)))
@@ -131,7 +221,7 @@ public class AnnotationConfiguration
             if (LOG.isDebugEnabled()) LOG.debug("Not a java identifier: {}"+name);
             return false;
         }
-        
+   
         return true;
     }
 

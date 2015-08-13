@@ -28,7 +28,7 @@ package com.mckoi.webplatform.impl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import javax.servlet.ServletException;
-import org.eclipse.jetty.server.AbstractHttpConnection;
+import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.Server;
 
 /**
@@ -51,13 +51,13 @@ public class JettyMckoiServer extends Server {
   }
 
   @Override
-  public void handle(AbstractHttpConnection connection)
+  public void handle(HttpChannel<?> connection)
                                          throws IOException, ServletException {
     super.handle(connection);
   }
 
   @Override
-  public void handleAsync(AbstractHttpConnection connection)
+  public void handleAsync(HttpChannel<?> connection)
                                          throws IOException, ServletException {
     super.handleAsync(connection);
   }
