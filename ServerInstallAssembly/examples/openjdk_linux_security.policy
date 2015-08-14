@@ -373,6 +373,7 @@ grant SYSTEM {
   permission java.lang.RuntimePermission "createClassLoader";
   permission java.lang.RuntimePermission "modifyThread";
   permission java.lang.RuntimePermission "modifyThreadGroup";
+  permission java.lang.RuntimePermission "getStackTrace";
 
   permission java.net.NetPermission "*";
 

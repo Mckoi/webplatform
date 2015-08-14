@@ -92,14 +92,15 @@
     <dependencySet>
       <includes>
         <include>com.mckoi.jasper:ModJasper</include>
-        <include>org.eclipse.jetty.aggregate:jetty-all-server</include>
+        <include>org.eclipse.jetty:jetty-server</include>
+        <include>org.eclipse.jetty:jetty-webapp</include>
+        <include>org.eclipse.jetty:jetty-continuation</include>
+        <include>org.eclipse.jetty:jetty-annotations</include>
+        <include>org.eclipse.jetty.websocket:websocket-server</include>
+        <include>org.eclipse.jetty.websocket:javax-websocket-server-impl</include>
+        <include>org.eclipse.jetty.websocket:websocket-servlet</include>
         <include>asm:asm-all</include>
 <!--        <include>org.apache.geronimo.bundles:jstl</include> -->
-        <include>org.eclipse.jetty.orbit:javax.activation</include>
-        <include>org.eclipse.jetty.orbit:javax.annotation</include>
-        <include>org.eclipse.jetty.orbit:javax.mail.glassfish</include>
-        <include>org.eclipse.jetty.orbit:javax.security.auth.message</include>
-        <include>org.eclipse.jetty.orbit:javax.servlet</include>
         <include>junit:junit</include>
       </includes>
       <useProjectArtifact>false</useProjectArtifact>
