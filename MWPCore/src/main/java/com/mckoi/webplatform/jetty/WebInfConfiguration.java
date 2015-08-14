@@ -23,7 +23,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
  * @author Tobias Downer
  */
 
-public class WebInfConfiguration
+public final class WebInfConfiguration
                         extends org.eclipse.jetty.webapp.WebInfConfiguration {
 
     private static final Logger LOG = Log.getLogger(org.eclipse.jetty.webapp.WebInfConfiguration.class);

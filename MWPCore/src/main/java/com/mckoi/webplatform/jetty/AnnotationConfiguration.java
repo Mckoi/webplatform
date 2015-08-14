@@ -40,7 +40,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
  *
  * @author Tobias Downer
  */
-public class AnnotationConfiguration
+public final class AnnotationConfiguration
               extends org.eclipse.jetty.annotations.AnnotationConfiguration {
 
     private static final Logger LOG = Log.getLogger(

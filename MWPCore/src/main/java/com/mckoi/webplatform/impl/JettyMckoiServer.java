@@ -26,7 +26,6 @@
 package com.mckoi.webplatform.impl;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import javax.servlet.ServletException;
 import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.Server;
@@ -39,15 +38,8 @@ import org.eclipse.jetty.server.Server;
 
 public class JettyMckoiServer extends Server {
 
-  public JettyMckoiServer(InetSocketAddress addr) {
-    super(addr);
-  }
-
-  public JettyMckoiServer(int port) {
-    super(port);
-  }
-
   public JettyMckoiServer() {
+    super(new JettyMckoiThreadPool());
   }
 
   @Override

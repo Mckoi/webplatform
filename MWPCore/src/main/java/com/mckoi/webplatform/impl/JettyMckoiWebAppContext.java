@@ -27,9 +27,6 @@ package com.mckoi.webplatform.impl;
 
 import com.mckoi.data.DataFile;
 import com.mckoi.data.DataFileUtils;
-import com.mckoi.mwpcore.ClassNameValidator;
-import com.mckoi.mwpcore.DBSessionCache;
-import com.mckoi.mwpcore.MWPClassLoaderSet;
 import com.mckoi.mwpcore.MWPUserClassLoader;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.odb.util.FileInfo;
@@ -76,9 +73,9 @@ import org.eclipse.jetty.webapp.WebAppContext;
 class JettyMckoiWebAppContext extends WebAppContext {
 
   /**
-   * The session cache.
+   * The context builder.
    */
-  private final DBSessionCache sessions_cache;
+  private final PlatformContextBuilder context_builder;
 
   /**
    * The account name for this context.
@@ -94,16 +91,6 @@ class JettyMckoiWebAppContext extends WebAppContext {
    * The LoggerService that handles event logging.
    */
   private final LoggerService account_log;
-
-  /**
-   * The system classes allowed to be accessed in this context.
-   */
-  private final ClassNameValidator allowed_system_classes;
-
-  /**
-   * The system class loaders.
-   */
-  private final MWPClassLoaderSet classloaders;
 
   /**
    * The vhost string expression (eg. '*.mckoi.com').
@@ -126,11 +113,6 @@ class JettyMckoiWebAppContext extends WebAppContext {
   private final String webapp_path;
 
   /**
-   * The local temporary folder.
-   */
-  private final File local_temp_folder;
-
-  /**
    * The MWPUserClassLoader for this web app.
    */
   private final MWPUserClassLoader user_cl;
@@ -139,7 +121,6 @@ class JettyMckoiWebAppContext extends WebAppContext {
   /**
    * Constructor, sets up a web application context to the details provided.
    *
-   * @param db_manager the MckoiDDB path connection manager.
    * @param account_name the name of the account the context is in.
    * @param vhost_expr the domain to match (eg. '*.mckoi.com').
    * @param vhost_protocol_expr the protocol to match (eg. 'https', '*').
@@ -149,27 +130,22 @@ class JettyMckoiWebAppContext extends WebAppContext {
    *   '/apps/console/')
    */
   JettyMckoiWebAppContext(
-                        DBSessionCache sessions_cache,
+                        PlatformContextBuilder context_builder,
                         String account_name,
                         String vhost_expr, String vhost_protocol_expr,
                         String context_path, String webapp_path,
                         LoggerService account_log,
-                        ClassNameValidator allowed_system_classes,
-                        MWPClassLoaderSet classloaders,
-                        String webapp_name,
-                        File local_temp_folder) {
+                        String webapp_name) {
 
     super(null, null, null, null);
 
+    this.context_builder = context_builder;
+    
     this.webapp_name = webapp_name;
 
-    this.sessions_cache = sessions_cache;
-
-    this.local_temp_folder = local_temp_folder;
-
     // Create a user class loader,
-    this.user_cl =
-            classloaders.createUserClassLoader(allowed_system_classes, false);
+    this.user_cl = context_builder.getClassLoaderSet().createUserClassLoader(
+                              context_builder.getClassNameValidator(), false);
 
     // This is for Tomcat Jasper support,
     this.getServletContext().setAttribute(
@@ -201,8 +177,6 @@ class JettyMckoiWebAppContext extends WebAppContext {
 
     this.account_name = account_name;
     this.account_log = account_log;
-    this.allowed_system_classes = allowed_system_classes;
-    this.classloaders = classloaders;
     this.vhost_expr = vhost_expr;
     this.vhost_protocol_expr = vhost_protocol_expr;
     this.context_path = context_path;
@@ -299,16 +273,13 @@ class JettyMckoiWebAppContext extends WebAppContext {
       setContextPath(context_path);
       // Set the base resource,
       setBaseResource(new MckoiDDBFileResource(webapp_path));
-//      setBaseResource(new MckoiDDBFileResource2("./test_app/"));
-//      setWar("./test_app/");
       // The directory in the local filesystem for temporary files
-      setTempDirectory(new File(local_temp_folder, account_name));
-//      setTempDirectory(new File("./temp/" + account_name + "/"));
+      setTempDirectory(new File(context_builder.getLocalTempDir(), account_name));
 
       // Create the class loader. The parent is the user class loader,
       JettyMckoiWebAppClassLoader class_loader =
-                   new JettyMckoiWebAppClassLoader(
-                                  user_cl, this, allowed_system_classes);
+              new JettyMckoiWebAppClassLoader(
+                      user_cl, this, context_builder.getClassNameValidator());
       setClassLoader(class_loader);
 
       // Defer to the super implementation,
@@ -416,8 +387,6 @@ class JettyMckoiWebAppContext extends WebAppContext {
         }
       }
 
-      // Set the allowed system classes validator object,
-      PlatformContextImpl.setAllowedSystemClasses(allowed_system_classes);
       // Sets the web application name,
       PlatformContextImpl.setWebApplicationName(webapp_name);
       // Reset the log flag,
@@ -429,8 +398,13 @@ class JettyMckoiWebAppContext extends WebAppContext {
       // A wrapper for the response object,
       MckoiResponseWrapped mckoi_response = new MckoiResponseWrapped(response);
 
-  // NOTE: Exception caching here doesn't work because user exceptions are
-  //   caught in org.eclipse.jetty.servlet.ServletHandler.
+      // NOTE: Exception caching here doesn't work because user exceptions are
+      //   caught in org.eclipse.jetty.servlet.ServletHandler.
+
+      // We set any properties in ServletContext
+      ServletContext servlet_context = request.getServletContext();
+      MWPContext mwp_context = new MWPContext(context_builder, webapp_name);
+      servlet_context.setAttribute(MWPContext.ATTRIBUTE_KEY, mwp_context);
 
       // Delegate the rest to Jetty,
       super.doHandle(target, jetty_request, request, mckoi_response);
@@ -440,7 +414,7 @@ class JettyMckoiWebAppContext extends WebAppContext {
       // The time took for this process,
       long time_took = (time_end - time_start);
       Long time_count = (Long)
-              jetty_request.getAttribute("com.mckoi.webplatform.impl.TimeCount");
+            jetty_request.getAttribute("com.mckoi.webplatform.impl.TimeCount");
       if (time_count == null) {
         time_count = time_took;
       }
@@ -450,14 +424,15 @@ class JettyMckoiWebAppContext extends WebAppContext {
 
       // --- EXTERNAL REQUEST LOGGING
 
-      // If the request was not handled by this context we do not log
-      if (jetty_request.isHandled() && mckoi_response.isCommitted()) {
+      // If the request was not handled by this context, and the user code
+      // has disabled logging, we do not log
+      if (jetty_request.isHandled() && mckoi_response.isCommitted() &&
+          PlatformContextImpl.getLogThisRequest() == true) {
 
         int response_status = mckoi_response.implGetStatus();
         // Do not log 404 (not found) and 304 (not modified),
         if ( response_status == Response.SC_NOT_FOUND ||
-             response_status == Response.SC_NOT_MODIFIED ||
-             PlatformContextImpl.getLogThisRequest() == false) {
+             response_status == Response.SC_NOT_MODIFIED ) {
           // Don't log,
         }
         else {
@@ -609,7 +584,8 @@ class JettyMckoiWebAppContext extends WebAppContext {
     
     private FileRepository getFileSystem() {
       ODBTransaction fs_t =
-                        sessions_cache.getODBTransaction("ufs" + account_name);
+              context_builder.getSessionsCache().getODBTransaction(
+                                                        "ufs" + account_name);
       return new FileRepositoryImpl(account_name, fs_t, "accountfs");
     }
 

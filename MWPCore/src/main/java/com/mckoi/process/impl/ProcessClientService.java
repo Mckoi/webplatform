@@ -26,6 +26,7 @@
 package com.mckoi.process.impl;
 
 import com.mckoi.appcore.SystemStatics;
+import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.mwpcore.DBSessionCache;
 import com.mckoi.network.CommitFaultException;
 import com.mckoi.odb.ODBClass;
@@ -690,8 +691,9 @@ public final class ProcessClientService {
    * Returns the next message from the broadcast queue (the next message
    * after the sequence number).
    */
-  PMessage getMessageFromBroadcast(String account_name,
-                        ProcessChannel process_channel, long sequence_value)
+  PMessage getMessageFromBroadcast(
+                    String account_name,
+                    ProcessChannel process_channel, long sequence_value)
                                           throws ProcessUnavailableException {
 
     // Check the ownership of the process matches 'account_name'
@@ -718,7 +720,8 @@ public final class ProcessClientService {
    * queue to consume, the given 'notifier' will be called when either there
    * are messages pending or consume limit is reached.
    */
-  List<PMessage> getMessagesFromBroadcast(String account_name,
+  List<PMessage> getMessagesFromBroadcast(
+          String account_name, ContextBuilder contextifier,
           ProcessChannel process_channel, long sequence_value,
           int consume_limit, ProcessResultNotifier notifier)
                                           throws ProcessUnavailableException {
@@ -731,7 +734,7 @@ public final class ProcessClientService {
 
     // Get the messages from the queue,
     return queue.getMessagesFromBroadcast(
-                                      sequence_value, consume_limit, notifier);
+                        sequence_value, consume_limit, notifier, contextifier);
 
   }
 
@@ -1503,11 +1506,13 @@ public final class ProcessClientService {
    * the given account.
    * 
    * @param account_name
+   * @param contextifier the context environment that all notified events are
+   *   given.
    * @return 
    */
   public AppServiceProcessClient getAppServiceProcessClientFor(
-                                                        String account_name) {
-    return new PCSAppServiceProcessClient(account_name);
+                          String account_name, ContextBuilder contextifier) {
+    return new PCSAppServiceProcessClient(account_name, contextifier);
   }
 
   public ProcessId createProcess(String account_name,
@@ -1654,13 +1659,15 @@ public final class ProcessClientService {
    * invoking the function
    * 
    * @param account_name
+   * @param contextifier
    * @param process_id
    * @param msg
    * @param reply_expected
    * @return
    */
   public ProcessResult invokeFunction(
-               String account_name, ProcessId process_id, ProcessMessage msg,
+               String account_name, ContextBuilder contextifier,
+               ProcessId process_id, ProcessMessage msg,
                boolean reply_expected) {
 
     int call_id = generateCallId();
@@ -1676,7 +1683,8 @@ public final class ProcessClientService {
       ProcessResultImpl process_ret;
       // Create the reply object,
       process_ret = new ProcessResultImpl(
-              thread_pool, account_name, e.getLocation(), call_id, process_id);
+              thread_pool, account_name, contextifier,
+              e.getLocation(), call_id, process_id);
       process_ret.setPMessage(
             ProcessServerService.failMessage(process_id, call_id,
                                              "UNAVAILABLE", e));
@@ -1723,8 +1731,8 @@ public final class ProcessClientService {
     ProcessResultImpl process_result = null;
     if (reply_expected) {
       // Create the reply object,
-      process_result = new ProcessResultImpl(thread_pool, account_name,
-                                             machine, call_id, process_id);
+      process_result = new ProcessResultImpl(thread_pool,
+                    account_name, contextifier, machine, call_id, process_id);
       synchronized (process_result_list) {
         process_result_list.add(process_result);
       }
@@ -1790,17 +1798,19 @@ public final class ProcessClientService {
   /**
    * 
    * @param account_name
+   * @param contextifier
    * @param session_state
    * @return 
    * @throws com.mckoi.process.ProcessUnavailableException 
    */
   public ChannelConsumer getChannelConsumer(
-                      String account_name, ChannelSessionState session_state)
+                      String account_name, ContextBuilder contextifier,
+                      ChannelSessionState session_state)
                                           throws ProcessUnavailableException {
 
     // Creates a ChannelConsumerImpl object from the session state string,
     ChannelConsumerImpl consumer = ChannelConsumerImpl.fromSessionState(
-                                           this, account_name, session_state);
+                              this, account_name, contextifier, session_state);
 
     // Check the process is owned by the account,
     checkAccountOwnership(account_name, consumer.getProcessChannel());
@@ -1815,16 +1825,18 @@ public final class ProcessClientService {
   /**
    * 
    * @param account_name
+   * @param contextifier
    * @param process_channel
    * @return 
    * @throws com.mckoi.process.ProcessUnavailableException 
    */
   public ChannelConsumer getChannelConsumer(
-                  String account_name, ProcessChannel process_channel)
+                  String account_name, ContextBuilder contextifier,
+                  ProcessChannel process_channel)
                                           throws ProcessUnavailableException {
 
     ChannelConsumerImpl consumer = new ChannelConsumerImpl(this,
-                                   account_name, process_channel);
+                                  account_name, contextifier, process_channel);
 
     // Check the process is owned by the account,
     checkAccountOwnership(account_name, process_channel);
@@ -1839,18 +1851,19 @@ public final class ProcessClientService {
   /**
    * 
    * @param account_name
+   * @param contextifier
    * @param process_channel
    * @param sequence_value
    * @return 
    * @throws com.mckoi.process.ProcessUnavailableException 
    */
   public ChannelConsumer getChannelConsumer(
-                  String account_name,
+                  String account_name, ContextBuilder contextifier,
                   ProcessChannel process_channel, long sequence_value)
                                           throws ProcessUnavailableException {
     
     ChannelConsumerImpl consumer = new ChannelConsumerImpl(this,
-                                account_name, process_channel, sequence_value);
+                  account_name, contextifier, process_channel, sequence_value);
 
     // Check the process is owned by the account,
     checkAccountOwnership(account_name, process_channel);
@@ -1865,11 +1878,12 @@ public final class ProcessClientService {
   /**
    * 
    * @param account_name
+   * @param contextifier
    * @param query
    * @return 
    */
   public ProcessResult invokeServersQuery(
-                                    String account_name, ServersQuery query) {
+        String account_name, ContextBuilder contextifier, ServersQuery query) {
 
     // Get the query arguments,
     Object[] args = query.getQueryArgs();
@@ -1909,7 +1923,7 @@ public final class ProcessClientService {
       ProcessResultImpl process_ret;
       // Create the reply object,
       process_ret = new ProcessResultImpl(
-                              thread_pool, account_name, null, call_id, null);
+                thread_pool, account_name, contextifier, null, call_id, null);
 
       byte[] header = ProcessServerService.createSuccessHeader(
                               null, call_id, CommConstants.CALL_REPLY_CC);
@@ -1959,7 +1973,7 @@ public final class ProcessClientService {
         ProcessResultImpl process_ret;
         // Create the reply object,
         process_ret = new ProcessResultImpl(
-                            thread_pool, account_name, machine, call_id, null);
+              thread_pool, account_name, contextifier, machine, call_id, null);
         // If we know the machine failed,
         if (isCurrentConnectKnownFailed(machine)) {
           PMessage fail_msg = ProcessServerService.failMessage(
@@ -2144,6 +2158,7 @@ public final class ProcessClientService {
     private final ExecutorService thread_pool;
     // The account that invoked the function that this is the result of,
     private final String invoker_account_name;
+    private final ContextBuilder contextifier;
 
 //    private final long invoke_timestamp;
     private final ProcessServiceAddress machine;
@@ -2155,11 +2170,12 @@ public final class ProcessClientService {
     private PMessage reply = null;
 
     private ProcessResultImpl(ExecutorService thread_pool,
-            String account_name,
+            String account_name, ContextBuilder contextifier,
             ProcessServiceAddress machine, int call_id, ProcessId process_id) {
 
       this.thread_pool = thread_pool;
       this.invoker_account_name = account_name;
+      this.contextifier = contextifier;
 
 //      this.invoke_timestamp = System.currentTimeMillis();
       this.machine = machine;
@@ -2250,6 +2266,7 @@ public final class ProcessClientService {
         @Override
         public void run() {
           for (ProcessResultNotifier n : set) {
+            contextifier.enterContext();
             n.lock();
             try {
               try {
@@ -2269,6 +2286,7 @@ public final class ProcessClientService {
             }
             finally {
               n.unlock();
+              contextifier.exitContext();
             }
           }
         }
@@ -2364,37 +2382,41 @@ public final class ProcessClientService {
   private class PCSAppServiceProcessClient extends PCSProcessClient
                                           implements AppServiceProcessClient {
 
-    private PCSAppServiceProcessClient(String account_name) {
+    private final ContextBuilder contextifier;
+
+    private PCSAppServiceProcessClient(
+                            String account_name, ContextBuilder contextifier) {
       super(account_name);
+      this.contextifier = contextifier;
     }
 
     @Override
     public ProcessResult invokeFunction(
             ProcessId process_id, ProcessMessage msg, boolean reply_expected) {
       return ProcessClientService.this.invokeFunction(
-                        getAccountName(), process_id, msg, reply_expected);
+            getAccountName(), contextifier, process_id, msg, reply_expected);
     }
 
     @Override
     public ChannelConsumer getChannelConsumer(ChannelSessionState session_state)
                                           throws ProcessUnavailableException {
       return ProcessClientService.this.getChannelConsumer(
-                        getAccountName(), session_state);
+            getAccountName(), contextifier, session_state);
     }
 
     @Override
     public ChannelConsumer getChannelConsumer(ProcessChannel process_channel)
                                           throws ProcessUnavailableException {
       return ProcessClientService.this.getChannelConsumer(
-                        getAccountName(), process_channel);
+            getAccountName(), contextifier, process_channel);
     }
 
     @Override
     public ChannelConsumer getChannelConsumer(
-                 ProcessChannel process_channel, long sequence_value)
+                ProcessChannel process_channel, long sequence_value)
                                           throws ProcessUnavailableException {
       return ProcessClientService.this.getChannelConsumer(
-                        getAccountName(), process_channel, sequence_value);
+            getAccountName(), contextifier, process_channel, sequence_value);
     }
 
     // ------
@@ -2402,7 +2424,7 @@ public final class ProcessClientService {
     @Override
     public ProcessResult invokeServersQuery(ServersQuery query) {
       return ProcessClientService.this.invokeServersQuery(
-                        getAccountName(), query);
+            getAccountName(), contextifier, query);
     }
 
   }

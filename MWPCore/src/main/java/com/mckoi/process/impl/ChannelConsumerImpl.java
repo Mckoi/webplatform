@@ -25,6 +25,7 @@
 
 package com.mckoi.process.impl;
 
+import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.process.*;
 import com.mckoi.process.ProcessResultNotifier.CleanupHandler;
 import java.util.AbstractList;
@@ -47,6 +48,7 @@ class ChannelConsumerImpl implements ChannelConsumer {
   private final ProcessClientService client_service;
 
   private final String account_name;
+  private final ContextBuilder contextifier;
   private final ProcessChannel process_channel;
   private long sequence_value;
 
@@ -54,20 +56,22 @@ class ChannelConsumerImpl implements ChannelConsumer {
    * Constructor.
    */
   ChannelConsumerImpl(ProcessClientService client_service,
-                      String account_name,
+                      String account_name, ContextBuilder contextifier,
                       ProcessChannel process_channel, long sequence_value) {
 
     this.client_service = client_service;
     this.account_name = account_name;
+    this.contextifier = contextifier;
     this.process_channel = process_channel;
     this.sequence_value = sequence_value;
 
   }
 
   ChannelConsumerImpl(ProcessClientService process_client,
-                      String account_name, ProcessChannel process_channel) {
+                      String account_name, ContextBuilder contextifier,
+                      ProcessChannel process_channel) {
 
-    this(process_client, account_name, process_channel, -1);
+    this(process_client, account_name, contextifier, process_channel, -1);
 
   }
 
@@ -108,61 +112,6 @@ class ChannelConsumerImpl implements ChannelConsumer {
 
   }
 
-//  @Override
-//  public Collection<ProcessMessage> consumeFromChannel(
-//                             int consume_limit, final ServletRequest request) {
-//
-//    // Null request,
-//    if (request == null) {
-//      return consumeFromChannel(consume_limit, (ProcessResultNotifier) null);
-//    }
-//
-//    // Perform under a local lock that blocks the async context completing
-//    // until after this method returns.
-//    final Object INNER_CLASS_LOCK = new Object();
-//
-//    // The notifier,
-//    ProcessResultNotifier message_notifier = new ProcessResultNotifier() {
-//      @Override
-//      public void notifyMessages(ProcessChannel process_channel) {
-//        // This 'synchronized' ensures the 'complete' operation is not
-//        // called before 'request.startAsync' is called.
-//        synchronized (INNER_CLASS_LOCK) {
-//          // Dispatch 'available' status attribute,
-//          request.setAttribute(CONSUME_STATUS_KEY, CONSUME_STATUS_AVAILABLE);
-//          request.getAsyncContext().dispatch();
-//        }
-//      }
-//    };
-//
-//    synchronized(INNER_CLASS_LOCK) {
-//
-//      // Try and consume messages, or add a message notifier if no messages
-//      // available to consume,
-//      Collection<ProcessMessage> pmsgs =
-//                           consumeFromChannel(consume_limit, message_notifier);
-//
-//      // If there are messages waiting then return with no further action
-//      // (in this case the process message notifier will never be called).
-//      if (pmsgs != null) {
-//        return pmsgs;
-//      }
-//
-//      // Otherwise there are no messages waiting so put the servlet request in
-//      // asynchronous mode,
-//      AsyncContext async_context = request.startAsync();
-//      // Add a listener that performs a callback dispatch on the request when
-//      // the async_context either times out or completes,
-//      async_context.addListener(new PMAsyncListener(message_notifier));
-//      // Default timeout is set to 3 minutes,
-//      async_context.setTimeout(3 * 60 * 1000);
-//
-//      // Return null,
-//      return null;
-//    }
-//
-//  }
-
   @Override
   public Collection<ProcessMessage> consumeFromChannel(int consume_limit)
                                           throws ProcessUnavailableException {
@@ -187,8 +136,8 @@ class ChannelConsumerImpl implements ChannelConsumer {
     // Handle the case when notifier is null
     if (notifier == null) {
       msg_set = client_service.getMessagesFromBroadcast(
-                  account_name, process_channel, sequence_value,
-                  consume_limit, notifier);
+                  account_name, contextifier,
+                  process_channel, sequence_value, consume_limit, notifier);
       if (msg_set == null) {
         return null;
       }
@@ -202,8 +151,8 @@ class ChannelConsumerImpl implements ChannelConsumer {
         // consume then returns null and the given notifier is called when there
         // are messages available or the timeout is reached.
         msg_set = client_service.getMessagesFromBroadcast(
-                    account_name, process_channel, sequence_value,
-                    consume_limit, notifier);
+                    account_name, contextifier,
+                    process_channel, sequence_value, consume_limit, notifier);
 
         // If there was nothing consumed then return null,
         // This indicates the notifier is now listening, so we should initialize
@@ -264,10 +213,10 @@ class ChannelConsumerImpl implements ChannelConsumer {
    */
   static ChannelConsumerImpl fromSessionState(
                  ProcessClientService process_client,
-                 String account_name,
+                 String account_name, ContextBuilder contextifier,
                  ChannelSessionState session_state) {
 
-    return new ChannelConsumerImpl(process_client, account_name,
+    return new ChannelConsumerImpl(process_client, account_name, contextifier,
                                    session_state.getProcessChannel(),
                                    session_state.getSequenceValue());
 

@@ -95,7 +95,7 @@ public final class MWPUserClassLoader extends URLClassLoader {
 
     File[] all_files = path.listFiles();
 
-    List<URL> url_list = new ArrayList(all_files.length);
+    List<URL> url_list = new ArrayList<>(all_files.length);
     for (File file : all_files) {
       String fname = file.getName();
       if (fname.endsWith(".jar")) {
@@ -139,6 +139,14 @@ public final class MWPUserClassLoader extends URLClassLoader {
    */
   private boolean isMJSResource(String name) {
     return name.startsWith("mjs/");
+  }
+
+  /**
+   * Returns true if the given resource name is a reference to META-INF
+   * resource directory.
+   */
+  private boolean isMetaInfResourcePath(String name) {
+    return name.startsWith("META-INF/");
   }
 
   @Override
@@ -260,7 +268,7 @@ public final class MWPUserClassLoader extends URLClassLoader {
 
     URL url = null;
 
-    if (isSystemResourcePath(name)) {
+    if (isSystemResourcePath(name) || isMetaInfResourcePath(name)) {
       // Load from the parent if it's a valid system resource
       url = parent_cl.getResource(name);
     }
@@ -292,22 +300,31 @@ public final class MWPUserClassLoader extends URLClassLoader {
     // Load from the parent if it's a valid system resource
     Enumeration<URL> parent_resources = null;
 
-    if (isSystemResourcePath(name) || isMJSResource(name)) {
+    if (isSystemResourcePath(name) || isMetaInfResourcePath(name)) {
       parent_resources = parent_cl.getResources(name);
     }
 
     // Load from this,
     Enumeration<URL> this_resources = findResources(name);
 
+    Enumeration<URL> parent2_resources = null;
+    if (isMJSResource(name)) {
+      parent2_resources = parent_cl.getResources(name);
+    }
+
     // Merge the lists,
-    ArrayList<URL> resource_list = new ArrayList();
+    ArrayList<URL> resource_list = new ArrayList<>();
     if (parent_resources != null) {
       while (parent_resources.hasMoreElements())
-                            resource_list.add(parent_resources.nextElement());
+                        resource_list.add(parent_resources.nextElement());
     }
     if (this_resources != null) {
       while (this_resources.hasMoreElements())
-                            resource_list.add(this_resources.nextElement());
+                        resource_list.add(this_resources.nextElement());
+    }
+    if (parent2_resources != null) {
+      while (parent2_resources.hasMoreElements())
+                        resource_list.add(parent2_resources.nextElement());
     }
 
     // Return the enumeration,

@@ -25,6 +25,7 @@
 
 package com.mckoi.process.impl;
 
+import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.process.ProcessResultNotifier;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -56,7 +57,12 @@ class BroadcastQueue {
    * The list of notifiers.
    */
   private ProcessResultNotifier[] notifiers;
-  
+
+  /**
+   * The list of ContextBuilders.
+   */
+  private ContextBuilder[] contextifiers;
+
   /**
    * The list of timestamps when the respective notifier was added to the list.
    */
@@ -100,6 +106,7 @@ class BroadcastQueue {
     this.queue_list = new QueueList();
     this.count = 0;
     notifiers = new ProcessResultNotifier[size];
+    contextifiers = new ContextBuilder[size];
     timestamps = new long[size];
     min_sequences = new long[size];
     listener_lock = 0;
@@ -159,16 +166,20 @@ class BroadcastQueue {
       }
 
       ProcessResultNotifier[] new_notifiers = new ProcessResultNotifier[size];
+      ContextBuilder[] new_contextifiers = new ContextBuilder[size];
       long[] new_timestamps = new long[size];
       long[] new_min_sequences = new long[size];
       System.arraycopy(notifiers, 0,
                        new_notifiers, 0, notifiers.length);
+      System.arraycopy(contextifiers, 0,
+                       new_contextifiers, 0, contextifiers.length);
       System.arraycopy(timestamps, 0,
                        new_timestamps, 0, timestamps.length);
       System.arraycopy(min_sequences, 0,
                        new_min_sequences, 0, min_sequences.length);
 
       notifiers = new_notifiers;
+      contextifiers = new_contextifiers;
       timestamps = new_timestamps;
       min_sequences = new_min_sequences;
 
@@ -213,11 +224,14 @@ class BroadcastQueue {
   /**
    * Adds a notifier to the list.
    */
-  private void addNotifier(ProcessResultNotifier notifier, long min_sequence) {
+  private void addNotifier(
+              ProcessResultNotifier notifier, ContextBuilder contextifier,
+              long min_sequence) {
     // Make sure there's enough room,
     ensureCapacity();
-    
+
     notifiers[count] = notifier;
+    contextifiers[count] = contextifier;
     timestamps[count] = System.currentTimeMillis();
     min_sequences[count] = min_sequence;
     
@@ -235,11 +249,13 @@ class BroadcastQueue {
       for (int i = 0; i < limit; ++i) {
         if (notifiers[i] == notifier) {
           System.arraycopy(notifiers, i + 1,
-                          notifiers, i, limit - i - 1);
+                           notifiers, i, limit - i - 1);
+          System.arraycopy(contextifiers, i + 1,
+                           contextifiers, i, limit - i - 1);
           System.arraycopy(timestamps, i + 1,
-                          timestamps, i, limit - i - 1);
+                           timestamps, i, limit - i - 1);
           System.arraycopy(min_sequences, i + 1,
-                          min_sequences, i, limit - i - 1);
+                           min_sequences, i, limit - i - 1);
           --limit;
           --i;
         }
@@ -247,6 +263,7 @@ class BroadcastQueue {
       // Clean out tailing notifiers,
       for (int i = limit; i < count; ++i) {
         notifiers[i] = null;
+        contextifiers[i] = null;
       }
       count = limit;
 
@@ -264,6 +281,8 @@ class BroadcastQueue {
       if (sequence_num > min_sequences[i]) {
         System.arraycopy(notifiers, i + 1,
                          notifiers, i, limit - i - 1);
+        System.arraycopy(contextifiers, i + 1,
+                         contextifiers, i, limit - i - 1);
         System.arraycopy(timestamps, i + 1,
                          timestamps, i, limit - i - 1);
         System.arraycopy(min_sequences, i + 1,
@@ -275,6 +294,7 @@ class BroadcastQueue {
     // Clean out tailing notifiers,
     for (int i = limit; i < count; ++i) {
       notifiers[i] = null;
+      contextifiers[i] = null;
     }
     count = limit;
   }
@@ -286,6 +306,7 @@ class BroadcastQueue {
     int limit = count;
     for (int i = 0; i < limit; ++i) {
       notifiers[i] = null;
+      contextifiers[i] = null;
     }
     count = 0;
   }
@@ -310,14 +331,17 @@ class BroadcastQueue {
       // Clear,
       if (end > 0) {
         System.arraycopy(notifiers, end,
-                        notifiers, 0, limit - end);
+                         notifiers, 0, limit - end);
+        System.arraycopy(contextifiers, end,
+                         contextifiers, 0, limit - end);
         System.arraycopy(timestamps, end,
-                        timestamps, 0, limit - end);
+                         timestamps, 0, limit - end);
         System.arraycopy(min_sequences, end,
-                        min_sequences, 0, limit - end);
+                         min_sequences, 0, limit - end);
         limit -= end;
         for (int i = limit; i < count; ++i) {
           notifiers[i] = null;
+          contextifiers[i] = null;
         }
         count = limit;
       }
@@ -413,6 +437,16 @@ class BroadcastQueue {
 
   }
 
+  private static class NotifierAndContext {
+    private final ProcessResultNotifier notifier;
+    private final ContextBuilder contextifier;
+    NotifierAndContext(
+                ProcessResultNotifier notifier, ContextBuilder contextifier) {
+      this.notifier = notifier;
+      this.contextifier = contextifier;
+    }
+  }
+
   /**
    * Dispatches call back events against all notifiers and listeners that are
    * interested in an incoming message with the given sequence value. The call
@@ -441,8 +475,7 @@ class BroadcastQueue {
 
           long trigger_min_seq;
           // The list of notifiers to be triggered,
-          // (assume it's the whole list)
-          List<ProcessResultNotifier> to_trigger = null;
+          List<NotifierAndContext> to_trigger = null;
 
           // NOTE: synchronized over the BroadcastQueue here
 
@@ -452,11 +485,13 @@ class BroadcastQueue {
 
             // Notifiers to inform,
             if (count > 0) {
-              to_trigger = new ArrayList(count);
+              // Assume it's the whole list
+              to_trigger = new ArrayList<>(count);
               trigger_min_seq = scheduled_seq_num;
               for (int i = 0; i < count; ++i) {
                 if (trigger_min_seq > min_sequences[i]) {
-                  to_trigger.add(notifiers[i]);
+                  to_trigger.add(new NotifierAndContext(
+                                              notifiers[i], contextifiers[i]));
                 }
               }
               // If we are triggering all (common case),
@@ -473,15 +508,18 @@ class BroadcastQueue {
 
           // Now do the trigger callback,
           if (to_trigger != null) {
-            for (ProcessResultNotifier notifier : to_trigger) {
-              notifier.lock();
+            // We could probably avoid a lot of context switching here if we
+            // can group identical contextifiers together and notify messages
+            // in each group.
+            for (NotifierAndContext t : to_trigger) {
+              t.contextifier.enterContext();
+              t.notifier.lock();
               try {
-                // PENDING: This needs to do thread context stuff because we are
-                //   probably going to be executing user code here.
-                notifier.notifyMessages();
+                t.notifier.notifyMessages();
               }
               finally {
-                notifier.unlock();
+                t.notifier.unlock();
+                t.contextifier.exitContext();
               }
             }
           }
@@ -504,7 +542,7 @@ class BroadcastQueue {
    */
   private static List<PMessage> broadcastList(QueueMessage msg, int limit) {
 
-    List<PMessage> msgs = new ArrayList(Math.min(limit, 16));
+    List<PMessage> msgs = new ArrayList<>(Math.min(limit, 16));
     int msgcount = 0;
     while (msgcount < limit && msg != null) {
       msgs.add(msg.getMessage());
@@ -635,8 +673,9 @@ class BroadcastQueue {
    * 'notifier' will be called as soon as messages are received and this
    * function will return null.
    */
-  List<PMessage> getMessagesFromBroadcast(long sequence_value,
-                          int consume_limit, ProcessResultNotifier notifier) {
+  List<PMessage> getMessagesFromBroadcast(
+                long sequence_value, int consume_limit,
+                ProcessResultNotifier notifier, ContextBuilder contextifier) {
 
     synchronized (this) {
 
@@ -644,7 +683,7 @@ class BroadcastQueue {
       // If no last,
       if (msg == null) {
         if (notifier != null) {
-          addNotifier(notifier, sequence_value);
+          addNotifier(notifier, contextifier, sequence_value);
         }
         return null;
       }
@@ -656,7 +695,7 @@ class BroadcastQueue {
           QueueMessage next_msg = msg.getNext();
           if (next_msg == null) {
             if (notifier != null) {
-              addNotifier(notifier, sequence_value);
+              addNotifier(notifier, contextifier, sequence_value);
             }
             return null;
           }

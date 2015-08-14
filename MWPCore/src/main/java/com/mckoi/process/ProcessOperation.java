@@ -195,7 +195,7 @@ public interface ProcessOperation {
    * 
    * @param instance
    */
-void resume(ProcessInstance instance);
+  void resume(ProcessInstance instance);
 
   /**
    * Called by the process service when there is an item waiting on the

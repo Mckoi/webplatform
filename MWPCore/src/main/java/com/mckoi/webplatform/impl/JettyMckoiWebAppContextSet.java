@@ -28,17 +28,13 @@ package com.mckoi.webplatform.impl;
 import com.mckoi.appcore.UserApplicationsSchema;
 import com.mckoi.data.DataFile;
 import com.mckoi.data.PropertySet;
-import com.mckoi.mwpcore.ClassNameValidator;
 import com.mckoi.mwpcore.DBSessionCache;
-import com.mckoi.mwpcore.MWPClassLoaderSet;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.odb.util.FileInfo;
 import com.mckoi.odb.util.FileName;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.SortedSet;
-import java.util.Timer;
 import java.util.TimerTask;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -52,37 +48,17 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
  * @author Tobias Downer
  */
 
-class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList {
+public final class JettyMckoiWebAppContextSet extends AbstractHandler {
 
   /**
-   * The session cache.
+   * The context builder.
    */
-  private final DBSessionCache sessions_cache;
+  private final PlatformContextBuilder context_builder;
 
   /**
    * The account name for this context.
    */
   private final String account_name;
-
-  /**
-   * The system timer.
-   */
-  private final Timer system_timer;
-
-  /**
-   * The local temporary folder.
-   */
-  private final File local_temp_folder;
-
-  /**
-   * The generally allowed system classes.
-   */
-  private final ClassNameValidator general_allowed_sys_classes;
-
-  /**
-   * The MWP class loaders.
-   */
-  private final MWPClassLoaderSet classloaders;  
 
   /**
    * The log system that's shared between all contexts.
@@ -125,23 +101,16 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
   /**
    * Constructor.
    */
-  JettyMckoiWebAppContextSet(DBSessionCache sessions_cache,
-                             String account_name, Timer system_timer,
-                             File local_temp_folder,
-                             ClassNameValidator general_allowed_sys_classes,
-                             MWPClassLoaderSet classloaders,
+  JettyMckoiWebAppContextSet(PlatformContextBuilder context_builder,
+                             String account_name,
                              LoggerService account_logger) {
 
-    this.sessions_cache = sessions_cache;
+    this.context_builder = context_builder;
     this.account_name = account_name;
-    this.system_timer = system_timer;
     this.account_logger = account_logger;
     this.lookups = new ArrayList<>();
     this.stop_queue = new ArrayList<>();
 
-    this.local_temp_folder = local_temp_folder;
-    this.general_allowed_sys_classes = general_allowed_sys_classes;
-    this.classloaders = classloaders;
   }
 
   /**
@@ -156,6 +125,8 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
    * and initializes the web applications defined there in this context set.
    */
   private void initializeWebApps() {
+
+    DBSessionCache sessions_cache = context_builder.getSessionsCache();
 
     // Get the account file system,
     ODBTransaction fs_t =
@@ -255,16 +226,12 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
 
             // PENDING: Contexts may permit varying levels of system class
             //   acceptance.
-            ClassNameValidator allowed_system_classes =
-                                                    general_allowed_sys_classes;
 
             // Create the web app context object,
             context = new JettyMckoiWebAppContext(
-                          sessions_cache, account_name,
+                          context_builder, account_name,
                           domain, protocol, context_path, webapp_path,
-                          account_logger,
-                          allowed_system_classes, classloaders,
-                          webapp_name, local_temp_folder);
+                          account_logger, webapp_name);
 
             // Create the lookup object,
             WALookup lookup =
@@ -333,7 +300,8 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
 
         // If there are pending stops, schedule the stop process,
         if (pending_stops) {
-          system_timer.schedule(new StopQueueTask(), (70 * 1000));
+          context_builder.getSystemTimer().schedule(
+                                            new StopQueueTask(), (70 * 1000));
         }
 
       } // if webapps timestamp different
@@ -376,7 +344,8 @@ class JettyMckoiWebAppContextSet extends AbstractHandler { //extends HandlerList
 
       // If the queue isn't empty, schedule a new clear,
       if (!is_empty) {
-        system_timer.schedule(new StopQueueTask(), (60 * 1000));
+        context_builder.getSystemTimer().schedule(
+                                            new StopQueueTask(), (60 * 1000));
       }
     }
   };

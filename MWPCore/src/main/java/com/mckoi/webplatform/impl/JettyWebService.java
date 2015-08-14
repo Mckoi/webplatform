@@ -25,13 +25,7 @@
 
 package com.mckoi.webplatform.impl;
 
-import com.mckoi.mwpcore.ClassNameValidator;
-import com.mckoi.mwpcore.DBSessionCache;
-import com.mckoi.mwpcore.MWPClassLoaderSet;
 import com.mckoi.mwpcore.SSLExtraConfig;
-import com.mckoi.process.impl.ProcessClientService;
-import java.io.File;
-import java.util.Timer;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -51,40 +45,9 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 class JettyWebService {
 
   /**
-   * The session cache.
-   */
-  private final DBSessionCache sessions_cache;
-
-  /**
-   * The ProcessClientService that supports communication with processes on
-   * the network.
-   */
-  private final ProcessClientService process_client_service;
-
-  /**
-   * The system timer.
-   */
-  private final Timer system_timer;
-
-  /**
-   * A class name validator for generally allowed system classes.
-   */
-  private final ClassNameValidator general_allowed_sys_classes;
-
-  /**
-   * The MWP class loaders.
-   */
-  private final MWPClassLoaderSet classloaders;
-
-  /**
    * Extra SSL configuration properties.
    */
   private final SSLExtraConfig ssl_extras;
-
-  /**
-   * The location of the local temporary folder.
-   */
-  private final File local_temp_folder;
 
   /**
    * The server.
@@ -100,28 +63,22 @@ class JettyWebService {
    * The current HTTPS connector.
    */
   private Connector current_https_connector = null;
+  private final PlatformContextBuilder context_builder;
 
   /**
    * Constructor.
    */
-  public JettyWebService(DBSessionCache sessions_cache,
-                         ProcessClientService process_client_service,
-                         Timer system_timer,
-                         ClassNameValidator general_allowed_sys_classes,
-                         MWPClassLoaderSet classloaders,
-                         SSLExtraConfig ssl_extras,
-                         File local_temp_folder) {
+  public JettyWebService(PlatformContextBuilder context_builder,
+                         SSLExtraConfig ssl_extras) {
 
-    this.sessions_cache = sessions_cache;
-    this.process_client_service = process_client_service;
-    this.system_timer = system_timer;
-    this.general_allowed_sys_classes = general_allowed_sys_classes;
-    this.classloaders = classloaders;
+    this.context_builder = context_builder;
     this.ssl_extras = ssl_extras;
-    this.local_temp_folder = local_temp_folder;
 
     // Create the Jetty context,
     this.server = new JettyMckoiServer();
+    
+    this.context_builder.setServer(server);
+
   }
 
   /**
@@ -130,10 +87,8 @@ class JettyWebService {
   void start() throws Exception, InterruptedException {
 
     // Add the request handler,
-    JettyMckoiRequestHandler handler = new JettyMckoiRequestHandler(
-                 sessions_cache, process_client_service, system_timer,
-                 general_allowed_sys_classes, classloaders,
-                 local_temp_folder);
+    JettyMckoiRequestHandler handler =
+                                new JettyMckoiRequestHandler(context_builder);
 
     server.setHandler(handler);
 

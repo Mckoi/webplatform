@@ -80,7 +80,7 @@ public class WebServiceNode {
   private static final Set<String> ignoreWarningsLogs;
   static {
     // A set of class names of Jetty logs that we ignore the warnings from,
-    Set<String> ignore_warnings = new HashSet();
+    Set<String> ignore_warnings = new HashSet<>();
     ignore_warnings.add("org.eclipse.jetty.http.HttpGenerator");
     ignoreWarningsLogs = Collections.unmodifiableSet(ignore_warnings);
   }
@@ -126,6 +126,10 @@ public class WebServiceNode {
 
   /**
    * Pre security initialization.
+   * 
+   * @param web_config
+   * @param sessions_cache
+   * @param process_client_service
    */
   public void preSecurityInit(Properties web_config,
                               DBSessionCache sessions_cache,
@@ -174,6 +178,10 @@ public class WebServiceNode {
     // a static method.
     Object c = new javax.servlet.http.Cookie("cookieinit", "testval");
 
+    // The static methods in PlatformContextBuilder distribute an object that
+    // permits certain classes to switch contexts.
+    Class<PlatformContextBuilder> clazz = PlatformContextBuilder.class;
+    
     // Jetty introduced a ShutdownMonitor object that has a way of reading
     // system properties that requires read, write access to all, which we'd
     // prefer not to have to allow.
@@ -289,14 +297,14 @@ public class WebServiceNode {
       // The local JVM system timer thread,
       Timer system_timer = new Timer("Mckoi Web Platform System Timer");
 
+      // The PlatformContextBuilder,
+      PlatformContextBuilder context_builder = new PlatformContextBuilder(
+              sessions_cache, process_client_service, system_timer,
+              allowed_sys_classes, classloaders, local_temp_folder);
+
       // Start the Jetty web service,
-      http_service = new JettyWebService(sessions_cache,
-                                         process_client_service,
-                                         system_timer,
-                                         allowed_sys_classes,
-                                         classloaders,
-                                         ssl_extras,
-                                         local_temp_folder);
+      http_service = new JettyWebService(context_builder, ssl_extras);
+
       // Init successful
       init_complete = true;
 
@@ -373,7 +381,7 @@ public class WebServiceNode {
   private static class JettyIgnoreWarningsLogger
                             extends org.eclipse.jetty.util.log.AbstractLogger {
 
-    private JavaUtilLog parent;
+    private final JavaUtilLog parent;
 
     public JettyIgnoreWarningsLogger(JavaUtilLog parent) {
       this.parent = parent;

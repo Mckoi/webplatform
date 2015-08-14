@@ -27,6 +27,7 @@ package com.mckoi.webplatform.impl;
 
 import com.mckoi.appcore.SystemStatics;
 import com.mckoi.mwpcore.ClassNameValidator;
+import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.mwpcore.DBSessionCache;
 import com.mckoi.mwpcore.MWPUserClassLoader;
 import com.mckoi.network.MckoiDDBAccess;
@@ -118,8 +119,9 @@ public final class PlatformContextImpl implements PlatformContext {
   /**
    * Creates a thread context for the current thread with the given details.
    */
-  public static void setCurrentThreadContext(
+  private static void setCurrentThreadContext(
             boolean is_app_service_context,
+            PlatformContextBuilder context_builder,
             DBSessionCache sessions_cache,
             ProcessClientService process_client_service,
             ProcessInstance process_instance,
@@ -140,6 +142,7 @@ public final class PlatformContextImpl implements PlatformContext {
     }
     // Create the context,
     c = new ThreadContext(is_app_service_context,
+                          context_builder,
                           sessions_cache,
                           process_client_service,
                           process_instance,
@@ -154,21 +157,63 @@ public final class PlatformContextImpl implements PlatformContext {
   }
 
   /**
-   * Creates a thread context for the current thread with the given details.
+   * Creates a thread context for a process application context, with the
+   * given details.
    */
-  static void setCurrentThreadContext(
-                         boolean is_app_service_context,
-                         DBSessionCache sessions_cache,
-                         ProcessClientService process_client_service,
-                         ProcessInstance process_instance,
-                         String account_name, String vhost, String protocol) {
+  public static void setCurrentThreadContextForProcessService(
+              DBSessionCache session_cache,
+              ProcessInstance process_instance,
+              String account_name, String vhost, String protocol,
+              String webapp_name,
+              LoggerService logger,
+              MWPUserClassLoader user_class_loader,
+              ClassLoader app_class_loader,
+              ClassNameValidator allowed_system_classes) {
+
+    setCurrentThreadContext(false, null, session_cache, null,
+                            process_instance,
+                            account_name, vhost, protocol,
+                            webapp_name,
+                            logger, user_class_loader, app_class_loader,
+                            allowed_system_classes);
+
+  }
+  
+  /**
+   * Creates a thread context for an application server context, with the
+   * given details.
+   */
+  static void setCurrentThreadContextForAppService(
+          PlatformContextBuilder context_builder,
+          String account_name, String vhost, String protocol) {
+
     setCurrentThreadContext(
-                    is_app_service_context,
-                    sessions_cache, process_client_service,
-                    process_instance,
+                    true,
+                    context_builder,
+                    context_builder.getSessionsCache(),
+                    context_builder.getProcessClientService(),
+                    null,
                     account_name, vhost, protocol,
                     null, null, null, null, null);
+
   }
+
+//  /**
+//   * Creates a thread context for the current thread with the given details.
+//   */
+//  static void setCurrentThreadContext(
+//                         boolean is_app_service_context,
+//                         DBSessionCache sessions_cache,
+//                         ProcessClientService process_client_service,
+//                         ProcessInstance process_instance,
+//                         String account_name, String vhost, String protocol) {
+//    setCurrentThreadContext(
+//                    is_app_service_context,
+//                    sessions_cache, process_client_service,
+//                    process_instance,
+//                    account_name, vhost, protocol,
+//                    null, null, null, null, null);
+//  }
 
   /**
    * Sets the LoggerService for the current thread.
@@ -527,10 +572,27 @@ public final class PlatformContextImpl implements PlatformContext {
     ThreadContext c = getCurrentThreadContext();
     if (c.is_app_service_context) {
       AppServiceProcessClient process_client =
-                                  (AppServiceProcessClient) c.getProperty("ap");
+                                (AppServiceProcessClient) c.getProperty("ap");
       if (process_client == null) {
+        final PlatformContextBuilder cb = c.context_builder;
+        final String server_name = c.vhost_name;
+        final boolean is_secure = c.protocol.equals("https");
+        // Create a contextifier that sets the context all notified events
+        // in this process client are given.
+        ContextBuilder contextifier = new ContextBuilder() {
+          @Override
+          public void enterContext() {
+            cb.enterWebContext(
+                PlatformContextBuilder.CONTEXT_GRANT, server_name, is_secure);
+          }
+          @Override
+          public void exitContext() {
+            cb.exitWebContext(PlatformContextBuilder.CONTEXT_GRANT);
+          }
+        };
         process_client =
-          c.process_client_service.getAppServiceProcessClientFor(c.account_name);
+                c.process_client_service.getAppServiceProcessClientFor(
+                                                c.account_name, contextifier);
         c.setProperty("ap", process_client);
       }
       return process_client;
@@ -796,6 +858,7 @@ public final class PlatformContextImpl implements PlatformContext {
   private static class ThreadContext {
 
     private final boolean is_app_service_context;
+    private final PlatformContextBuilder context_builder;
     private final DBSessionCache sessions_cache;
     private final ProcessClientService process_client_service;
     private final ProcessInstance process_instance;
@@ -812,6 +875,7 @@ public final class PlatformContextImpl implements PlatformContext {
     private Map<String, Object> properties = null;
 
     ThreadContext(boolean is_app_service_context,
+                  PlatformContextBuilder context_builder,
                   DBSessionCache sessions_cache,
                   ProcessClientService process_client_service,
                   ProcessInstance process_instance,
@@ -823,6 +887,7 @@ public final class PlatformContextImpl implements PlatformContext {
                   ClassLoader app_class_loader,
                   ClassNameValidator system_class_validator) {
       this.is_app_service_context = is_app_service_context;
+      this.context_builder = context_builder;
       this.sessions_cache = sessions_cache;
       this.process_client_service = process_client_service;
       this.process_instance = process_instance;

@@ -11,7 +11,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
  * @author Tobias Downer
  */
 
-public class WebXmlConfiguration
+public final class WebXmlConfiguration
                          extends org.eclipse.jetty.webapp.WebXmlConfiguration {
 
     /* ------------------------------------------------------------------------------- */

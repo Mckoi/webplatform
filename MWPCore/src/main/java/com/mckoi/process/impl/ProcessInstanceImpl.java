@@ -26,6 +26,7 @@
 package com.mckoi.process.impl;
 
 import com.mckoi.mwpcore.ClassNameValidator;
+import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.mwpcore.DBSessionCache;
 import com.mckoi.mwpcore.MWPUserClassLoader;
 import com.mckoi.mwpcore.ThreadUsageStatics;
@@ -69,6 +70,14 @@ final class ProcessInstanceImpl implements ProcessInstance {
    */
   public static final Logger PROCESS_LOG =
                                      Logger.getLogger("com.mckoi.process.Log");
+
+  /**
+   * The noop ContextBuilder.
+   */
+  private static final ContextBuilder NO_CONTEXT;
+  static {
+    NO_CONTEXT = ContextBuilder.NO_CONTEXT;
+  }
 
   /**
    * The backed process service.
@@ -117,8 +126,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
   /**
    * A map of ProcessChannel to the object managing it.
    */
-  private final Map<ProcessChannel, PIChannelListener> listener_map = new HashMap();
-
+  private final Map<ProcessChannel, PIChannelListener> listener_map =
+                                                              new HashMap<>();
 
   /**
    * Cached logger service.
@@ -495,7 +504,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         try {
 
           // Instantiate the process object via the class loader,
-          Class process_class = Class.forName(process_name, true, cl);
+          Class<?> process_class = Class.forName(process_name, true, cl);
 
           if (!ProcessOperation.class.isAssignableFrom(process_class)) {
             // Fail if process not a com.mckoi.process.ProcessOperation instance.
@@ -816,7 +825,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
                                      process_service.getProcessClientService();
       // Consume all messages until our notifier is registered,
       final ChannelConsumer consumer =
-              client_service.getChannelConsumer(account_name, process_channel);
+              client_service.getChannelConsumer(
+                                  account_name, NO_CONTEXT, process_channel);
 
       // Create a notifier that self renews,
       final PIChannelListener pi_channel_listener =
@@ -842,7 +852,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
                                      process_service.getProcessClientService();
     // Consume all messages until our notifier is registered,
     final ChannelConsumer consumer =
-                client_service.getChannelConsumer(account_name, session_state);
+                client_service.getChannelConsumer(
+                                    account_name, NO_CONTEXT, session_state);
 
     // Get the process channel,
     ProcessChannel process_channel = consumer.getProcessChannel();
@@ -957,12 +968,9 @@ final class ProcessInstanceImpl implements ProcessInstance {
 
       Thread.currentThread().setContextClassLoader(
                                    ProcessInstanceImpl.class.getClassLoader());
-      PlatformContextImpl.setCurrentThreadContext(
-              false,  // is_app_service_context
-              session_cache, null, this,
-              account_name, vhost, protocol, webapp_name,
-              logger_service,
-              user_class_loader, app_class_loader,
+      PlatformContextImpl.setCurrentThreadContextForProcessService(
+              session_cache, this, account_name, vhost, protocol, webapp_name,
+              logger_service, user_class_loader, app_class_loader,
               allowed_classes);
 
       try {
@@ -1726,7 +1734,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         // Yes, so put it in the account's log system,
         // This is a privileged action since this can be called from
         // user-code.
-        AccessController.doPrivileged(new PrivilegedAction() {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
           @Override
           public Object run() {
             process_service.logAccountException(ProcessInstanceImpl.this, e);
@@ -1867,8 +1875,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
     private BroadcastInstance() {
       broadcast_seq_value = new AtomicLong(System.currentTimeMillis());
       broadcast_queue = new QueueList();
-      connection_list = new ArrayList(2);
-      connection_timestamp_list = new ArrayList(2);
+      connection_list = new ArrayList<>(2);
+      connection_timestamp_list = new ArrayList<>(2);
     }
 
     /**
@@ -1990,7 +1998,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
     private List<PMessage> allBroadcastMessagesBetween(
                   long min_seq, long max_seq, Set<Long> sent_sequences) {
 
-      List<PMessage> to_send = new ArrayList();
+      List<PMessage> to_send = new ArrayList<>();
       synchronized (broadcast_queue) {
 
         // Search the queue backwards,
@@ -2008,8 +2016,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
 
           // Add the message to send,
           if ( msg_seq_val <= max_seq &&
-                            ( sent_sequences == null ||
-                              !sent_sequences.contains(msg_seq_val) ) ) {
+                            ( !sent_sequences.contains(msg_seq_val) ) ) {
             sent_sequences.add(msg_seq_val);
             to_send.add(pmsg);
           }
@@ -2035,7 +2042,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
      */
     private List<PMessage> allBroadcastMessagesAfter(long min_sequence_val) {
 
-      List<PMessage> to_send = new ArrayList();
+      List<PMessage> to_send = new ArrayList<>();
       synchronized (broadcast_queue) {
 
         // Search the queue backwards,
@@ -2147,7 +2154,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
     private List<NIOConnection> getBroadcastListeners() {
       List<NIOConnection> output_list;
       synchronized (connection_list) {
-        output_list = new ArrayList(connection_list.size());
+        output_list = new ArrayList<>(connection_list.size());
         output_list.addAll(connection_list);
       }
       return output_list;
@@ -2287,9 +2294,9 @@ final class ProcessInstanceImpl implements ProcessInstance {
            ProcessId process_id, ProcessMessage msg, boolean reply_expected) {
 
       // Invoke the function,
-      final ProcessResult result =
-                  client_service.invokeFunction(
-                              account_name, process_id, msg, reply_expected);
+      final ProcessResult result = client_service.invokeFunction(
+                                        account_name, NO_CONTEXT,
+                                        process_id, msg, reply_expected);
       return pushMessageOnCallback(result, reply_expected);
 
     }
@@ -2317,8 +2324,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
     public int invokeServersQuery(ServersQuery query) {
 
       // Invoke the function,
-      final ProcessResult ret =
-                    client_service.invokeServersQuery(account_name, query);
+      final ProcessResult ret = client_service.invokeServersQuery(
+                                            account_name, NO_CONTEXT, query);
       return pushMessageOnCallback(ret, true);
 
     }
