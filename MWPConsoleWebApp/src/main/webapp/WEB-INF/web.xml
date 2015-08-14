@@ -22,6 +22,14 @@
         <async-supported>true</async-supported>
     </servlet>
     <servlet>
+        <servlet-name>WSockServlet</servlet-name>
+        <servlet-class>com.mckoi.mwpui.servlets.WSockServlet</servlet-class>
+<!--        <init-param>
+            <param-name>maxIdleTime</param-name>
+            <param-value>8000</param-value>
+        </init-param>-->
+    </servlet>
+    <servlet>
         <servlet-name>DBBrowser</servlet-name>
         <servlet-class>com.mckoi.mwpui.servlets.DBBrowserServlet</servlet-class>
         <async-supported>true</async-supported>
@@ -48,6 +56,11 @@
     <servlet-mapping>
         <servlet-name>FunctionServlet</servlet-name>
         <url-pattern>/F</url-pattern>
+    </servlet-mapping>
+    <!-- WebSocket support -->
+    <servlet-mapping>
+        <servlet-name>WSockServlet</servlet-name>
+        <url-pattern>/WSock</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>DBBrowser</servlet-name>

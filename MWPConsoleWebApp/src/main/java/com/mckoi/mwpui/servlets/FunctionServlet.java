@@ -24,9 +24,6 @@
 package com.mckoi.mwpui.servlets;
 
 import com.mckoi.mwpui.ServletUtils;
-import com.mckoi.process.*;
-import com.mckoi.webplatform.PlatformContext;
-import com.mckoi.webplatform.PlatformContextFactory;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
@@ -52,7 +49,7 @@ public class FunctionServlet extends HttpServlet {
    * @throws IOException if an I/O error occurs
    */
   protected void processRequest(
-                  HttpServletRequest request, HttpServletResponse response)
+        final HttpServletRequest request, final HttpServletResponse response)
                                          throws ServletException, IOException {
 
     // Decode parameters from client,
@@ -68,72 +65,23 @@ public class FunctionServlet extends HttpServlet {
     final String signal_str = params.get("s");
     final String signal_feature_str = params.get("sf");
 
-    // Bad request if no process id or command string,
-    boolean valid_request =
-               process_id_str != null &&
-                ( command_str != null ||
-                 ( signal_str != null && signal_feature_str != null ) );
-
-    if (!valid_request) {
+    CommandHandler cmd = new CommandHandler(
+                                  process_id_str, frame_str, command_str,
+                                  signal_str, signal_feature_str) {
+      @Override
+      PrintWriter getPrintWriter() throws IOException {
+        response.setContentType("text/plain;charset=UTF-8");
+        return response.getWriter();
+      }
+    };
+    
+    // Check if the request is valid,
+    if (!cmd.isValidRequest()) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST);
       return;
     }
-
-    PlatformContext ctx = PlatformContextFactory.getPlatformContext();
-    // Disable automatic logging,
-    ctx.getLogControl().setAutomaticLogging(false);
-    AppServiceProcessClient process_client = ctx.getAppServiceProcessClient();
-    ProcessId process_id = ProcessId.fromString(process_id_str);
-
-    // NOTE: We can reply here for immediate response to the client if needed
-    //   for some commands/state.
-    response.setContentType("text/plain;charset=UTF-8");
-    PrintWriter out = response.getWriter();
-
-    try {
-
-      String ip_addr = request.getRemoteAddr();
-
-      // Immediate push and ignore the result,
-      // NOTE; This ignores failure conditions,
-
-      // Send the command,
-      if (command_str != null) {
-        // Create the message,
-        ProcessMessage msg = ByteArrayProcessMessage.encodeArgs("@",
-                                      command_str, frame_str, ip_addr);
-        // Invoke the function on the process,
-        process_client.invokeFunction(process_id, msg, false);
-      }
-      // Send the signal,
-      if (signal_str != null) {
-        // If it's a kill signal,
-        if (signal_feature_str.equals("kill")) {
-          String[] signal = new String[]
-                    { signal_feature_str, frame_str, ip_addr };
-          process_client.sendSignal(process_id, signal);
-        }
-        // Otherwise, send as an interact message,
-        else {
-          // Create the message,
-          ProcessMessage msg = ByteArrayProcessMessage.encodeArgs("#",
-                                      signal_feature_str, frame_str, ip_addr);
-          // Invoke the function on the process,
-          process_client.invokeFunction(process_id, msg, false);
-        }
-      }
-      
-      // NOTE; we don't care about the result, we let it GC
-      out.println("OK");
-
-    }
-    catch (Throwable e) {
-      out.println("FAIL:Exception");
-      e.printStackTrace(out);
-    }
-
-    out.flush();
-    out.close();
+    // Okay, run the command,
+    cmd.run(request.getRemoteAddr());
 
   }
 

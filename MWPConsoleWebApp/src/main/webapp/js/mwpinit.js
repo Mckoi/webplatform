@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2000-2012 Diehl and Associates, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -44,7 +44,7 @@ this.MWPENV = {};
   // This string is appended to all css and js resources loaded dynamically if
   // 'addTimestampForLoad' is false. If you are having caching problems then
   // change this version number to see if it fixes things.
-  MWPENV.timestampString = "000h";
+  MWPENV.timestampString = "000i";
 
   MWPENV.ts_code = new Date().getTime();
 
@@ -211,6 +211,27 @@ this.MWPENV = {};
     dom_ele.innerHTML = template;
   };
 
+  /**
+   * Creates a WebSocket from the relative URL of the current address.
+   */
+  MWPENV.createWebSocket = function(relative_url) {
+    var url = window.location.href;
+    var file_part = url.substring(0, url.lastIndexOf("/"));
+    var ws_url = "";
+    // The web socket link is either encrypted or not depending on test page,
+    if (file_part.startsWith("http://")) {
+      ws_url = "ws://" + file_part.substring(7);
+    }
+    else if (file_part.startsWith("https://")) {
+      ws_url = "wss://" + file_part.substring(8);
+    }
+    ws_url = ws_url + relative_url;
+
+    console.log("Web Socket URL: " + ws_url);
+    return new WebSocket(ws_url);
+
+  };
+
   // Loads all the scripts dynamically and calls the callback function when
   // all the scripts are loaded.
   MWPENV.loadScripts = function(scripts_array, callback) {
@@ -307,7 +328,7 @@ this.MWPUTILS = {};
 //// Loads the given script dynamically if it's not already loaded.
 //this.requireScript = MWPENV.requireScript;
 
-  
+
 
 
 
@@ -359,7 +380,7 @@ this.MWPUTILS = {};
         tag: "div.mwpconsole_selector",
         style: {position: "relative", height: "100%", width: "26px"}
       });
-      
+
       this.div.appendChild(selector_div);
     };
 
@@ -593,7 +614,7 @@ this.MWPUTILS = {};
     var last_tab_complete_prompt = null;
     var last_tab_complete_db = null;
     var last_tab_index = -1;
-    
+
     function doTabOperation() {
       if (last_tab_complete_db === null) return;
       var sz = last_tab_complete_db.length - 1;
@@ -606,7 +627,7 @@ this.MWPUTILS = {};
       var start_str = last_tab_complete_db[0];
       promptinput.value = "" + start_str + complete_str;
     };
-    
+
     function doTabCompletion(prompt_text) {
       // Do we need to query?
       if (last_tab_complete_db === null) {
@@ -650,7 +671,7 @@ this.MWPUTILS = {};
         // Clear the pane_div,
         while (pane_div.lastChild) {
           pane_div.removeChild(pane_div.lastChild);
-        } 
+        }
       }
 
       // The default focus div.
@@ -676,7 +697,7 @@ this.MWPUTILS = {};
 
       main_div = mdom.create("div");
       pane_div.appendChild(main_div);
-      
+
     };
 
     function getSelectedText() {
@@ -708,13 +729,13 @@ this.MWPUTILS = {};
 
     this.setupForConsole = function() {
       setupPaneGeneral();
-      
+
       main_div.className="mwpconsole_base";
       main_div.style.position = "relative";
       main_div.style.height = "100%";
       main_div.style.overflowX = "auto";
       main_div.style.overflowY = "auto";
-      
+
       // Capture click events on the panel,
       main_div.onclick = mainPanelClick;
     };
@@ -764,10 +785,10 @@ this.MWPUTILS = {};
         }
       });
 
-      promptinput.onfocus = function() { 
+      promptinput.onfocus = function() {
         prompt_focus = true;
       };
-      promptinput.onblur = function() { 
+      promptinput.onblur = function() {
         prompt_focus = false;
       };
 
@@ -812,7 +833,7 @@ this.MWPUTILS = {};
         }
         return true;
       };
-      
+
       promptinput.onkeydown = function(e) {
         var sz;
         e = e || window.event;
@@ -842,7 +863,7 @@ this.MWPUTILS = {};
           last_tab_complete_db = null;
           last_tab_complete_prompt = null;
         }
-        
+
         // If 'up' pressed,
         if (e.keyCode === 38) {
           sz = commands_history.length;
@@ -889,7 +910,7 @@ this.MWPUTILS = {};
             }
           }
         }
-        
+
         return true;
       };
 
@@ -1029,7 +1050,7 @@ this.MWPUTILS = {};
           this.println(stack_trace, "error");
         }
         else {
-          
+
           var icon1_inf = {icon : "right", fill_color : "white"};
           var icon2_inf = {icon : "down", fill_color : "white"};
           var expand_button = GUIWidgets.createToggleIconButton(1.2);
@@ -1062,7 +1083,7 @@ this.MWPUTILS = {};
             body_dom.style.display = ((i === 1) ? "block" : "none");
             scrollToElement(dom);
           });
-          
+
         }
       }
     };
@@ -1272,6 +1293,307 @@ this.MWPUTILS = {};
     }
   }
 
+  // ----- START Network interface code -----
+
+  // We can talk with the server either using long-poll AJAX continuations or,
+  // when available, bidirectional WebSockets. The interface code below
+  // supports either mode.
+
+  function inputArgsToMap(frame, process_id_str, args) {
+    var map = {
+      "p" : process_id_str,
+      "f" : frame
+    };
+    for (var arg in args) {
+      if (arg !== "p" && arg !== "f") map[arg] = args[arg];
+    }
+    return map;
+  }
+
+  function dispatchMessage(
+                      panel_group, process_id_str, session_state, message) {
+
+    var console_pane = panel_group.getPane("0");
+    var lines = explodeLines(message);
+    var next_session_state;
+    var retry_time;
+
+    if (lines[0] === "OK") {
+      next_session_state = lines[1];
+      retry_time = 0;
+      var pdelim = lines[0].length + 1 + lines[1].length + 1;
+      // Received some messages so dispatch them,
+      processConsoleCommands(panel_group, process_id_str,
+                             message.substring(pdelim));
+    }
+    else if (lines[0] === "FAIL:Exception") {
+      // Retry after a 4 second timeout,
+      next_session_state = session_state;
+      retry_time = 4000;
+      console_pane.println("Server communication exception", "error");
+      printException(console_pane, lines);
+    }
+    else {
+      console_pane.println("Invalid server response", "error");
+      return [-1, ''];
+    }
+
+    return [retry_time, next_session_state];
+
+  }
+
+  // Net implementations (AJAXNet and WebSocketNet).
+  // These objects provide 2 main functions;
+  //
+  // doNetMessageInputLoop(panel_group, process_id_str, session_state)
+  //   When a batch of messages is received from the server, dispatches the
+  //   messages to the required locations. Typically this results in a call to
+  //   'processConsoleCommands'. After messages have been dispatched, the
+  //   function calls itself ready to receive the next message.
+  //
+  // sendCommand(panel_group, frame, process_id_str, args, ok_action)
+  //   Sends a set of arguments to the server to be processed. When the server
+  //   has acknowledged the command has been received, the 'ok_action' function
+  //   is called (if provided).
+  //
+  var AJAXNet = {};
+  (function() {
+
+    function doNetMessageInputLoop(
+                                panel_group, process_id_str, session_state) {
+
+      doAJAXPost(
+        // The AJAX message consumer query,
+        "M",
+        { "ss" : session_state },
+        // Success message,
+        function(msg) {
+          // Dispatch the message,
+          var result = dispatchMessage(
+                            panel_group, process_id_str, session_state, msg);
+          var retry_time = result[0];
+          var next_session_state = result[1];
+          // Recurse on this function,
+          if (retry_time === 0) {
+            doNetMessageInputLoop(panel_group, process_id_str, next_session_state);
+          }
+          else if (retry_time > 0) {
+            setTimeout(function() {
+                     doNetMessageInputLoop(panel_group, process_id_str,
+                                           next_session_state);}, retry_time);
+          }
+        },
+        // Fail message,
+        function(fail_code) {
+          var console_pane = panel_group.getPane("0");
+          console_pane.println(
+                          "Server communication error: " + fail_code, "error");
+          setTimeout(function() {
+                     doNetMessageInputLoop(panel_group, process_id_str,
+                                           session_state);}, 4000);
+        }
+      );
+    }
+
+    // Sends a series of arguments to the server,
+    function sendCommand(panel_group, frame, process_id_str, args, ok_action) {
+      doAJAXPost(
+        // The AJAX message consumer query,
+        "F", inputArgsToMap(frame, process_id_str, args),
+        // Success message,
+        function(success_text) {
+          var console_pane = panel_group.getPane("0");
+          var lines = explodeLines(success_text);
+          if (lines[0] === "OK") {
+            if (ok_action) {
+              ok_action("");
+            }
+          }
+          else if (lines[0] === "FAIL:Exception") {
+            console_pane.println(
+                          "(" + frame + ") Exception on command", "error");
+            printException(console_pane, lines);
+          }
+          else {
+            console_pane.println(
+                          "(" + frame + ") Invalid server response", "error");
+          }
+        },
+        // Fail message,
+        function(fail_code) {
+          var console_pane = panel_group.getPane("0");
+          console_pane.println(
+                "(" + frame + ") Server communication error: " + fail_code,
+                "error");
+        }
+      );
+    }
+
+    AJAXNet.doNetMessageInputLoop = doNetMessageInputLoop;
+    AJAXNet.sendCommand = sendCommand;
+    AJAXNet.establishConnection = function(onestablish) { onestablish(); };
+
+  })();
+
+
+  var WebSocketNet = {};
+  (function() {
+
+    var connect = false;
+    var cur_session_state;
+    var cur_panel_group;
+    var cur_process_id_str;
+    var handshake = false;
+    var invalidated = false;
+    var web_socket;
+    var ack_counter = 1;
+    var ack_map = [];
+
+    // When we receive a message from the server,
+    function handleMessage(e) {
+      var data = e.data;
+      var tdata = typeof data;
+
+      if (tdata === 'string') {
+        // Parse the command,
+        var cmd = data.charAt(0);
+        // This is a send command acknowlegement which will make a callback.
+        if (cmd === '!') {
+          // Acknowlegment,
+          var delim = data.indexOf(' ');
+          var ack_id = parseInt(data.substring(1, delim));
+          var fun = ack_map[ack_id];
+          delete ack_map[ack_id];
+          if (fun) fun(data.substring(delim + 1));
+        }
+        // Otherwise it's a regular message broadcast from the process,
+        else {
+          var msg = data.substring(1);
+          // Dispatch the message,
+          var result = dispatchMessage(
+                    cur_panel_group, cur_process_id_str, cur_session_state, msg);
+          var retry_time = result[0];
+          if (retry_time < 0) {
+            // Invalidate,
+            invalidated = true;
+          }
+          // Update the current session state,
+          cur_session_state = result[1];
+        }
+
+      }
+      else {
+        // Don't know how to handle this type of message,
+        console.error("Don't type know to handle data type: %s", tdata);
+      }
+    }
+
+    // Establishes the WebSocket connection.
+    function establishConnection(onEstablish) {
+      if (!connect && !invalidated) {
+
+        // Make sure we only ever call this once,
+        var once_callback = onEstablish;
+
+        web_socket = MWPENV.createWebSocket("/WSock");
+        web_socket.binaryType = 'arraybuffer';
+        web_socket.onopen = function() {
+          connect = true;
+          // Reestablish to the last session state,
+          if (handshake) web_socket.send("$" + cur_session_state);
+          // Callback,
+          if (once_callback) {
+            var cb = once_callback;
+            once_callback = null;
+            cb();
+          }
+        };
+        var timeout_function;
+        var reestablish = function() {
+          if (!timeout_function) {
+            timeout_function = function() {
+              timeout_function = null;
+              establishConnection(once_callback);
+            };
+            // After 4 seconds attempt to reconnect,
+            console.log("Failed to connect WebSocket, retrying in 4 sec");
+            setTimeout(timeout_function, 4000);
+          }
+        };
+        web_socket.onerror = function() {
+          connect = false;
+          reestablish();
+        };
+        web_socket.onclose = function() {
+          connect = false;
+          setTimeout(function() { establishConnection(once_callback); }, 20);
+        };
+        web_socket.onmessage = handleMessage;
+      }
+    }
+
+    function printConnectFail(panel_group) {
+      var console_pane = panel_group.getPane("0");
+      console_pane.println("Error: Not connected to server", "error");
+    }
+
+    function doNetMessageInputLoop(
+                                panel_group, process_id_str, session_state) {
+      // If not currently connected then print an error message,
+      if (!connect) printConnectFail(panel_group);
+      // Have we done the handshake?
+      if (!handshake) {
+        // Handshake, and then we'll get a callback,
+        cur_session_state = session_state;
+        cur_panel_group = panel_group;
+        cur_process_id_str = process_id_str;
+        web_socket.send("$" + cur_session_state);
+        handshake = true;
+      }
+    }
+
+    // Sends a series of arguments to the server,
+    function sendCommand(panel_group, frame, process_id_str, args, ok_action) {
+      if (invalidated)
+            throw new Error("Connection was invalidated because of error");
+
+      // If not currently connected then print an error message,
+      if (!connect) printConnectFail(panel_group);
+
+      // The output message is a JSON string,
+      var jsona = JSON.stringify(inputArgsToMap(frame, process_id_str, args));
+      // If we need an acknowlegement
+      var ack_id = -1;
+      if (ok_action) {
+        ack_id = ack_counter;
+        ++ack_counter;
+        // Roll counter around at 2 billion
+        if (ack_counter > 2000000000) ack_count = 1;
+        ack_map[ack_id] = ok_action;
+        web_socket.send("!" + ack_id + " " + jsona);
+      }
+      else {
+        // Send the map as a JSON string,
+        web_socket.send(">" + jsona);
+      }
+
+    }
+
+    WebSocketNet.doNetMessageInputLoop = doNetMessageInputLoop;
+    WebSocketNet.sendCommand = sendCommand;
+    WebSocketNet.establishConnection = establishConnection;
+
+  })();
+
+  // The default network object to use,
+  //var Net = AJAXNet;
+  var Net = WebSocketNet;
+
+  // ----- END Network interface code -----
+
+
+
+
 
 
 
@@ -1291,8 +1613,8 @@ this.MWPUTILS = {};
     var comm = {};
     // Send a single message,
     comm.send = function(command_str, ok_action) {
-      sendMap(panel_group, frame_name, process_id_str,
-              {"c":command_str}, ok_action);
+      Net.sendCommand(panel_group, frame_name, process_id_str,
+                  {"c":command_str}, ok_action);
     };
     // Send a set of messages,
     comm.sendSet = function(msg_arr, complete_action) {
@@ -1303,8 +1625,8 @@ this.MWPUTILS = {};
         }
         else {
           ++p;
-          sendMap(panel_group, frame_name, process_id_str,
-                  {"c":msg_arr[p - 1]}, send_pos);
+          Net.sendCommand(panel_group, frame_name, process_id_str,
+                      {"c":msg_arr[p - 1]}, send_pos);
         }
       };
       send_pos();
@@ -1389,7 +1711,7 @@ this.MWPUTILS = {};
         }
         p = d1 + 1 + msgsz;
       }
-      
+
       else if (ch === 't') { // interact-reply receive,
         d1 = cmd.indexOf('|', p);
         msgsz = parseInt(cmd.substring(p, d1));
@@ -1523,7 +1845,7 @@ this.MWPUTILS = {};
       // PENDING: Pipe the instructions appropriately,
       var block_name = cmd.substring(p, initd1);
       var block_sz = parseInt(cmd.substring(initd1 + 1, initd2));
-      
+
       p = initd2 + 1;
       var block_end = p + block_sz;
 
@@ -1543,103 +1865,14 @@ this.MWPUTILS = {};
 
   }
 
-  function doConsoleUpdateLoop(panel_group, process_id_str, session_state) {
-    doAJAXPost(
-        // The AJAX message consumer query,
-        "M",
-        {"ss":session_state},
-        // Success message,
-        function(success_text) {
-          var console_pane = panel_group.getPane("0");
-          var lines = explodeLines(success_text);
-          if (lines[0] === "OK") {
-            var new_session_state = lines[1];
-            var pdelim = lines[0].length + 1 + lines[1].length + 1;
-            processConsoleCommands(panel_group, process_id_str,
-                                   success_text.substring(pdelim));
-            // Recurse AJAX,
-            doConsoleUpdateLoop(panel_group, process_id_str, new_session_state);
-          }
-          else if (lines[0] === "FAIL:Exception") {
-            console_pane.println("Server communication exception", "error");
-            printException(console_pane, lines);
-            setTimeout(function() {
-                     doConsoleUpdateLoop(panel_group, process_id_str,
-                                         session_state);}, 4000);
-          }
-          else {
-            console_pane.println("Invalid server response", "error");
-          }
-        },
-        // Fail message,
-        function(fail_code) {
-          var console_pane = panel_group.getPane("0");
-          console_pane.println(
-                          "Server communication error: " + fail_code, "error");
-          setTimeout(function() {
-                     doConsoleUpdateLoop(panel_group, process_id_str,
-                                         session_state);}, 4000);
-        }
-    );
-  }
-
-  // Sends a series of arguments to the server,
-  function sendMap(panel_group, frame, process_id_str, args, ok_action) {
-    var map = {
-      "p":process_id_str,
-      "f":frame
-    };
-    for (var arg in args) {
-      if (arg !== "p" && arg !== "f") {
-        map[arg] = args[arg];
-      }
-    }
-
-    doAJAXPost(
-      // The AJAX message consumer query,
-      "F", map,
-      // Success message,
-      function(success_text) {
-        var console_pane = panel_group.getPane("0");
-        var lines = explodeLines(success_text);
-        if (lines[0] === "OK") {
-          // Display any immediate response,
-          var pdelim = lines[0].length + 1;
-//          var pane = panel_group.getPane(frame);
-          var result_txt = success_text.substring(pdelim);
-          processConsoleCommands(panel_group, process_id_str, result_txt);
-          if (ok_action) {
-            ok_action(result_txt);
-          }
-        }
-        else if (lines[0] === "FAIL:Exception") {
-          console_pane.println(
-                        "(" + frame + ") Exception on command", "error");
-          printException(console_pane, lines);
-        }
-        else {
-          console_pane.println(
-                        "(" + frame + ") Invalid server response", "error");
-        }
-      },
-      // Fail message,
-      function(fail_code) {
-        var console_pane = panel_group.getPane("0");
-        console_pane.println(
-              "(" + frame + ") Server communication error: " + fail_code,
-              "error");
-      }
-    );
-  }
-
   // Sends command to server,
   function sendCommand(panel_group, frame, process_id_str, command_line) {
-    sendMap(panel_group, frame, process_id_str, {"c":command_line});
+    Net.sendCommand(panel_group, frame, process_id_str, {"c":command_line});
   }
 
   // Sends an interact signal to the server,
   function sendInteractSignal(panel_group, frame, process_id_str, feature) {
-    sendMap(panel_group, frame, process_id_str, {"s":"int", "sf":feature});
+    Net.sendCommand(panel_group, frame, process_id_str, {"s":"int", "sf":feature});
   }
 
   // Starts the console,
@@ -1700,8 +1933,12 @@ this.MWPUTILS = {};
     pane.init(action_function, close_function, interact_function);
 
     setTimeout(function() {
-      // Enter the asynchronous loop,
-      doConsoleUpdateLoop(panel_group, process_id_str, session_state);
+      // Establish a connection then start the loop,
+      Net.establishConnection(function() {
+        // Enter the asynchronous loop that listens for messages from the
+        // server and dispatches incoming messages as necessary,
+        Net.doNetMessageInputLoop(panel_group, process_id_str, session_state);
+      });
     }, 250);
 
   }
@@ -1764,7 +2001,7 @@ this.MWPUTILS = {};
       // Install it,
       MWPENV.installTemplate(template, document.body);
       // Set it up,
-      
+
       form = document.getElementById("login_form");
       error_div = document.getElementById("error_report");
 
@@ -1805,7 +2042,7 @@ this.MWPUTILS = {};
         };
         return false;
       };
-      
+
     });
 
 //    // If you want to login automatically then you can use the following

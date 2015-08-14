@@ -48,6 +48,43 @@ import javax.servlet.http.HttpServletResponse;
 //            asyncSupported = true)
 public class ReaderServlet extends HttpServlet {
 
+  
+  static void formatMessages(PrintWriter out, String session_state,
+                             Collection<ProcessMessage> messages)
+                                                          throws IOException {
+
+    out.println("OK");
+    out.println(session_state);
+
+    // If there are messages, return them immediately,
+    for (ProcessMessage m : messages) {
+      BufferedReader r = new BufferedReader(
+                        new InputStreamReader(m.getMessageStream(), "UTF-8"));
+      StringBuilder b = new StringBuilder(m.size() + 2);
+      while (true) {
+        int ch = r.read();
+        if (ch < 0) {
+          break;
+        }
+        b.append((char) ch);
+      }
+      String msg_str = b.toString();
+      int delim = msg_str.indexOf("|");
+      if (delim == -1) {
+        throw new RuntimeException("Message format invalid");
+      }
+      String message_type = msg_str.substring(0, delim);
+      String message_body = msg_str.substring(delim + 1);
+
+      out.print(message_type);
+      out.print("|");
+      out.print(Integer.toString(message_body.length()));
+      out.print("|");
+      out.print(message_body);
+    }
+
+  }
+
   /**
    * Processes requests for both HTTP
    * <code>GET</code> and
@@ -57,6 +94,7 @@ public class ReaderServlet extends HttpServlet {
    * @param response servlet response
    * @throws ServletException if a servlet-specific error occurs
    * @throws IOException if an I/O error occurs
+   * @throws com.mckoi.process.ProcessUnavailableException
    */
   protected void processRequest(
                   HttpServletRequest request, HttpServletResponse response)
@@ -120,43 +158,15 @@ public class ReaderServlet extends HttpServlet {
     ChannelSessionState new_state = consumer.getSessionState();
 
     response.setContentType("text/plain;charset=UTF-8");
-    PrintWriter out = response.getWriter();
 
-    out.println("OK");
-    out.println(new_state);
-
-    // If there are messages, return them immediately,
-    for (ProcessMessage m : messages) {
-      BufferedReader r = new BufferedReader(
-                        new InputStreamReader(m.getMessageStream(), "UTF-8"));
-      StringBuilder b = new StringBuilder(m.size() + 2);
-      while (true) {
-        int ch = r.read();
-        if (ch < 0) {
-          break;
-        }
-        b.append((char) ch);
-      }
-      String msg_str = b.toString();
-      int delim = msg_str.indexOf("|");
-      if (delim == -1) {
-        throw new RuntimeException("Message format invalid");
-      }
-      String message_type = msg_str.substring(0, delim);
-      String message_body = msg_str.substring(delim + 1);
-
-      out.print(message_type);
-      out.print("|");
-      out.print(Integer.toString(message_body.length()));
-      out.print("|");
-      out.print(message_body);
+    // Output the messages,
+    try (PrintWriter out = response.getWriter()) {
+      // Output the messages,
+      formatMessages(out, new_state.toString(), messages);
+      out.flush();
     }
 
-    out.flush();
-    out.close();
-
   }
-
 
   /**
    * Handles the HTTP
