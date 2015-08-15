@@ -266,6 +266,13 @@ public final class PlatformContextBuilder {
     // Must provide the correct context grant to use this method,
     checkGrantObject(grant_object);
 
+    // Look for nested contexts
+    if (PlatformContextImpl.hasThreadContextDefined()) {
+      IllegalStateException ex = new IllegalStateException("Multiple thread context error");
+      ex.printStackTrace(System.err);
+      throw ex;
+    }
+
     // The protocol,
     String protocol;
     if (is_secure) {

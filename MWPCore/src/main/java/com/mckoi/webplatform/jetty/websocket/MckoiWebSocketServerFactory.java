@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -643,117 +644,162 @@ public class MckoiWebSocketServerFactory extends ContainerLifeCycle implements W
 
     @Override
     public void onBinaryFrame(ByteBuffer buffer, boolean fin) throws IOException {
-      backed.onBinaryFrame(buffer, fin);
+      System.err.println("onBinaryFrame called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onBinaryMessage(byte[] data) {
-      backed.onBinaryMessage(data);
-    }
-
-    @Override
-    public void onClose(CloseInfo close) {
-      backed.onClose(close);
+      System.err.println("onBinaryMessage called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onConnect() {
-      backed.onConnect();
+      System.err.println("onConnect called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onContinuationFrame(ByteBuffer buffer, boolean fin) throws IOException {
-      backed.onContinuationFrame(buffer, fin);
+      System.err.println("onContinuationFrame called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onError(Throwable t) {
-      backed.onError(t);
+      System.err.println("onError called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onFrame(Frame frame) {
-      backed.onFrame(frame);
+      System.err.println("onFrame called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onInputStream(InputStream stream) throws IOException {
-      backed.onInputStream(stream);
+      System.err.println("onInputStream called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onPing(ByteBuffer buffer) {
-      backed.onPing(buffer);
+      System.err.println("onPing called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onPong(ByteBuffer buffer) {
-      backed.onPong(buffer);
+      System.err.println("onPong called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onReader(Reader reader) throws IOException {
-      backed.onReader(reader);
+      System.err.println("onReader called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onTextFrame(ByteBuffer buffer, boolean fin) throws IOException {
-      backed.onTextFrame(buffer, fin);
+      System.err.println("onTextFrame called");
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public void onTextMessage(String message) {
-      backed.onTextMessage(message);
+      System.err.println("onTextMessage called");
+      throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Enter the user-code context, and return the MWPContext for leaving the
+     * context.
+     * 
+     * @return 
+     */
+    private final AtomicInteger counter = new AtomicInteger(0);
+    private interface ContextExiter {
+      void exitContext();
+    }
+    private ContextExiter enterContext(WebSocketSession session) {
+      // Handle re-entering.
+      if (counter.getAndIncrement() == 0) {
+        ServletUpgradeRequest req =
+                      (ServletUpgradeRequest) session.getUpgradeRequest();
+        HttpServletRequest http_srequest = req.getHttpServletRequest();
+        ServletContext context = http_srequest.getServletContext();
+        final MWPContext mwp_context =
+                    (MWPContext) context.getAttribute(MWPContext.ATTRIBUTE_KEY);
+        // Enter the user-code context,
+        mwp_context.enterWebContext(CONTEXT_GRANT, http_srequest);
+        return new ContextExiter() {
+          @Override
+          public void exitContext() {
+            counter.getAndDecrement();
+            mwp_context.exitWebContext(CONTEXT_GRANT);
+          }
+        };
+      }
+      else {
+        return new ContextExiter() {
+          @Override
+          public void exitContext() {
+            counter.getAndDecrement();
+          }
+        };
+      }
+    }
+    
+    @Override
+    public void onClose(CloseInfo close) {
+      // Enter the user-code context,
+      ContextExiter mwp_context = enterContext(getSession());
+      try {
+        backed.onClose(close);
+      }
+      finally {
+        mwp_context.exitContext();
+      }
     }
 
     @Override
     public void openSession(WebSocketSession session) {
-      backed.openSession(session);
+      // Enter the user-code context,
+      ContextExiter mwp_context = enterContext(session);
+      try {
+        backed.openSession(session);
+      }
+      finally {
+        mwp_context.exitContext();
+      }
     }
 
     // Context wraps,
 
     @Override
     public void incomingError(Throwable t) {
-
-      ServletUpgradeRequest req =
-                    (ServletUpgradeRequest) getSession().getUpgradeRequest();
-      HttpServletRequest http_srequest = req.getHttpServletRequest();
-      ServletContext context = http_srequest.getServletContext();
-      MWPContext mwp_context =
-                  (MWPContext) context.getAttribute(MWPContext.ATTRIBUTE_KEY);
-
       // Enter the user-code context,
-      mwp_context.enterWebContext(CONTEXT_GRANT, http_srequest);
+      ContextExiter mwp_context = enterContext(getSession());
       try {
-
         backed.incomingError(t);
-
       }
       finally {
-        mwp_context.exitWebContext(CONTEXT_GRANT);
+        mwp_context.exitContext();
       }
     }
 
     @Override
     public void incomingFrame(Frame frame) {
-
-      ServletUpgradeRequest req =
-                    (ServletUpgradeRequest) getSession().getUpgradeRequest();
-      HttpServletRequest http_srequest = req.getHttpServletRequest();
-      ServletContext context = http_srequest.getServletContext();
-      MWPContext mwp_context =
-                  (MWPContext) context.getAttribute(MWPContext.ATTRIBUTE_KEY);
-
       // Enter the user-code context,
-      mwp_context.enterWebContext(CONTEXT_GRANT, http_srequest);
+      ContextExiter mwp_context = enterContext(getSession());
       try {
-
         backed.incomingFrame(frame);
-
       }
       finally {
-        mwp_context.exitWebContext(CONTEXT_GRANT);
+        mwp_context.exitContext();
       }
     }
 
