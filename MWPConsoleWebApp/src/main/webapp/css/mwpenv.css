@@ -23,6 +23,10 @@ div#mwplogin #login_form {
 div#mwplogin .infield {
   padding: 1px 0px 1px 0px;
 }
+div#mwplogin .chkfield {
+  padding: 0px 0px 10px 0px;
+  font-size: 80%;
+}
 div#mwplogin .smtfield {
   padding: 10px 0px 6px 0px;
 }

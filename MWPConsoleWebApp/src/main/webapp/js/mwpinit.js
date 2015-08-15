@@ -1587,7 +1587,8 @@ this.MWPUTILS = {};
 
   // The default network object to use,
   //var Net = AJAXNet;
-  var Net = WebSocketNet;
+  //var Net = WebSocketNet;
+  var Net;
 
   // ----- END Network interface code -----
 
@@ -1876,7 +1877,7 @@ this.MWPUTILS = {};
   }
 
   // Starts the console,
-  function startConsole(process_id_str, session_state) {
+  function startConsole(process_id_str, session_state, websock_enabled) {
 
     var body = document.body;
 
@@ -1933,6 +1934,8 @@ this.MWPUTILS = {};
     pane.init(action_function, close_function, interact_function);
 
     setTimeout(function() {
+      // Set either AJAX or Web Socket connection
+      Net = websock_enabled ? WebSocketNet : AJAXNet;
       // Establish a connection then start the loop,
       Net.establishConnection(function() {
         // Enter the asynchronous loop that listens for messages from the
@@ -1953,7 +1956,7 @@ this.MWPUTILS = {};
     var form;
     var child_window;
 
-    function tryLogin(user, pass) {
+    function tryLogin(user, pass, websock_enabled) {
       // Use AJAX POST to authenticate the user,
       doAJAXPost(
           "Auth",
@@ -1973,7 +1976,7 @@ this.MWPUTILS = {};
             else if (lines[0] === "OK") {
               var process_id_str = lines[1];
               var session_state = lines[2];
-              startConsole(process_id_str, session_state);
+              startConsole(process_id_str, session_state, websock_enabled);
             }
           },
           // Fail message,
@@ -1989,6 +1992,7 @@ this.MWPUTILS = {};
       if (form) {
         form.user.disabled = status;
         form.pass.disabled = status;
+        form.websocket.disabled = status;
         form.btn.disabled = status;
       }
     }
@@ -2021,7 +2025,9 @@ this.MWPUTILS = {};
         // Disable the form inputs,
         disableForm(form, true);
 
-        tryLogin(form.user.value, form.pass.value, true);
+        var websock_enabled = form.websocket.checked;
+
+        tryLogin(form.user.value, form.pass.value, websock_enabled);
 
         // Prevent the default action,
         return false;
