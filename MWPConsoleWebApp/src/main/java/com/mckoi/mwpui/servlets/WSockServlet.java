@@ -30,6 +30,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
+import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
@@ -144,6 +145,11 @@ public class WSockServlet extends WebSocketServlet {
         throw e;
       }
 
+    }
+
+    @Override
+    public void onWebSocketConnect(Session sess) {
+      super.onWebSocketConnect(sess);
     }
 
     @Override

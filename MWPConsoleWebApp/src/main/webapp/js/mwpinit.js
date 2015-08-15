@@ -1492,6 +1492,7 @@ this.MWPUTILS = {};
     function establishConnection(onEstablish) {
       if (!connect && !invalidated) {
 
+        var last_try_time = -1;
         // Make sure we only ever call this once,
         var once_callback = onEstablish;
 
@@ -1499,6 +1500,7 @@ this.MWPUTILS = {};
         web_socket.binaryType = 'arraybuffer';
         web_socket.onopen = function() {
           connect = true;
+          last_try_time = performance.now();
           // Reestablish to the last session state,
           if (handshake) web_socket.send("$" + cur_session_state);
           // Callback,
@@ -1509,24 +1511,39 @@ this.MWPUTILS = {};
           }
         };
         var timeout_function;
-        var reestablish = function() {
+        var reestablish = function(wait_ms) {
           if (!timeout_function) {
             timeout_function = function() {
               timeout_function = null;
               establishConnection(once_callback);
             };
             // After 4 seconds attempt to reconnect,
-            console.log("Failed to connect WebSocket, retrying in 4 sec");
-            setTimeout(timeout_function, 4000);
+            console.log("WebSocket Disconnect, retrying in %s ms", wait_ms);
+            setTimeout(timeout_function, wait_ms);
           }
         };
         web_socket.onerror = function() {
           connect = false;
-          reestablish();
+          reestablish(4000);
         };
         web_socket.onclose = function() {
           connect = false;
-          setTimeout(function() { establishConnection(once_callback); }, 20);
+          var cur_time = performance.now();
+          var tmo = 10;
+          if (last_try_time <= 0) {
+            last_try_time = cur_time;
+          }
+          else {
+            // The difference in time since the last try connect time,
+            var difms = cur_time - last_try_time;
+            // If it wasn't long ago then wait for longer,
+            if (difms < 1000) tmo = 4000;
+            else if (difms < 8000) tmo = 2000;
+            // Longer than 8 seconds
+            else tmo = 10;
+          }
+          last_try_time = cur_time;
+          reestablish(tmo);
         };
         web_socket.onmessage = handleMessage;
       }
@@ -1558,7 +1575,10 @@ this.MWPUTILS = {};
             throw new Error("Connection was invalidated because of error");
 
       // If not currently connected then print an error message,
-      if (!connect) printConnectFail(panel_group);
+      if (!connect) {
+        printConnectFail(panel_group);
+        return;
+      }
 
       // The output message is a JSON string,
       var jsona = JSON.stringify(inputArgsToMap(frame, process_id_str, args));
@@ -1576,7 +1596,6 @@ this.MWPUTILS = {};
         // Send the map as a JSON string,
         web_socket.send(">" + jsona);
       }
-
     }
 
     WebSocketNet.doNetMessageInputLoop = doNetMessageInputLoop;
@@ -1868,12 +1887,12 @@ this.MWPUTILS = {};
 
   // Sends command to server,
   function sendCommand(panel_group, frame, process_id_str, command_line) {
-    Net.sendCommand(panel_group, frame, process_id_str, {"c":command_line});
+    return Net.sendCommand(panel_group, frame, process_id_str, {"c":command_line});
   }
 
   // Sends an interact signal to the server,
   function sendInteractSignal(panel_group, frame, process_id_str, feature) {
-    Net.sendCommand(panel_group, frame, process_id_str, {"s":"int", "sf":feature});
+    return Net.sendCommand(panel_group, frame, process_id_str, {"s":"int", "sf":feature});
   }
 
   // Starts the console,

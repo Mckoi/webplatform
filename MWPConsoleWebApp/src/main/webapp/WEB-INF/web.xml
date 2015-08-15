@@ -24,10 +24,11 @@
     <servlet>
         <servlet-name>WSockServlet</servlet-name>
         <servlet-class>com.mckoi.mwpui.servlets.WSockServlet</servlet-class>
-<!--        <init-param>
+        <!-- Web Socket Servlet parameters -->
+        <init-param>
             <param-name>maxIdleTime</param-name>
-            <param-value>8000</param-value>
-        </init-param>-->
+            <param-value>300000</param-value>
+        </init-param>
     </servlet>
     <servlet>
         <servlet-name>DBBrowser</servlet-name>
