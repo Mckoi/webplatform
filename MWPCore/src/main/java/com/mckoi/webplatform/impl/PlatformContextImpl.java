@@ -286,10 +286,10 @@ public final class PlatformContextImpl implements PlatformContext {
     checkSecurity();
 
     ThreadContext c = thread_context.get();
-    // If there is not one defined for this thread, generate an error
-    if (c == null) {
-      throw new SecurityException("No context defined for thread.");
-    }
+//    // If there is not one defined for this thread, generate an error
+//    if (c == null) {
+//      throw new SecurityException("No context defined for thread.");
+//    }
     // Remove the context,
     thread_context.remove();
 

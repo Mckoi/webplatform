@@ -25,7 +25,7 @@ import com.mckoi.odb.ODBList;
 import com.mckoi.odb.ODBObject;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.process.impl.ProcessClientService;
-import com.mckoi.webplatform.jetty.MckoiWebSocketServerFactory;
+import com.mckoi.webplatform.jetty.websocket.MckoiWebSocketServerFactory;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;

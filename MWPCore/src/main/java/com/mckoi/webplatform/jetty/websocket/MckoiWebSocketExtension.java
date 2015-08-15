@@ -14,7 +14,7 @@
  * version 3 along with this program.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-package com.mckoi.webplatform.jetty.ext;
+package com.mckoi.webplatform.jetty.websocket;
 
 import org.eclipse.jetty.websocket.api.extensions.ExtensionFactory;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;

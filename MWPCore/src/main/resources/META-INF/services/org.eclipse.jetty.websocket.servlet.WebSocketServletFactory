@@ -1,1 +1,1 @@
-com.mckoi.webplatform.jetty.MckoiWebSocketServerFactory
+com.mckoi.webplatform.jetty.websocket.MckoiWebSocketServerFactory

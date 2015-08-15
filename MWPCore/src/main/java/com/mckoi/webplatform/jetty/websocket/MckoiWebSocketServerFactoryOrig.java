@@ -15,7 +15,7 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-package com.mckoi.webplatform.jetty;
+package com.mckoi.webplatform.jetty.websocket;
 
 import com.mckoi.webplatform.impl.MWPContext;
 import java.io.IOException;
@@ -40,11 +40,22 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 
 /**
+ * This is the base WebSocketServerFactory used in the Mckoi Web Platform. The
+ * main purpose is to wrap all Web Socket frame code paths that end up in
+ * user-code to be within the same account's platform context.
+ * <p>
+ * NOTE: We intercept frame calls in a way that I consider quite hacky and it
+ *   very well might break in future releases of Jetty. We wrap all standard
+ *   web socket drivers with delegates that intercept code paths we know end
+ *   up in user code.
+ * <p>
+ *   It would have been a lot nicer if Jetty allowed us to override web socket
+ *   sessions directly through a method in server factory.
  *
  * @author Tobias Downer
  */
 
-public final class MckoiWebSocketServerFactory extends WebSocketServerFactory {
+public final class MckoiWebSocketServerFactoryOrig extends WebSocketServerFactory {
 
   /**
    * Object needed to switch contexts in PlatformContextBuilder.
@@ -258,7 +269,12 @@ public final class MckoiWebSocketServerFactory extends WebSocketServerFactory {
 
     @Override
     public boolean supports(EventDriver websocket) {
-      return (websocket instanceof WrappedEventDriver);
+      if (websocket instanceof WrappedEventDriver) {
+        // Unwrap,
+        WrappedEventDriver wrapped_driver = (WrappedEventDriver) websocket;
+        return super.supports(wrapped_driver.backed);
+      }
+      return false;
     }
 
   }
