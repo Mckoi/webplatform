@@ -97,10 +97,8 @@
         <include>org.eclipse.jetty:jetty-continuation</include>
         <include>org.eclipse.jetty:jetty-annotations</include>
         <include>org.eclipse.jetty.websocket:websocket-server</include>
-        <include>org.eclipse.jetty.websocket:javax-websocket-server-impl</include>
         <include>org.eclipse.jetty.websocket:websocket-servlet</include>
         <include>asm:asm-all</include>
-<!--        <include>org.apache.geronimo.bundles:jstl</include> -->
         <include>junit:junit</include>
       </includes>
       <useProjectArtifact>false</useProjectArtifact>
