@@ -16,14 +16,14 @@
     else if (file_part.startsWith("https://")) {
       ws_url = "wss://" + file_part.substring(8);
     }
-    ws_url = ws_url + "/WSock";
+    ws_url = ws_url + "/WSock1";
 
     ui.info("Web Socket URL: " + ws_url);
-    
+
     // First test sequence,
-    
+
     var first_test_sequence = function() {
-    
+
       var count_order = 0;
       var counter_failed = false;
       var expecting_close = false;
@@ -56,9 +56,8 @@
         if (msg instanceof ArrayBuffer) {
           var arr = new Int8Array(msg);
           ui.pass("Binary Object Received");
-          // Close
-          expecting_close = true;
-          connection.close(1000, "OK");
+
+          connection.send('PLATCTX FSQUERY');
         }
         else {
           if (msg === 'HANDSHAKE RET') {
@@ -82,6 +81,14 @@
             }
             connection.send('GET BINARY');
           }
+          else if (msg.startsWith('FSQUERY: ')) {
+            ui.pass("Platform Context File System Query");
+            ui.info(msg);
+
+            // Close
+            expecting_close = true;
+            connection.close(1000, "OK");
+          }
           else {
             ui.fail("Unexpected server message: " + msg);
           }
@@ -93,7 +100,7 @@
     // Second test sequence,
 
     var second_test_sequence = function() {
-    
+
       var count_order = 0;
       var counter_failed = false;
       var expecting_close = false;
@@ -132,5 +139,5 @@
     first_test_sequence();
 
   });
-  
+
 })();
