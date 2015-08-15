@@ -24,8 +24,7 @@ import com.mckoi.process.ProcessResultNotifier;
 import com.mckoi.process.ProcessUnavailableException;
 import com.mckoi.webplatform.PlatformContext;
 import com.mckoi.webplatform.PlatformContextFactory;
-import com.mckoi.webplatform.jetty.MckoiWebSocketServerFactory;
-import com.mckoi.webplatform.jetty.ext.MckoiWebSocketExtension;
+import com.mckoi.webplatform.jetty.websocket.MckoiWebSocketExtension;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -164,12 +163,8 @@ public class WSockServlet extends WebSocketServlet {
       final char type = data.charAt(0);
       if (type == '$') {
         
-        String old_state = current_session_state;
-        
         // This is a handshake command that sets up the initial session state,
         current_session_state = data.substring(1);
-
-        System.out.println("RECEIVED $ from=" + old_state + " to=" + current_session_state);
 
         // Start the notifier chain,
         continueNotifierChain();
