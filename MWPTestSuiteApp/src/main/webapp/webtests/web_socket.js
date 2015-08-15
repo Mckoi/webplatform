@@ -16,19 +16,20 @@
     else if (file_part.startsWith("https://")) {
       ws_url = "wss://" + file_part.substring(8);
     }
-    ws_url = ws_url + "/WSock1";
-
-    ui.info("Web Socket URL: " + ws_url);
+    var ws1_url = ws_url + "/WSock1";
+    var ws2_url = ws_url + "/WSock2";
 
     // First test sequence,
 
     var first_test_sequence = function() {
 
+      ui.info("Web Socket 1 URL: " + ws1_url);
+
       var count_order = 0;
       var counter_failed = false;
       var expecting_close = false;
 
-      var connection = new WebSocket(ws_url);
+      var connection = new WebSocket(ws1_url);
       connection.binaryType = 'arraybuffer';
       connection.onopen = function() {
         ui.pass("WebSocket(1) Open");
@@ -105,7 +106,7 @@
       var counter_failed = false;
       var expecting_close = false;
 
-      var connection = new WebSocket(ws_url);
+      var connection = new WebSocket(ws1_url);
       connection.binaryType = 'arraybuffer';
 
       connection.onopen = function() {
@@ -126,7 +127,7 @@
         console.log("Connection closed: %s '%s' %s", close_code, close_reason, close_was_clean);
 
         // Complete the test,
-        oncomplete();
+        third_test_sequence();
 
       };
       connection.onmessage = function(e) {
@@ -134,6 +135,56 @@
       };
 
     };
+
+    // Third test sequence,
+
+    var third_test_sequence = function() {
+
+      oncomplete();
+
+//      ui.info("Web Socket 2 URL: " + ws2_url);
+//
+//      var count_order = 0;
+//      var counter_failed = false;
+//      var expecting_close = false;
+//
+//      var connection = new WebSocket(ws2_url);
+//      connection.binaryType = 'arraybuffer';
+//
+//      connection.onopen = function() {
+//        ui.pass("WebSocket(3) Open");
+//        connection.send('Hello');
+//      };
+//      connection.onclose = function(e) {
+//        if (expecting_close) {
+//          ui.pass("WebSocket(3) closed");
+//        }
+//        else {
+//          ui.fail("Unexpected close");
+//        }
+//        var close_code = e.code;
+//        var close_reason = e.reason;
+//        var close_was_clean = e.wasClean;
+//        console.log("Connection closed: %s '%s' %s", close_code, close_reason, close_was_clean);
+//
+//        // Complete the test,
+//        oncomplete();
+//
+//      };
+//      connection.onmessage = function(e) {
+//        var msg = e.data;
+//        if (msg === 'Server replied: Hello') {
+//          ui.pass("WebSocket(3) Echo received");
+//        }
+//        else {
+//          ui.pass("Invalid echo string from server");
+//        }
+//        connection.close(1000, "OK");
+//        expecting_close = true;
+//      };
+
+    };
+
 
     // Start the test sequence,
     first_test_sequence();
