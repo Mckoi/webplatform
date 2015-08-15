@@ -403,7 +403,8 @@ class JettyMckoiWebAppContext extends WebAppContext {
 
       // We set any properties in ServletContext
       ServletContext servlet_context = request.getServletContext();
-      MWPContext mwp_context = new MWPContext(context_builder, webapp_name);
+      MWPContext mwp_context =
+                new MWPContext(PlatformContextImpl.getCurrentContextBuilder());
       servlet_context.setAttribute(MWPContext.ATTRIBUTE_KEY, mwp_context);
 
       // Delegate the rest to Jetty,

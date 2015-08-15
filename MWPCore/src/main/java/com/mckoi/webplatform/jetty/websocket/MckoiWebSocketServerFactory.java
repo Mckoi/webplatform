@@ -33,7 +33,9 @@
  */
 package com.mckoi.webplatform.jetty.websocket;
 
+import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.webplatform.impl.MWPContext;
+import com.mckoi.webplatform.impl.PlatformContextImpl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -726,20 +728,22 @@ public class MckoiWebSocketServerFactory extends ContainerLifeCycle implements W
     }
     private ContextExiter enterContext(WebSocketSession session) {
       // Handle re-entering.
-      if (counter.getAndIncrement() == 0) {
+      if ( counter.getAndIncrement() == 0 &&
+           !PlatformContextImpl.hasThreadContextDefined() ) {
         ServletUpgradeRequest req =
                       (ServletUpgradeRequest) session.getUpgradeRequest();
         HttpServletRequest http_srequest = req.getHttpServletRequest();
         ServletContext context = http_srequest.getServletContext();
-        final MWPContext mwp_context =
-                    (MWPContext) context.getAttribute(MWPContext.ATTRIBUTE_KEY);
+        MWPContext mwp_context =
+                  (MWPContext) context.getAttribute(MWPContext.ATTRIBUTE_KEY);
         // Enter the user-code context,
-        mwp_context.enterWebContext(CONTEXT_GRANT, http_srequest);
+        final ContextBuilder cb = mwp_context.getContextBuilder(CONTEXT_GRANT);
+        cb.enterContext();
         return new ContextExiter() {
           @Override
           public void exitContext() {
             counter.getAndDecrement();
-            mwp_context.exitWebContext(CONTEXT_GRANT);
+            cb.exitContext();
           }
         };
       }

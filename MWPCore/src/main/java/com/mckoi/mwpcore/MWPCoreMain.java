@@ -58,8 +58,8 @@ public class MWPCoreMain {
     
     // The class loader hierarchy looks like this...
     
-    // bootstrap (lib/base/)
-    //   appserver (lib/jetty/)
+    // bootstrap (lib/base/MWPCore.jar)
+    //   appserver (lib/base/*.jar, lib/jetty/*.jar)
     //     user libs (lib/user/)
     //       [user code]
     
@@ -68,6 +68,9 @@ public class MWPCoreMain {
     MWPSystemClassLoader system_cl =
                   new MWPSystemClassLoader(MWPCoreMain.class.getClassLoader());
     try {
+      // NOTE: The order of this is important. When querying resources in the
+      //   system class loader the returned list is ordered by the insert order
+      //   here. We want service loaders to prioritize entries in 'base'.
       system_cl.addAllToClassPath(new File(lib_base, "base"));
       system_cl.addAllToClassPath(new File(lib_base, "jetty"));
     }
@@ -79,11 +82,11 @@ public class MWPCoreMain {
     // Execute,
     try {
 
-      Class mwp_core_process_class =
-         Class.forName("com.mckoi.mwpcore.MWPCoreProcess", true, system_cl);
+      Class<?> mwp_core_process_class =
+            Class.forName("com.mckoi.mwpcore.MWPCoreProcess", true, system_cl);
 
       Method m = mwp_core_process_class.getDeclaredMethod("main",
-                                               new Class[] { String[].class });
+                                            new Class<?>[] { String[].class });
       m.invoke(null, new Object[] { args });
 
       System.exit(0);
@@ -91,7 +94,6 @@ public class MWPCoreMain {
     }
     catch (Exception e) {
       e.printStackTrace(System.err);
-      return;
     }
 
   }

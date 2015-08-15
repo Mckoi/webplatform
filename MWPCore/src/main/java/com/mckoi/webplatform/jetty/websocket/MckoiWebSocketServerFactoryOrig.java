@@ -17,6 +17,7 @@
 
 package com.mckoi.webplatform.jetty.websocket;
 
+import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.webplatform.impl.MWPContext;
 import java.io.IOException;
 import java.io.InputStream;
@@ -224,16 +225,15 @@ public final class MckoiWebSocketServerFactoryOrig extends WebSocketServerFactor
       ServletContext context = http_srequest.getServletContext();
       MWPContext mwp_context =
                   (MWPContext) context.getAttribute(MWPContext.ATTRIBUTE_KEY);
-
+      ContextBuilder cb = mwp_context.getContextBuilder(CONTEXT_GRANT);
+      
       // Enter the user-code context,
-      mwp_context.enterWebContext(CONTEXT_GRANT, http_srequest);
+      cb.enterContext();
       try {
-
         backed.incomingError(t);
-
       }
       finally {
-        mwp_context.exitWebContext(CONTEXT_GRANT);
+        cb.exitContext();
       }
     }
 
@@ -246,16 +246,15 @@ public final class MckoiWebSocketServerFactoryOrig extends WebSocketServerFactor
       ServletContext context = http_srequest.getServletContext();
       MWPContext mwp_context =
                   (MWPContext) context.getAttribute(MWPContext.ATTRIBUTE_KEY);
+      ContextBuilder cb = mwp_context.getContextBuilder(CONTEXT_GRANT);
 
       // Enter the user-code context,
-      mwp_context.enterWebContext(CONTEXT_GRANT, http_srequest);
+      cb.enterContext();
       try {
-
         backed.incomingFrame(frame);
-
       }
       finally {
-        mwp_context.exitWebContext(CONTEXT_GRANT);
+        cb.exitContext();
       }
     }
 

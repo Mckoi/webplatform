@@ -111,8 +111,10 @@ public final class PlatformContextImpl implements PlatformContext {
 
   /**
    * Returns true if this thread already has a context defined for it.
+   * 
+   * @return 
    */
-  static boolean hasThreadContextDefined() {
+  public static boolean hasThreadContextDefined() {
     return thread_context.get() != null;
   }
 
@@ -194,26 +196,48 @@ public final class PlatformContextImpl implements PlatformContext {
                     context_builder.getProcessClientService(),
                     null,
                     account_name, vhost, protocol,
-                    null, null, null, null, null);
+                    null, null, null, null,
+                    context_builder.getClassNameValidator());
 
   }
 
-//  /**
-//   * Creates a thread context for the current thread with the given details.
-//   */
-//  static void setCurrentThreadContext(
-//                         boolean is_app_service_context,
-//                         DBSessionCache sessions_cache,
-//                         ProcessClientService process_client_service,
-//                         ProcessInstance process_instance,
-//                         String account_name, String vhost, String protocol) {
-//    setCurrentThreadContext(
-//                    is_app_service_context,
-//                    sessions_cache, process_client_service,
-//                    process_instance,
-//                    account_name, vhost, protocol,
-//                    null, null, null, null, null);
-//  }
+  /**
+   * Returns a ContextBuilder for switching to the same context as the current
+   * MWP context.
+   * 
+   * @return 
+   */
+  static ContextBuilder getCurrentContextBuilder() {
+
+    ThreadContext current_context = getCurrentThreadContext();
+    final PlatformContextBuilder context_builder =
+                                  current_context.context_builder;
+    final String account_name = current_context.account_name;
+    final String vhost = current_context.vhost_name;
+    final String protocol = current_context.protocol;
+    final String webapp_name = current_context.webapp_name;
+    final LoggerService logger = current_context.log_system;
+    final MWPUserClassLoader user_class_loader =
+                                  current_context.user_class_loader;
+    final ClassLoader app_class_loader = current_context.app_class_loader;
+
+    return new ContextBuilder() {
+      @Override
+      public void enterContext() {
+        setCurrentThreadContextForAppService(
+                              context_builder, account_name, vhost, protocol);
+        PlatformContextImpl.setWebApplicationName(webapp_name);
+        PlatformContextImpl.setCurrentThreadLogger(logger);
+        PlatformContextImpl.setUserClassLoader(user_class_loader);
+        PlatformContextImpl.setApplicationClassLoader(app_class_loader);
+      }
+      @Override
+      public void exitContext() {
+        removeCurrentThreadContext();
+      }
+    };
+
+  }
 
   /**
    * Sets the LoggerService for the current thread.
@@ -574,22 +598,10 @@ public final class PlatformContextImpl implements PlatformContext {
       AppServiceProcessClient process_client =
                                 (AppServiceProcessClient) c.getProperty("ap");
       if (process_client == null) {
-        final PlatformContextBuilder cb = c.context_builder;
-        final String server_name = c.vhost_name;
-        final boolean is_secure = c.protocol.equals("https");
         // Create a contextifier that sets the context all notified events
         // in this process client are given.
-        ContextBuilder contextifier = new ContextBuilder() {
-          @Override
-          public void enterContext() {
-            cb.enterWebContext(
-                PlatformContextBuilder.CONTEXT_GRANT, server_name, is_secure);
-          }
-          @Override
-          public void exitContext() {
-            cb.exitWebContext(PlatformContextBuilder.CONTEXT_GRANT);
-          }
-        };
+        ContextBuilder contextifier =
+                              PlatformContextImpl.getCurrentContextBuilder();
         process_client =
                 c.process_client_service.getAppServiceProcessClientFor(
                                                 c.account_name, contextifier);

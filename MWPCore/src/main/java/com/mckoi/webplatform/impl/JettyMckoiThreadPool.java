@@ -17,6 +17,7 @@
 
 package com.mckoi.webplatform.impl;
 
+import com.mckoi.mwpcore.ContextBuilder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 /**
@@ -25,5 +26,52 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
  */
 
 public class JettyMckoiThreadPool extends QueuedThreadPool {
+
+  @Override
+  public void execute(Runnable job) {
+//    // If this thread was executed within a MWP context then the runnable
+//    // inherits the context when executed,
+//    
+//    if (PlatformContextImpl.hasThreadContextDefined()) {
+//      ContextBuilder context_builder =
+//                              PlatformContextImpl.getCurrentContextBuilder();
+//      System.err.println("Task inherits context;");
+//      new Error().printStackTrace(System.err);
+//      // Inherit context in this,
+//      super.execute(new WrappedJob(job, context_builder));
+//    }
+//    else {
+//      // Otherwise,
+//      super.execute(job);
+//    }
+
+    super.execute(job);
+
+  }
+
+  // ------
+
+  private static class WrappedJob implements Runnable {
+
+    private final Runnable backed_job;
+    private final ContextBuilder context_builder;
+    
+    private WrappedJob(Runnable job, ContextBuilder context_builder) {
+      this.backed_job = job;
+      this.context_builder = context_builder;
+    }
+
+    @Override
+    public void run() {
+      context_builder.enterContext();
+      try {
+        backed_job.run();
+      }
+      finally {
+        context_builder.exitContext();
+      }
+    }
+
+  }
 
 }

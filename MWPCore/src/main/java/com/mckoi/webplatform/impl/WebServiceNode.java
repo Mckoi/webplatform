@@ -81,7 +81,7 @@ public class WebServiceNode {
   static {
     // A set of class names of Jetty logs that we ignore the warnings from,
     Set<String> ignore_warnings = new HashSet<>();
-    ignore_warnings.add("org.eclipse.jetty.http.HttpGenerator");
+//    ignore_warnings.add("org.eclipse.jetty.http.HttpGenerator");
     ignoreWarningsLogs = Collections.unmodifiableSet(ignore_warnings);
   }
 

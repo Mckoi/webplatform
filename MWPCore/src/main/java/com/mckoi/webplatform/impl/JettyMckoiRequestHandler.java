@@ -25,8 +25,17 @@
 
 package com.mckoi.webplatform.impl;
 
+import com.mckoi.appcore.SystemStatics;
+import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.odb.ODBList;
+import com.mckoi.odb.ODBObject;
+import com.mckoi.odb.ODBTransaction;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Timer;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.Request;
@@ -39,6 +48,14 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
  */
 
 class JettyMckoiRequestHandler extends AbstractHandler {
+
+  /**
+   * The cache from account name to web app contexts.
+   */
+  private final Map<String, JettyMckoiWebAppContextSet> webapp_map =
+                                                              new HashMap<>();
+  private final Object webapp_map_lock = new Object();
+
 
   /**
    * Object needed to switch contexts in PlatformContextBuilder.
@@ -58,6 +75,174 @@ class JettyMckoiRequestHandler extends AbstractHandler {
   }
 
   /**
+   * Returns a thread-safe transaction object representing the sysplatform
+   * path.
+   */
+  private ODBTransaction getSystemPathTransaction() {
+    DBSessionCache sessions_cache = context_builder.getSessionsCache();
+    return sessions_cache.getODBTransaction(SystemStatics.SYSTEM_PATH);
+  }
+
+  /**
+   * Looks up a vhost address and returns the account name for the host.
+   * Returns null if the vhost wasn't found.
+   * 
+   * @param protocol either 'http' or 'https'
+   * @param server_address the vhost string.
+   */
+  private String getAccountForVHost(final String protocol,
+                                    final String server_address) {
+
+    // Assert,
+    if (server_address.contains("/") || server_address.contains(":")) {
+      throw new IllegalStateException();
+    }
+
+    // Turn it into a qualified address
+    // (eg. "http:mydomain.com")
+    final String qual_address = server_address + ":" + protocol;
+
+    // TODO: This query probably needs to get cached,
+
+    // Create and query the transaction snapshot,
+    ODBTransaction t = getSystemPathTransaction();
+
+    // The vhosts index
+    ODBObject vhost_index = t.getNamedItem("vhosts");
+    // The index of domain objects,
+    ODBList domain_idx = vhost_index.getList("domainIdx");
+    // Query the index,
+    ODBList domain_index = domain_idx.tail(qual_address);
+
+    ODBObject account = null;
+
+    // If the index returned something
+    if (domain_index.size() > 0) {
+      // Check if the first entry is the same as the domain name,
+      ODBObject vhost_ob = domain_index.getObject(0);
+      if (vhost_ob.getString("domain").equals(qual_address)) {
+        // Yes, so set the account name,
+        account = vhost_ob.getObject("account");
+      }
+    }
+
+    // Return the account name (may return null),
+    if (account == null) {
+      return null;
+    }
+    else {
+      return account.getString("account");
+    }
+
+  }
+
+  /**
+   * Returns the JettyMckoiWebAppContextSet for the given account name.
+   */
+  private JettyMckoiWebAppContextSet
+                             getWebAppContextForAccount(String account_name) {
+
+    JettyMckoiWebAppContextSet web_app;
+    DBSessionCache sessions_cache = context_builder.getSessionsCache();
+    Timer system_timer = context_builder.getSystemTimer();
+
+    // Is it in the cache?
+    synchronized (webapp_map_lock) {
+      web_app = webapp_map.get(account_name);
+      // Not in cache so create it.
+      if (web_app == null) {
+
+        // Create the account log system,
+        LoggerService account_logger = new LoggerService(sessions_cache,
+                                           "ufs" + account_name, system_timer);
+
+        web_app = new JettyMckoiWebAppContextSet(
+                                context_builder, account_name, account_logger);
+        webapp_map.put(account_name, web_app);
+        web_app.setServer(getServer());
+      }
+    }
+
+    return web_app;
+  }
+
+  /**
+   * Enters the platform context for the given vhost server name.
+   * 
+   * @param server_name
+   * @param is_secure
+   * @return 
+   */
+  JettyMckoiWebAppContextSet enterWebContext(
+                                      String server_name, boolean is_secure) {
+
+    // Look for nested contexts
+    if (PlatformContextImpl.hasThreadContextDefined()) {
+      IllegalStateException ex = new IllegalStateException("Multiple thread context error");
+      ex.printStackTrace(System.err);
+      throw ex;
+    }
+
+    // The protocol,
+    String protocol;
+    if (is_secure) {
+      protocol = "https";
+    }
+    else {
+      protocol = "http";
+    }
+
+    // TODO: Handle case-sensitivity in a compatible way with DNS
+    server_name = server_name.toLowerCase();
+
+    // Translate the server name into an app domain and process accordingly,
+    String account_name = getAccountForVHost(protocol, server_name);
+
+    // Account name wasn't defined so report error,
+    if (account_name == null) {
+      return null;
+    }
+
+    Thread.currentThread().setContextClassLoader(
+                            JettyMckoiRequestHandler.class.getClassLoader());
+
+    // Set the thread context,
+    PlatformContextImpl.setCurrentThreadContextForAppService(
+                        context_builder, account_name, server_name, protocol);
+
+    // Create the web app context for this account,
+    JettyMckoiWebAppContextSet context =
+                                   getWebAppContextForAccount(account_name);
+
+    // Set the platform context logging,
+    PlatformContextImpl.setCurrentThreadLogger(context.getLogSystem());
+
+    return context;
+
+  }
+
+  /**
+   * Enters the platform context for the given URI.
+   * 
+   * @param request
+   * @return 
+   */
+  JettyMckoiWebAppContextSet enterWebContext(ServletRequest request) {
+
+    return enterWebContext(request.getServerName(), request.isSecure());
+    
+  }
+  
+  /**
+   * Exits the current web context. If 'enterWebContext' returned an object
+   * then this must be called.
+   */
+  void exitWebContext() {
+    // Make sure we remove the current thread context,
+    PlatformContextImpl.removeCurrentThreadContext();
+  }
+
+  /**
    * Handle the page request.
    */
   @Override
@@ -66,8 +251,7 @@ class JettyMckoiRequestHandler extends AbstractHandler {
                                         throws IOException, ServletException {
 
     // Enter the context for this request,
-    JettyMckoiWebAppContextSet context =
-                      context_builder.enterWebContext(CONTEXT_GRANT, request);
+    JettyMckoiWebAppContextSet context = enterWebContext(request);
     if (context == null) {
       return;
     }
@@ -107,7 +291,7 @@ class JettyMckoiRequestHandler extends AbstractHandler {
     }
     finally {
       // Make sure we remove the current thread context,
-      context_builder.exitWebContext(CONTEXT_GRANT);
+      exitWebContext();
     }
 
   }

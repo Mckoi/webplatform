@@ -315,16 +315,22 @@ public final class MWPUserClassLoader extends URLClassLoader {
     // Merge the lists,
     ArrayList<URL> resource_list = new ArrayList<>();
     if (parent_resources != null) {
-      while (parent_resources.hasMoreElements())
-                        resource_list.add(parent_resources.nextElement());
+      while (parent_resources.hasMoreElements()) {
+        URL ele = parent_resources.nextElement();
+        resource_list.add(ele);
+      }
     }
     if (this_resources != null) {
-      while (this_resources.hasMoreElements())
-                        resource_list.add(this_resources.nextElement());
+      while (this_resources.hasMoreElements()) {
+        URL ele = this_resources.nextElement();
+        resource_list.add(ele);
+      }
     }
     if (parent2_resources != null) {
-      while (parent2_resources.hasMoreElements())
-                        resource_list.add(parent2_resources.nextElement());
+      while (parent2_resources.hasMoreElements()) {
+        URL ele = parent2_resources.nextElement();
+        resource_list.add(ele);
+      }
     }
 
     // Return the enumeration,

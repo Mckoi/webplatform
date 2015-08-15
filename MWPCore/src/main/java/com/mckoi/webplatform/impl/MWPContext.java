@@ -17,7 +17,7 @@
 
 package com.mckoi.webplatform.impl;
 
-import javax.servlet.ServletRequest;
+import com.mckoi.mwpcore.ContextBuilder;
 
 /**
  * An object that describes the MWP context of a servlet operation, including
@@ -38,39 +38,23 @@ public final class MWPContext {
   /**
    * The context builder.
    */
-  private final PlatformContextBuilder context_builder;
+  private final ContextBuilder context_builder;
   
-  /**
-   * The web app name.
-   */
-  private final String web_app_name;
-
   /**
    * Constructor.
    * 
    * @param context_builder
    * @param web_app_name 
    */
-  MWPContext(PlatformContextBuilder context_builder, String web_app_name) {
+  MWPContext(ContextBuilder context_builder) {
     this.context_builder = context_builder;
-    this.web_app_name = web_app_name;
   }
 
-  public PlatformContextBuilder getContextBuilder() {
+  public ContextBuilder getContextBuilder(Object grant_object) {
+    if (grant_object != PlatformContextBuilder.CONTEXT_GRANT) {
+      throw new IllegalStateException("Invalid grant object");
+    }
     return context_builder;
   }
 
-  public String getWebAppName() {
-    return web_app_name;
-  }
-
-  public void enterWebContext(Object grant_object, ServletRequest request) {
-    context_builder.enterWebContext(grant_object, request);
-    PlatformContextImpl.setWebApplicationName(web_app_name);
-  }
-
-  public void exitWebContext(Object grant_object) {
-    context_builder.exitWebContext(grant_object);
-  }
-  
 }
