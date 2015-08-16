@@ -205,7 +205,7 @@ public class ProcessServerService implements PEnvironment {
    * A map used for broadcast event dispatching.
    */
   private final Map<NIOConnection, MessageBroadcastContainer>
-                                        broadcast_connect_map = new HashMap();
+                                        broadcast_connect_map = new HashMap<>();
 
   /**
    * Secure random number generator.
@@ -225,11 +225,11 @@ public class ProcessServerService implements PEnvironment {
    * Constructor.
    */
   public ProcessServerService() {
-    this.allowed_ip_list = new ArrayList(0);
+    this.allowed_ip_list = new ArrayList<>(0);
     this.process_set = new ProcessSet();
-    this.process_modify_log = new ArrayList(64);
-    this.app_classloaders_cache = new HashMap();
-    this.account_info_cache = new HashMap();
+    this.process_modify_log = new ArrayList<>(64);
+    this.app_classloaders_cache = new HashMap<>();
+    this.account_info_cache = new HashMap<>();
   }
 
   /**
@@ -270,7 +270,11 @@ public class ProcessServerService implements PEnvironment {
   }
 
   /**
-   * Pre security initialization.
+   * Pre security initial
+   * 
+   * @param web_config
+   * @param sessions_cache
+   * @param process_client_service
    */
   public void preSecurityInit(Properties web_config,
                               DBSessionCache sessions_cache,
@@ -334,6 +338,11 @@ public class ProcessServerService implements PEnvironment {
 
   /**
    * Post security init.
+   * 
+   * @param web_config
+   * @param allowed_sys_classes
+   * @param classloaders
+   * @param shared_thread_pool
    */
   public void init(Properties web_config,
                    ClassNameValidator allowed_sys_classes,
@@ -643,7 +652,7 @@ public class ProcessServerService implements PEnvironment {
     // The sorted list of all private ip addresses
     ODBList private_ip_idx = servers.getList("privateipIdx");
     int list_sz = (int) private_ip_idx.size();
-    List<String> allowedips = new ArrayList(list_sz);
+    List<String> allowedips = new ArrayList<>(list_sz);
     for (ODBObject private_ip : private_ip_idx) {
       String ip = private_ip.getString("privateip");
       allowedips.add(ip);
@@ -660,12 +669,7 @@ public class ProcessServerService implements PEnvironment {
    * 'loadSystemData' was called.
    */
   private boolean notLoadedDBInAWhile() {
-    long time_now = System.currentTimeMillis();
-    // 60 seconds
-    if (time_now - (60 * 1000) > last_load_db_time) {
-      return true;
-    }
-    return false;
+    return System.currentTimeMillis() - (60 * 1000) > last_load_db_time;
   }
 
   /**
@@ -929,7 +933,7 @@ public class ProcessServerService implements PEnvironment {
     List<String> classpath_libs = Collections.emptyList();
     if (file_list != null) {
       // Make a list of all .jar and .zip files from the lib directory,
-      classpath_libs = new ArrayList(file_list.size());
+      classpath_libs = new ArrayList<>(file_list.size());
       for (FileInfo file : file_list) {
         String abs_name = file.getAbsoluteName();
         if (abs_name.endsWith(".zip") || abs_name.endsWith(".jar")) {
@@ -1724,7 +1728,7 @@ public class ProcessServerService implements PEnvironment {
         int update_version = -1;
 
         // The map to process in the loop,
-        Map<ProcessInstanceImpl, MessagePushValue> local_pmap = new HashMap();
+        Map<ProcessInstanceImpl, MessagePushValue> local_pmap = new HashMap<>();
 
         while (true) {
 
@@ -1751,7 +1755,7 @@ public class ProcessServerService implements PEnvironment {
               MessagePushValue mpv = local_pmap.get(instance);
               if (mpv == null) {
                 mpv = new MessagePushValue();
-                mpv.sent_sequences = new HashSet();
+                mpv.sent_sequences = new HashSet<>();
                 local_pmap.put(instance, mpv);
               }
               mpv.copyFrom(global_pmap.get(instance));
@@ -1822,7 +1826,7 @@ public class ProcessServerService implements PEnvironment {
         // to notify.
         if (!conn.isValid()) {
           if (to_remove == null) {
-            to_remove = new ArrayList();
+            to_remove = new ArrayList<>();
           }
           to_remove.add(conn);
         }
@@ -1836,7 +1840,7 @@ public class ProcessServerService implements PEnvironment {
             // Dispatch to the thread pool,
             // This is a privileged action since we will commonly end up here
             // via user-code.
-            AccessController.doPrivileged(new PrivilegedAction() {
+            AccessController.doPrivileged(new PrivilegedAction<Object>() {
               @Override
               public Object run() {
                 thread_pool.submit(new PushBroadcastRunnable(conn));
@@ -1865,6 +1869,9 @@ public class ProcessServerService implements PEnvironment {
    * Called when a new connection is accepted. If the channel is accepted
    * (for example, comes from a valid IP address), returns true. Otherwise
    * returns false.
+   * 
+   * @param ch
+   * @return 
    */
   @Override
   public boolean channelConnectionValid(SocketChannel ch) {
@@ -1900,6 +1907,8 @@ public class ProcessServerService implements PEnvironment {
 
   /**
    * Initializes the connection.
+   * 
+   * @param connection
    */
   @Override
   public void initializeConnection(NIOConnection connection) {
@@ -1935,6 +1944,8 @@ public class ProcessServerService implements PEnvironment {
 
   /**
    * Notifies when a connection is closed.
+   * 
+   * @param connection
    */
   @Override
   public void connectionClosed(NIOConnection connection) {
@@ -1942,6 +1953,8 @@ public class ProcessServerService implements PEnvironment {
 
   /**
    * Handles messages from a connection.
+   * 
+   * @param connection
    */
   @Override
   public void handleMessages(final NIOConnection connection) {
@@ -1988,7 +2001,7 @@ public class ProcessServerService implements PEnvironment {
           connection.setStateLong((long) 0);
 
           // Process the remaining messages,
-          List<PMessage> remaining_messages = new ArrayList();
+          List<PMessage> remaining_messages = new ArrayList<>();
           while (iterator.hasNext()) {
             remaining_messages.add(iterator.next());
           }
@@ -2141,7 +2154,7 @@ public class ProcessServerService implements PEnvironment {
       if (sz == 0) {
         return;
       }
-      log_entries = new ArrayList(sz);
+      log_entries = new ArrayList<>(sz);
       log_entries.addAll(process_modify_log);
       // Clear the log,
       process_modify_log.clear();
@@ -2598,7 +2611,7 @@ public class ProcessServerService implements PEnvironment {
     private final Object lock = new Object();
     private boolean finished = false;
     
-    private Set<ProcessId> instance_events = new HashSet();
+    private Set<ProcessId> instance_events = new HashSet<>();
     
 
     public FunctionDispatcherThread() {
@@ -2739,19 +2752,19 @@ public class ProcessServerService implements PEnvironment {
 
       // Map of process paths we changed.
       Map<Byte, ChangeReportedODBTransaction>
-                                       process_paths_changed = new HashMap();
+                                       process_paths_changed = new HashMap<>();
 
       // Flush the process modification log entries,
       flushProcessModifyLog(process_paths_changed);
 
       // Processes that have terminated,
-      Set<ProcessId> terminated_processes = new HashSet(128);
+      Set<ProcessId> terminated_processes = new HashSet<>(128);
       // Stale processes,
-      Set<ProcessId> stale_processes = new HashSet(128);
+      Set<ProcessId> stale_processes = new HashSet<>(128);
       // Suspended processes,
-      Set<ProcessId> suspended_processes = new HashSet(128);
+      Set<ProcessId> suspended_processes = new HashSet<>(128);
       // Out of date processes,
-      Set<ProcessId> outofdate_processes = new HashSet(128);
+      Set<ProcessId> outofdate_processes = new HashSet<>(128);
 
       // Flush process instances,
       flushProcessInstances(terminated_processes,
@@ -2854,7 +2867,7 @@ public class ProcessServerService implements PEnvironment {
   private static class MessageBroadcastContainer {
     private int update_version = 0;
     private final Map<ProcessInstanceImpl, MessagePushValue> map =
-                                                                 new HashMap();
+                                                               new HashMap<>();
     private void notifyNewBroadcastMessage(
                            ProcessInstanceImpl instance, long sequence_value) {
       MessagePushValue mpv = map.get(instance);
