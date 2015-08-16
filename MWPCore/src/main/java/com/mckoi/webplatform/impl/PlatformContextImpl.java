@@ -247,6 +247,15 @@ public final class PlatformContextImpl implements PlatformContext {
   }
 
   /**
+   * Returns the LoggerService for the current thread.
+   * 
+   * @return 
+   */
+  public static LoggerService getCurrentThreadLogger() {
+    return getCurrentThreadContext().log_system;
+  }
+
+  /**
    * Sets the user class loader for this context.
    */
   static void setUserClassLoader(MWPUserClassLoader user_class_loader) {

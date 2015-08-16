@@ -146,6 +146,14 @@ public class MckoiWebSocketServerFactory extends ContainerLifeCycle implements W
 
         this.defaultPolicy = policy;
         this.eventDriverFactory = new EventDriverFactory(defaultPolicy);
+
+        // --- Mckoi change START ---
+
+        this.eventDriverFactory.clearImplementations();
+        this.eventDriverFactory.addImplementation(new MckoiJettyListenerImpl());
+
+        // --- Mckoi change END ---
+
         this.bufferPool = bufferPool;
         this.extensionFactory = new WebSocketExtensionFactory(defaultPolicy, this.bufferPool);
         

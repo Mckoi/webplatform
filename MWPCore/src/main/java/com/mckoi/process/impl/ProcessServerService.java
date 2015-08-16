@@ -43,6 +43,7 @@ import com.mckoi.process.ProcessMessage;
 import com.mckoi.util.ByteArrayUtil;
 import com.mckoi.webplatform.LogPageEvent;
 import com.mckoi.webplatform.impl.LoggerService;
+import com.mckoi.webplatform.util.LogUtils;
 import java.io.*;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -568,12 +569,8 @@ public class ProcessServerService implements PEnvironment {
         ex_stack_trace = user_code_ex.getUserCodeStackTrace();
       }
       else {
-        // Print the exception to a string,
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        ex.printStackTrace(pw);
-        pw.flush();
-        ex_stack_trace = sw.toString();
+        // Convert the exception to a stack trace string,
+        ex_stack_trace = LogUtils.stringStackTrace(ex);
       }
 
       // Write the error to the log,
