@@ -1399,7 +1399,7 @@ public class ProcessServerService implements PEnvironment {
    * <p>
    * This is called when a client attempts to consume broadcast messages.
    * Broadcast requests may be refreshed periodically by a client that's
-   * listening for messages. Typically this is called every 2 minutes by
+   * listening for messages. Typically this is called every ~4 minutes by
    * clients interested in the channel.
    */
   private PMessage processBroadcastRequest(final NIOConnection connection,

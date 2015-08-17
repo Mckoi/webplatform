@@ -1889,10 +1889,13 @@ final class ProcessInstanceImpl implements ProcessInstance {
 
     /**
      * Immediately cleans the broadcast connections that have not been
-     * renewed within 6 minutes.
+     * renewed within 24 minutes. We use 24 mins because the client API
+     * guarantees a 20 minute window when a consumer listens for events in
+     * which it will be notified. We add 4 minutes of lead time in which the
+     * client waits between polls.
      */
     private int cleanExpiredConnections() {
-      long four_mins_ago = System.currentTimeMillis() - (6 * 60 * 1000);
+      long twenty_four_mins_ago = System.currentTimeMillis() - (24 * 60 * 1000);
       int count = 0;
       synchronized (connection_list) {
         Iterator<NIOConnection> conn_it = connection_list.iterator();
@@ -1900,7 +1903,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         while (conn_it.hasNext()) {
           NIOConnection connection = conn_it.next();
           long ts = connts_it.next();
-          if (ts < four_mins_ago) {
+          if (ts < twenty_four_mins_ago) {
             conn_it.remove();
             connts_it.remove();
             ++count;

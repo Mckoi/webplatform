@@ -1054,7 +1054,10 @@ public final class ProcessClientService {
 
     // If we are not receiving on the queue or 4 minutes has passed since the
     // last request,
-    if (connect_time > queue.getConnectTime() || queue.requestExpired()) {
+    boolean not_received_on_queue = connect_time > queue.getConnectTime();
+    boolean timeout_on_request = queue.requestExpired();
+    if (not_received_on_queue || timeout_on_request) {
+
       // Send a request to the process that we are still interested in
       // broadcast messages that originate from it,
       queue.setRequestNotExpired();
@@ -1062,6 +1065,7 @@ public final class ProcessClientService {
       PMessage pmsg = createBroadcastRequestMessage(
                    process_id, process_channel.getChannel(), min_sequence_val);
       putMessageOnOutput(new QueueMessage(machine, pmsg));
+
     }
 
     // Note; We don't block waiting for a reply when we put this message on
@@ -2879,6 +2883,7 @@ queue_empty_loop:
 
     @Override
     public boolean equals(Object obj) {
+      if (!(obj instanceof ProcessClientConnection)) return false;
       final ProcessClientConnection other = (ProcessClientConnection) obj;
       return machine_addr.equals(other.machine_addr);
     }

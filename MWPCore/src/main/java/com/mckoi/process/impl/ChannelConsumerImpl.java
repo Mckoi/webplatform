@@ -119,7 +119,7 @@ class ChannelConsumerImpl implements ChannelConsumer {
               consumeFromChannel(consume_limit, (ProcessResultNotifier) null);
     // If nothing waiting,
     if (list == null) {
-      list = Collections.EMPTY_LIST;
+      list = Collections.emptyList();
     }
     return list;
   }
@@ -187,7 +187,7 @@ class ChannelConsumerImpl implements ChannelConsumer {
 
     // Return empty Collection
     if (msg_set.isEmpty()) {
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
 
     // Update the sequence value with the last value consumed,
