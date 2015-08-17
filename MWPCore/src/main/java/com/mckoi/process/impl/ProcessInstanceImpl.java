@@ -38,6 +38,7 @@ import com.mckoi.process.ProcessInputMessage.Type;
 import com.mckoi.process.ProcessResultNotifier.CleanupHandler;
 import com.mckoi.webplatform.impl.LoggerService;
 import com.mckoi.webplatform.impl.PlatformContextImpl;
+import com.mckoi.webplatform.util.MonotonicTime;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -180,6 +181,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
    * Timestamp when the last 'function' method was called.
    */
   private volatile long time_of_last_function;
+  private volatile long monotonic_time_of_last_function;
 
   /**
    * The number of times the 'function' method has been called.
@@ -235,7 +237,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
     this.account_application = account_app;
     this.process_name = process_name;
     this.suspended = false;
-    this.time_of_last_function = System.currentTimeMillis();
+    timestampLastFunctionCall();
 
     this.state_map = new StateMapImpl();
 
@@ -255,10 +257,15 @@ final class ProcessInstanceImpl implements ProcessInstance {
     this.process_id = process_id;
     this.process_id_str = process_id.getStringValue();
     this.suspended = true;
-    this.time_of_last_function = System.currentTimeMillis();
+    timestampLastFunctionCall();
 
     this.state_map = new StateMapImpl();
 
+  }
+
+  private void timestampLastFunctionCall() {
+    time_of_last_function = System.currentTimeMillis();
+    monotonic_time_of_last_function = MonotonicTime.now();
   }
 
   /**
@@ -390,9 +397,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
         return false;
       }
 
-      // Not flushable if trying to flush withing 4 seconds of construction,
-      long ts = System.currentTimeMillis();
-      if (process_object_create_timestamp + (4 * 1000) > ts) {
+      // Not flushable if trying to flush within 4 seconds of construction,
+      if (MonotonicTime.millisSince(process_object_create_timestamp) < (4 * 1000)) {
         return false;
       }
     }
@@ -404,15 +410,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
    * hasn't recently been called on this process).
    */
   boolean isCurrentlyStale() {
-    long ts = System.currentTimeMillis();
-    long la = time_of_last_function;
-    // If current timestamp is greater than last access time + stale process
-    // timeout,
-    if (ts > (la + ProcessServerService.STALE_PROCESS_TIMEOUT)) {
-      // It's stale
-      return true;
-    }
-    return false;
+    return MonotonicTime.millisSince(monotonic_time_of_last_function) >
+                              ProcessServerService.STALE_PROCESS_TIMEOUT;
   }
 
   /**
@@ -421,15 +420,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
    * at least 4 minutes).
    */
   boolean isDisposable() {
-    long ts = System.currentTimeMillis();
-    long la = time_of_last_function;
-    // If current timestamp is greater than last access time + disposable
-    // timeout,
-    if (ts > (la + ProcessServerService.DISPOSABLE_PROCESS_TIMEOUT)) {
-      // It's stale
-      return true;
-    }
-    return false;
+    return MonotonicTime.millisSince(monotonic_time_of_last_function) >
+                              ProcessServerService.DISPOSABLE_PROCESS_TIMEOUT;
   }
 
   /**
@@ -520,7 +512,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
             // Wrap any exception thrown in a ProcessUserCodeException
             throw new ProcessUserCodeException(e);
           }
-          process_object_create_timestamp = System.currentTimeMillis();
+          process_object_create_timestamp = MonotonicTime.now();
 
         }
         // Wrap these exceptions in 'ProcessUserCodeException' so they end
@@ -571,7 +563,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
 
     // Record the time so we can't dispose the instance for at least another
     // 4 minutes.
-    time_of_last_function = System.currentTimeMillis();
+    timestampLastFunctionCall();
 
     getBroadcastInstance().addBroadcastRequest(
                                   channel_num, connection, min_sequence_val);
@@ -1036,7 +1028,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         }
 
         // Record the time we performed a function,
-        time_of_last_function = System.currentTimeMillis();
+        timestampLastFunctionCall();
 
         // Record the entry time,
         long nano_start = ThreadUsageStatics.getCurrentThreadCPUTimeNanos();
@@ -1066,7 +1058,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
           }
 
           // Record the time we performed a function,
-          time_of_last_function = System.currentTimeMillis();
+          timestampLastFunctionCall();
 
           // If process_type is 'STATIC' then we close the process
           // immediately.
@@ -1781,6 +1773,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
     try {
       dout.write(header);
       dout.writeLong(sequence_uid);
+      // %NonMonotonic%
+      // PENDING: The timestamp generated here may not be monotonic.
       dout.writeLong(System.currentTimeMillis());
       message.writeTo(new SecureWrappedOutputStream(dout));
       dout.flush();
@@ -1869,7 +1863,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
     /**
      * Last time the queue was cleaned.
      */
-    private volatile long last_queue_clean = 0;
+    private volatile long last_queue_clean = -1;
 
 
     private BroadcastInstance() {
@@ -1895,7 +1889,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * client waits between polls.
      */
     private int cleanExpiredConnections() {
-      long twenty_four_mins_ago = System.currentTimeMillis() - (24 * 60 * 1000);
+      long twenty_four_mins_ago = MonotonicTime.now(-(24 * 60 * 1000));
       int count = 0;
       synchronized (connection_list) {
         Iterator<NIOConnection> conn_it = connection_list.iterator();
@@ -1903,7 +1897,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         while (conn_it.hasNext()) {
           NIOConnection connection = conn_it.next();
           long ts = connts_it.next();
-          if (ts < twenty_four_mins_ago) {
+          if (MonotonicTime.isBefore(ts, twenty_four_mins_ago)) {
             conn_it.remove();
             connts_it.remove();
             ++count;
@@ -1942,7 +1936,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
     private int cleanBroadcastQueue() {
       long time_now = System.currentTimeMillis();
       long two_mins_ago = time_now - (2 * 60 * 1000);
-      last_queue_clean = time_now;
+      last_queue_clean = MonotonicTime.now();
       int count = 0;
       synchronized (broadcast_queue) {
         QueueMessage msg = broadcast_queue.getFirst();
@@ -1982,8 +1976,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * elements cleaned.
      */
     private int periodicClean() {
-      long time_now = System.currentTimeMillis();
-      if (time_now > last_queue_clean + (60 * 1000)) {
+      if (last_queue_clean == -1 ||
+          MonotonicTime.millisSince(last_queue_clean) > (60 * 1000)) {
         return cleanBroadcastQueue();
       }
       else {
@@ -2121,6 +2115,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
                          int channel_num, NIOConnection connection,
                                    long min_sequence_val) throws IOException {
 
+      long monotonic_time_now = MonotonicTime.now();
+
       // Add the connection to the list of listeners,
       synchronized (connection_list) {
         boolean add_connection = true;
@@ -2130,7 +2126,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
           // Already broadcasting to this connection,
           if (c == connection) {
             // Update the timestamp,
-            connection_timestamp_list.set(i, System.currentTimeMillis());
+            connection_timestamp_list.set(i, monotonic_time_now);
             add_connection = false;
             break;
           }
@@ -2139,7 +2135,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         // Do we add this connection?
         if (add_connection) {
           connection_list.add(connection);
-          connection_timestamp_list.add(System.currentTimeMillis());
+          connection_timestamp_list.add(monotonic_time_now);
         }
       }
 

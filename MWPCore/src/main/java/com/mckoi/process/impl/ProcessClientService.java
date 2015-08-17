@@ -36,6 +36,7 @@ import com.mckoi.odb.ODBTransaction;
 import com.mckoi.process.*;
 import com.mckoi.util.ByteArrayUtil;
 import com.mckoi.util.Cache;
+import com.mckoi.webplatform.util.MonotonicTime;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -232,7 +233,7 @@ public final class ProcessClientService {
           }
         }
 
-        long four_mins_ago = System.currentTimeMillis() - (4 * 60 * 1000);
+        long four_mins_ago = MonotonicTime.now(-(4 * 60 * 1000));
 
         Iterator<BroadcastQueue> bq_it = to_maintain.iterator();
         Iterator<ProcessChannel> pc_it = to_maintain_keys.iterator();
@@ -941,13 +942,13 @@ public final class ProcessClientService {
                     throws InterruptedException {
 
     synchronized (input_queue) {
-      long start_time = System.currentTimeMillis();
+      long start_time = MonotonicTime.now();
       QueueMessage msg = input_queue.getFirst();
       while (true) {
         // Reached the end of the queue so we need to block,
         if (msg == null) {
           // If timed out,
-          if ((System.currentTimeMillis() - start_time) > FUNCTION_TIMEOUT_MS) {
+          if (MonotonicTime.millisSince(start_time) > FUNCTION_TIMEOUT_MS) {
             // Failure,
             return ProcessServerService.failMessage(pid, call_id,
                               "UNAVAILABLE-TIMEOUT", new PTimeoutException());
@@ -978,13 +979,13 @@ public final class ProcessClientService {
   private QueueMessage blockUntilConnectionInit(ProcessServiceAddress machine)
                                                   throws InterruptedException {
     synchronized (input_queue) {
-      long start_time = System.currentTimeMillis();
+      long start_time = MonotonicTime.now();
       QueueMessage msg = input_queue.getFirst();
       while (true) {
         // Reached the end of the queue so we need to block,
         if (msg == null) {
           // If timed out,
-          if ((System.currentTimeMillis() - start_time) > FUNCTION_TIMEOUT_MS) {
+          if (MonotonicTime.millisSince(start_time) > FUNCTION_TIMEOUT_MS) {
             throw new PRuntimeException("Reply timeout");
           }
           input_queue.wait(FUNCTION_TIMEOUT_MS);
@@ -1054,7 +1055,8 @@ public final class ProcessClientService {
 
     // If we are not receiving on the queue or 4 minutes has passed since the
     // last request,
-    boolean not_received_on_queue = connect_time > queue.getConnectTime();
+    boolean not_received_on_queue =
+                MonotonicTime.isBefore(queue.getConnectTime(), connect_time);
     boolean timeout_on_request = queue.requestExpired();
     if (not_received_on_queue || timeout_on_request) {
 
@@ -1121,9 +1123,10 @@ public final class ProcessClientService {
    */
   private List<String> getSystemProcessPaths() {
 
-    long current_time = System.currentTimeMillis();
+    long current_time = MonotonicTime.now();
     if (process_paths_list == null ||
-        current_time > last_checked + (2 * 60 * 1000)) {
+        last_checked == 0 ||
+        MonotonicTime.millisSince(last_checked) > (2 * 60 * 1000)) {
 
       last_checked = current_time;
       ODBTransaction syst =
@@ -2164,7 +2167,6 @@ public final class ProcessClientService {
     private final String invoker_account_name;
     private final ContextBuilder contextifier;
 
-//    private final long invoke_timestamp;
     private final ProcessServiceAddress machine;
     private final int call_id;
     private final ProcessId process_id;
@@ -2181,7 +2183,6 @@ public final class ProcessClientService {
       this.invoker_account_name = account_name;
       this.contextifier = contextifier;
 
-//      this.invoke_timestamp = System.currentTimeMillis();
       this.machine = machine;
       this.call_id = call_id;
       this.process_id = process_id;
@@ -2514,7 +2515,7 @@ public final class ProcessClientService {
     /**
      * The time the connection was established.
      */
-    private volatile long time_connected;
+    private volatile long time_connected = -1;
 
     /**
      * A fail check time, or -1 if connection is established.
@@ -2583,10 +2584,10 @@ public final class ProcessClientService {
     }
 
     /**
-     * Look at the queue and any messages that are timed out we remove from
-     * the queue and put a failure message on the output.
+     * Fail all messages currently on the input queue. This would typically
+     * happen because of a connection failure.
      */
-    private void failAllMessagesTimedOutAfter(long timeout_ts) {
+    private void failAllMessages() {
 
       QueueList to_fail = new QueueList();
       int fail_count = 0;
@@ -2596,13 +2597,10 @@ public final class ProcessClientService {
         QueueMessage msg = queue.getFirst();
         while (msg != null) {
           QueueMessage next_msg = msg.getNext();
-          // Has this message timed out?
-          if (timeout_ts > msg.getTimeoutAt()) {
-            // Yes, so remove,
-            queue.remove(msg);
-            to_fail.add(msg);
-            ++fail_count;
-          }
+          // Remove,
+          queue.remove(msg);
+          to_fail.add(msg);
+          ++fail_count;
           // Next message,
           msg = next_msg;
         }
@@ -2667,14 +2665,6 @@ public final class ProcessClientService {
     }
 
     /**
-     * Fail all messages currently on the input queue. This would typically
-     * happen because of a connection failure.
-     */
-    private void failAllMessages() {
-      failAllMessagesTimedOutAfter(Long.MAX_VALUE);
-    }
-
-    /**
      * Signifies there are messages that need to be flushed to the machine.
      * This will establish a connection if necessary.
      */
@@ -2698,7 +2688,7 @@ queue_empty_loop:
             // establish within the last 5 seconds then yes,
             long fail_ch_value = fail_checkpoint;
             if ( fail_ch_value != -1 &&
-                 System.currentTimeMillis() < (fail_ch_value + 5000) ) {
+                 MonotonicTime.millisSince(fail_ch_value) < 5000 ) {
               // If we failed to connect, empty the queue of all messages
               // and put failure messages on the output queue.
               failAllMessages();
@@ -2780,7 +2770,8 @@ queue_empty_loop:
                   nio_connection.flushSendMessages();
                   nio_connection.setStateLong((long) 0);
 
-                  time_connected = System.currentTimeMillis();
+                  long time_now = MonotonicTime.now();
+                  time_connected = time_now == -1 ? 1 : time_now;
                   fail_checkpoint = -1;
 
                   LOG.log(Level.INFO,
@@ -2795,7 +2786,9 @@ queue_empty_loop:
                         new Object[] { machine_addr, exceptionMessage(e) });
                 resetConnection();
 
-                fail_checkpoint = System.currentTimeMillis();
+                // Set timestamp but make sure it's not -1
+                long mono_ts = MonotonicTime.now();
+                fail_checkpoint = mono_ts == -1 ? 1 : mono_ts;
 
                 // If we failed to connect, empty the queue of all messages
                 // and put failure messages on the output queue.

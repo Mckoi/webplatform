@@ -29,6 +29,7 @@ import com.mckoi.mwpcore.ClassNameValidator;
 import com.mckoi.mwpcore.DBPathSnapshot;
 import com.mckoi.mwpcore.MWPUserClassLoader;
 import com.mckoi.webplatform.MckoiDDBWebPermission;
+import com.mckoi.webplatform.util.MonotonicTime;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -87,7 +88,7 @@ public final class ProcessMckoiAppClassLoader extends URLClassLoader {
   /**
    * The last time the db was checked for this class loader.
    */
-  private long last_db_check;
+  private volatile long last_db_check;
 
   /**
    * Constructs the class loader using the class loader of this class as the
@@ -125,7 +126,7 @@ public final class ProcessMckoiAppClassLoader extends URLClassLoader {
    */
   void updateDBCheck(DBPathSnapshot version_snapshot) {
     this.db_snapshot = version_snapshot;
-    last_db_check = System.currentTimeMillis();
+    last_db_check = MonotonicTime.now();
   }
 
   /**

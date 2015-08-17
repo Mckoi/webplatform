@@ -27,6 +27,7 @@ package com.mckoi.process.impl;
 
 import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.process.ProcessResultNotifier;
+import com.mckoi.webplatform.util.MonotonicTime;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -138,14 +139,14 @@ class BroadcastQueue {
    * over 4 minutes ago since 'setRequestNotExpired' was called).
    */
   boolean requestExpired() {
-    return System.currentTimeMillis() > (request_expired_ts + (4 * 60 * 1000));
+    return MonotonicTime.millisSince(request_expired_ts) > (4 * 60 * 1000);
   }
 
   /**
    * Resets the request expiration timestamp.
    */
   void setRequestNotExpired() {
-    request_expired_ts = System.currentTimeMillis();
+    request_expired_ts = MonotonicTime.now();
   }
 
   /**
@@ -232,7 +233,7 @@ class BroadcastQueue {
 
     notifiers[count] = notifier;
     contextifiers[count] = contextifier;
-    timestamps[count] = System.currentTimeMillis();
+    timestamps[count] = MonotonicTime.now();
     min_sequences[count] = min_sequence;
     
     ++count;
@@ -321,7 +322,7 @@ class BroadcastQueue {
       int limit = count;
       int end = 0;
       for (int i = 0; i < limit; ++i) {
-        if (timestamps[i] < timestamp) {
+        if (MonotonicTime.isBefore(timestamps[i], timestamp)) {
           end = i + 1;
         }
         else {
@@ -406,6 +407,8 @@ class BroadcastQueue {
       while (msg != null) {
 
         ByteBuffer bb = msg.getMessage().asByteBuffer();
+        // %NonMonotonic%
+        // PENDING: The timestamp returned here may not be monotonic.
         long bm_timestamp = bb.getLong(28);
 
         // Preserve all the messages sooner than 2 mins ago,
@@ -576,6 +579,8 @@ class BroadcastQueue {
         ByteBuffer msg_bb = msg.getMessage().asByteBuffer();
         long sequence_num = msg_bb.getLong(20);
         // Update the timestamp for this message,
+        // %NonMonotonic%
+        // PENDING: The timestamp generated here may not be monotonic.
         msg_bb.putLong(28, System.currentTimeMillis());
 
         // Make sure we update the max sequence number,

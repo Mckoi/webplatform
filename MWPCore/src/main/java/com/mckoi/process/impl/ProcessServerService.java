@@ -44,6 +44,7 @@ import com.mckoi.util.ByteArrayUtil;
 import com.mckoi.webplatform.LogPageEvent;
 import com.mckoi.webplatform.impl.LoggerService;
 import com.mckoi.webplatform.util.LogUtils;
+import com.mckoi.webplatform.util.MonotonicTime;
 import java.io.*;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -644,7 +645,7 @@ public class ProcessServerService implements PEnvironment {
    */
   private void loadSystemData() {
 
-    last_load_db_time = System.currentTimeMillis();
+    last_load_db_time = MonotonicTime.now();
 
     ODBTransaction t =
                   sessions_cache.getODBTransaction(SystemStatics.SYSTEM_PATH);
@@ -669,7 +670,7 @@ public class ProcessServerService implements PEnvironment {
    * 'loadSystemData' was called.
    */
   private boolean notLoadedDBInAWhile() {
-    return System.currentTimeMillis() - (60 * 1000) > last_load_db_time;
+    return MonotonicTime.millisSince(last_load_db_time) > (60 * 1000);
   }
 
   /**
@@ -993,8 +994,7 @@ public class ProcessServerService implements PEnvironment {
       else {
         // If it is defined, is it time to refresh from the db?
         long last_db_check = cl.getLastDBCheck();
-        long time_now = System.currentTimeMillis();
-        if (time_now > last_db_check + (4 * 1000)) {
+        if (MonotonicTime.millisSince(last_db_check) > (4 * 1000)) {
           // Refresh the class loader if necessary,
           cl = createClassLoaderForApplication(cl, account_app);
           app_classloaders_cache.put(account_app, cl);

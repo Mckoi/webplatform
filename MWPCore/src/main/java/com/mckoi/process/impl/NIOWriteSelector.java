@@ -64,7 +64,7 @@ public class NIOWriteSelector {
   /**
    * The map.
    */
-  private final Map<NIOConnection, SelectionKey> managed_keys = new HashMap();
+  private final Map<NIOConnection, SelectionKey> managed_keys = new HashMap<>();
 
   private Thread thread;
 
@@ -149,7 +149,7 @@ public class NIOWriteSelector {
   /**
    * The thread loop.
    */
-  private Runnable selector_loop = new Runnable() {
+  private final Runnable selector_loop = new Runnable() {
     @Override
     public void run() {
       try {
@@ -167,7 +167,7 @@ public class NIOWriteSelector {
 
             // The connections to notify,
             List<NIOConnection> connections =
-                                         new ArrayList(selected_keys.size());
+                                       new ArrayList<>(selected_keys.size());
 
             // First cancel the keys,
             synchronized (managed_keys) {

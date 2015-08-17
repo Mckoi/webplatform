@@ -43,9 +43,6 @@ class QueueMessage {
   // The message being sent/received.
   private final PMessage message;
 
-  // The time, against the system clock, that this message will timeout.
-  private final long timeout_at;
-
   // The next and previous messages in the queue,
   private QueueMessage next;
   private QueueMessage previous;
@@ -53,8 +50,6 @@ class QueueMessage {
   QueueMessage(ProcessServiceAddress machine, PMessage msg) {
     this.machine = machine;
     this.message = msg;
-    // PENDING; configurable timeout. Default is 10 seconds,
-    timeout_at = System.currentTimeMillis() + (10 * 1000);
   }
 
   QueueMessage getNext() {
@@ -79,10 +74,6 @@ class QueueMessage {
   
   ProcessServiceAddress getMachine() {
     return machine;
-  }
-
-  long getTimeoutAt() {
-    return timeout_at;
   }
 
   /**
