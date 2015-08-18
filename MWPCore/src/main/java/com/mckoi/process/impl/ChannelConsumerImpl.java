@@ -104,10 +104,10 @@ class ChannelConsumerImpl implements ChannelConsumer {
     }
     else {
       // Update to the new sequence value,
-      long new_sequence_value = msg.asByteBuffer().getLong(20);
+      long new_sequence_value = msg.getSequenceValue();
       sequence_value = new_sequence_value;
       // Return as a ProcessMessage,
-      return msg.asProcessMessage(36);
+      return msg.asProcessMessage(28);
     }
 
   }
@@ -193,7 +193,7 @@ class ChannelConsumerImpl implements ChannelConsumer {
     // Update the sequence value with the last value consumed,
     int sz = msg_set.size();
     PMessage last_msg = msg_set.get(sz - 1);
-    long new_sequence_value = last_msg.asByteBuffer().getLong(20);
+    long new_sequence_value = last_msg.getSequenceValue();
     sequence_value = new_sequence_value;
 
     return new CCList(msg_set);
@@ -235,7 +235,7 @@ class ChannelConsumerImpl implements ChannelConsumer {
 
     @Override
     public ProcessMessage get(int index) {
-      return backed.get(index).asProcessMessage(36);
+      return backed.get(index).asProcessMessage(28);
     }
 
     @Override

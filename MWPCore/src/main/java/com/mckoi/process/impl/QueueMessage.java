@@ -27,6 +27,7 @@ package com.mckoi.process.impl;
 
 import com.mckoi.process.ProcessId;
 import com.mckoi.process.ProcessServiceAddress;
+import com.mckoi.webplatform.util.MonotonicTime;
 
 /**
  * 
@@ -43,6 +44,9 @@ class QueueMessage {
   // The message being sent/received.
   private final PMessage message;
 
+  // The timestamp this queue entry was created.
+  private final long timestamp;
+
   // The next and previous messages in the queue,
   private QueueMessage next;
   private QueueMessage previous;
@@ -50,6 +54,7 @@ class QueueMessage {
   QueueMessage(ProcessServiceAddress machine, PMessage msg) {
     this.machine = machine;
     this.message = msg;
+    this.timestamp = MonotonicTime.now();
   }
 
   QueueMessage getNext() {
@@ -74,6 +79,10 @@ class QueueMessage {
   
   ProcessServiceAddress getMachine() {
     return machine;
+  }
+
+  long getQueueTimestamp() {
+    return timestamp;
   }
 
   /**

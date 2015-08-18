@@ -1768,14 +1768,11 @@ final class ProcessInstanceImpl implements ProcessInstance {
               process_id, channel_number, CommConstants.BROADCAST_MESSAGE_CC);
 
     ByteArrayOutputStream bout =
-                                new ByteArrayOutputStream(message.size() + 36);
+                                new ByteArrayOutputStream(message.size() + 28);
     DataOutputStream dout = new DataOutputStream(bout);
     try {
       dout.write(header);
       dout.writeLong(sequence_uid);
-      // %NonMonotonic%
-      // PENDING: The timestamp generated here may not be monotonic.
-      dout.writeLong(System.currentTimeMillis());
       message.writeTo(new SecureWrappedOutputStream(dout));
       dout.flush();
     }
@@ -1897,7 +1894,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         while (conn_it.hasNext()) {
           NIOConnection connection = conn_it.next();
           long ts = connts_it.next();
-          if (MonotonicTime.isBefore(ts, twenty_four_mins_ago)) {
+          if (MonotonicTime.isInPastOf(ts, twenty_four_mins_ago)) {
             conn_it.remove();
             connts_it.remove();
             ++count;
@@ -1934,19 +1931,17 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * broadcast queue.
      */
     private int cleanBroadcastQueue() {
-      long time_now = System.currentTimeMillis();
-      long two_mins_ago = time_now - (2 * 60 * 1000);
+      long two_mins_ago = MonotonicTime.now(-(2 * 60 * 1000));
       last_queue_clean = MonotonicTime.now();
       int count = 0;
       synchronized (broadcast_queue) {
         QueueMessage msg = broadcast_queue.getFirst();
         while (msg != null) {
 
-          ByteBuffer bb = msg.getMessage().asByteBuffer();
-          long bm_timestamp = bb.getLong(28);
+          long bm_timestamp = msg.getQueueTimestamp();
 
           // Preserve all the messages sooner than 2 mins ago,
-          if (bm_timestamp >= two_mins_ago) {
+          if (MonotonicTime.isInFutureOf(bm_timestamp, two_mins_ago)) {
             // If count is 0 then there's nothing to clear,
             if (count == 0) {
               return 0;
@@ -2049,8 +2044,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
           PMessage pmsg = msg.getMessage();
 
           // Get the sequence value of the message,
-          ByteBuffer bb = pmsg.asByteBuffer();
-          long msg_seq_val = bb.getLong(20);
+          long msg_seq_val = pmsg.getSequenceValue();
           // If it's less than we sent all the messages after,
           if (msg_seq_val <= min_sequence_val) {
             break;

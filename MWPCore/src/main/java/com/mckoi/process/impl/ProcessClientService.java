@@ -1056,7 +1056,7 @@ public final class ProcessClientService {
     // If we are not receiving on the queue or 4 minutes has passed since the
     // last request,
     boolean not_received_on_queue =
-                MonotonicTime.isBefore(queue.getConnectTime(), connect_time);
+                MonotonicTime.isInPastOf(queue.getConnectTime(), connect_time);
     boolean timeout_on_request = queue.requestExpired();
     if (not_received_on_queue || timeout_on_request) {
 

@@ -81,8 +81,20 @@ public class MonotonicTime {
    * @param time_nanos2
    * @return 
    */
-  public static boolean isBefore(long time_nanos1, long time_nanos2) {
+  public static boolean isInPastOf(long time_nanos1, long time_nanos2) {
     return time_nanos1 < time_nanos2;
+  }
+
+  /**
+   * Returns true if the first time represents a time in the future of the
+   * second time.
+   * 
+   * @param time_nanos1
+   * @param time_nanos2
+   * @return 
+   */
+  public static boolean isInFutureOf(long time_nanos1, long time_nanos2) {
+    return time_nanos1 > time_nanos2;
   }
 
 }

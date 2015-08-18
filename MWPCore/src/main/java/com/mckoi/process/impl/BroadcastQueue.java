@@ -322,7 +322,7 @@ class BroadcastQueue {
       int limit = count;
       int end = 0;
       for (int i = 0; i < limit; ++i) {
-        if (MonotonicTime.isBefore(timestamps[i], timestamp)) {
+        if (MonotonicTime.isInPastOf(timestamps[i], timestamp)) {
           end = i + 1;
         }
         else {
@@ -399,20 +399,16 @@ class BroadcastQueue {
 
     synchronized (this) {
 
-      long time_now = System.currentTimeMillis();
-      long two_mins_ago = time_now - (2 * 60 * 1000);
+      long two_mins_ago = MonotonicTime.now(-(2 * 60 * 1000));
       int clean_count = 0;
 
       QueueMessage msg = queue_list.getFirst();
       while (msg != null) {
 
-        ByteBuffer bb = msg.getMessage().asByteBuffer();
-        // %NonMonotonic%
-        // PENDING: The timestamp returned here may not be monotonic.
-        long bm_timestamp = bb.getLong(28);
+        long bm_timestamp = msg.getQueueTimestamp();
 
         // Preserve all the messages sooner than 2 mins ago,
-        if (bm_timestamp >= two_mins_ago) {
+        if (MonotonicTime.isInFutureOf(bm_timestamp, two_mins_ago)) {
           // If count is 0 then there's nothing to clear,
           if (clean_count == 0) {
             return 0;
@@ -568,7 +564,6 @@ class BroadcastQueue {
     synchronized (this) {
 
       long max_sequence_num = 0;
-      QueueList queue_out = queue_list;
 
       QueueMessage msg = in_msgs.getFirst();
 
@@ -576,12 +571,7 @@ class BroadcastQueue {
         final QueueMessage next_msg = msg.getNext();
 
         // The byte buffer of the message we are inserting,
-        ByteBuffer msg_bb = msg.getMessage().asByteBuffer();
-        long sequence_num = msg_bb.getLong(20);
-        // Update the timestamp for this message,
-        // %NonMonotonic%
-        // PENDING: The timestamp generated here may not be monotonic.
-        msg_bb.putLong(28, System.currentTimeMillis());
+        long sequence_num = msg.getMessage().getSequenceValue();
 
         // Make sure we update the max sequence number,
         if (sequence_num > max_sequence_num) {
@@ -589,19 +579,18 @@ class BroadcastQueue {
         }
 
         // If the queue is empty,
-        if (queue_out.isEmpty()) {
+        if (queue_list.isEmpty()) {
           // Just add to end,
-          queue_out.add(msg);
+          queue_list.add(msg);
         }
         else {
           // Otherwise insert at the correctly sorted position (most likely it
           // will be at the end so we search from the end),
-          QueueMessage insert_msg = queue_out.getLast();
+          QueueMessage insert_msg = queue_list.getLast();
           boolean inserted_or_found = false;
           while (insert_msg != null) {
-            ByteBuffer bb = insert_msg.getMessage().asByteBuffer();
-
-            long in_sequence_num = bb.getLong(20);
+            long in_sequence_num = insert_msg.getMessage().getSequenceValue();
+            
             // If we found a message with the same sequence we don't insert
             if (sequence_num == in_sequence_num) {
               inserted_or_found = true;
@@ -609,7 +598,7 @@ class BroadcastQueue {
             }
             else if (sequence_num > in_sequence_num) {
               // Insert the message after 'insert_msg',
-              queue_out.insertAfter(msg, insert_msg);
+              queue_list.insertAfter(msg, insert_msg);
               inserted_or_found = true;
               break;
             }
@@ -619,7 +608,7 @@ class BroadcastQueue {
           // If not inserted or found,
           if (!inserted_or_found) {
             // Insert as the first item,
-            queue_out.insertFirst(msg);
+            queue_list.insertFirst(msg);
           }
         }
 
@@ -646,8 +635,7 @@ class BroadcastQueue {
 
       QueueMessage msg = queue_list.getLast();
       while (msg != null) {
-        ByteBuffer bb = msg.getMessage().asByteBuffer();
-        long in_sequence_num = bb.getLong(20);
+        long in_sequence_num = msg.getMessage().getSequenceValue();
         if (sequence_value >= in_sequence_num) {
           // Go to the next message,
           QueueMessage next_msg = msg.getNext();
@@ -693,8 +681,7 @@ class BroadcastQueue {
         return null;
       }
       while (msg != null) {
-        ByteBuffer bb = msg.getMessage().asByteBuffer();
-        long in_sequence_num = bb.getLong(20);
+        long in_sequence_num = msg.getMessage().getSequenceValue();
         if (sequence_value >= in_sequence_num) {
           // Go to the next message,
           QueueMessage next_msg = msg.getNext();
