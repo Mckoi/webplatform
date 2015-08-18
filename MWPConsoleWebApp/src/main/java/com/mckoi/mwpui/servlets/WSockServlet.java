@@ -46,19 +46,6 @@ import org.json.JSONObject;
  */
 public class WSockServlet extends WebSocketServlet {
 
-//  @Override
-//  public WebSocket doWebSocketConnect(
-//                              HttpServletRequest request, String protocol) {
-//
-//    PlatformContext ctx = PlatformContextFactory.getPlatformContext();
-//    String ip_addr = request.getRemoteAddr();
-//
-////    // Make a context dispatcher for the current context,
-////    ContextDispatcher context_dispatcher = ctx.createContextDispatcher();
-//
-//    return new WSEvents(ip_addr);
-//  }
-
   @Override
   public void configure(WebSocketServletFactory factory) {
 
@@ -66,6 +53,7 @@ public class WSockServlet extends WebSocketServlet {
     MckoiWebSocketExtension.enableDraftCompressionExtensions(factory);
 
     factory.register(WSEvents.class);
+
   }
 
   /**
@@ -133,15 +121,12 @@ public class WSockServlet extends WebSocketServlet {
 
       }
       catch (ProcessUnavailableException ex) {
-        ex.printStackTrace(System.err);
         throw new RuntimeException(ex);
       }
       catch (IOException ex) {
-        ex.printStackTrace(System.err);
         throw new RuntimeException(ex);
       }
       catch (Exception e) {
-        e.printStackTrace(System.err);
         throw e;
       }
 
@@ -241,11 +226,9 @@ public class WSockServlet extends WebSocketServlet {
 
         }
         catch (JSONException ex) {
-          ex.printStackTrace(System.err);
           throw new RuntimeException(ex);
         }
         catch (IOException ex) {
-          ex.printStackTrace(System.err);
           throw new RuntimeException(ex);
         }
 
@@ -262,7 +245,7 @@ public class WSockServlet extends WebSocketServlet {
    */
   @Override
   public String getServletInfo() {
-    return "Mckoi Web Platform Web Socket";
+    return "Mckoi Web Platform Web Socket Access";
   }
 
 }
