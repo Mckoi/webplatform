@@ -233,7 +233,7 @@ public final class ProcessClientService {
           }
         }
 
-        long four_mins_ago = MonotonicTime.now(-(4 * 60 * 1000));
+        final long four_mins_ago = MonotonicTime.now(-(4 * 60 * 1000));
 
         Iterator<BroadcastQueue> bq_it = to_maintain.iterator();
         Iterator<ProcessChannel> pc_it = to_maintain_keys.iterator();
@@ -942,7 +942,7 @@ public final class ProcessClientService {
                     throws InterruptedException {
 
     synchronized (input_queue) {
-      long start_time = MonotonicTime.now();
+      final long start_time = MonotonicTime.now();
       QueueMessage msg = input_queue.getFirst();
       while (true) {
         // Reached the end of the queue so we need to block,
@@ -979,7 +979,7 @@ public final class ProcessClientService {
   private QueueMessage blockUntilConnectionInit(ProcessServiceAddress machine)
                                                   throws InterruptedException {
     synchronized (input_queue) {
-      long start_time = MonotonicTime.now();
+      final long start_time = MonotonicTime.now();
       QueueMessage msg = input_queue.getFirst();
       while (true) {
         // Reached the end of the queue so we need to block,
@@ -1123,10 +1123,10 @@ public final class ProcessClientService {
    */
   private List<String> getSystemProcessPaths() {
 
-    long current_time = MonotonicTime.now();
+    final long current_time = MonotonicTime.now();
     if (process_paths_list == null ||
         last_checked == 0 ||
-        MonotonicTime.millisSince(last_checked) > (2 * 60 * 1000)) {
+        MonotonicTime.millisDif(current_time, last_checked) > (2 * 60 * 1000)) {
 
       last_checked = current_time;
       ODBTransaction syst =

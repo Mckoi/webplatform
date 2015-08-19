@@ -43,7 +43,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
@@ -1931,8 +1930,10 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * broadcast queue.
      */
     private int cleanBroadcastQueue() {
-      long two_mins_ago = MonotonicTime.now(-(2 * 60 * 1000));
-      last_queue_clean = MonotonicTime.now();
+      final long monotonic_time_now = MonotonicTime.now();
+      long two_mins_ago =
+                MonotonicTime.millisSubtract(monotonic_time_now, 2 * 60 * 1000);
+      last_queue_clean = monotonic_time_now;
       int count = 0;
       synchronized (broadcast_queue) {
         QueueMessage msg = broadcast_queue.getFirst();
@@ -2109,7 +2110,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
                          int channel_num, NIOConnection connection,
                                    long min_sequence_val) throws IOException {
 
-      long monotonic_time_now = MonotonicTime.now();
+      final long monotonic_time_now = MonotonicTime.now();
 
       // Add the connection to the list of listeners,
       synchronized (connection_list) {

@@ -18,7 +18,15 @@
 package com.mckoi.webplatform.util;
 
 /**
- * 
+ * Makes a best attempt at producing a monotonic time function through the
+ * Java Virtual Machine. A monotonic time function will not return a value
+ * that is less than preceeding calls, with the exception of the time function
+ * wrapping on 64-bit overflow.
+ * <p>
+ * Note that the values returned by the 'now' methods are only valid within
+ * the current VM. A time value produced in one VM will have no relation with
+ * another time value produced in another VM. Comparing times across VM
+ * instances produces undefined results.
  *
  * @author Tobias Downer
  */
@@ -45,7 +53,7 @@ public class MonotonicTime {
    * @return 
    */
   public static long now(long milliseconds_diff) {
-    return (now() + (milliseconds_diff * MILLISECONDS_IN_NANOSECOND));
+    return millisAdd(now(), milliseconds_diff);
   }
 
   /**
@@ -71,6 +79,34 @@ public class MonotonicTime {
    */
   public static long millisSince(long time_nanos) {
     return millisDif(now(), time_nanos);
+  }
+
+  /**
+   * Converts 'time_millis' (time period in milliseconds) to nanoseconds,
+   * adds that value from 'time_nanos' and returns the result. The
+   * calculation is
+   * time_nanos + (time_millis * MILLISECONDS_IN_NANOSECOND)
+   * 
+   * @param time_nanos
+   * @param time_millis
+   * @return 
+   */
+  public static long millisAdd(long time_nanos, long time_millis) {
+    return time_nanos + (time_millis * MILLISECONDS_IN_NANOSECOND);
+  }
+
+  /**
+   * Converts 'time_millis' (time period in milliseconds) to nanoseconds,
+   * subtracts that value from 'time_nanos' and returns the result. The
+   * calculation is
+   * time_nanos - (time_millis * MILLISECONDS_IN_NANOSECOND)
+   * 
+   * @param time_nanos
+   * @param time_millis
+   * @return 
+   */
+  public static long millisSubtract(long time_nanos, long time_millis) {
+    return millisAdd(time_nanos, -time_millis);
   }
 
   /**
