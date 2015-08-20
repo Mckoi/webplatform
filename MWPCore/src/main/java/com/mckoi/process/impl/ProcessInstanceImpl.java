@@ -1284,7 +1284,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
             throw new SuspendedProcessException();
           }
 
-          // If the operation is not dormant then fail the reload,
+          // If the operation is not dormant then fail the suspend,
           if (!process_object.isDormant()) {
             return false;
           }

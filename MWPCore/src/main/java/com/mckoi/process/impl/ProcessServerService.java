@@ -86,7 +86,7 @@ public class ProcessServerService implements PEnvironment {
   /**
    * How long before a process is considered stale.
    */
-  public static final int STALE_PROCESS_TIMEOUT = 5 * 60 * 1000;
+  public static final int STALE_PROCESS_TIMEOUT = (int) (5.5 * 60 * 1000);
 //  // DEBUG VALUE
 //  public static final int STALE_PROCESS_TIMEOUT = 9 * 1000;
 
@@ -98,11 +98,15 @@ public class ProcessServerService implements PEnvironment {
 //  public static final int MAINT_FREQUENCY_TIME = 4 * 1000;
 
   /**
-   * The timeout since an instance was lasted interacted with that will signal
+   * The timeout since an instance was last interacted with that will signal
    * the instance be removed from the process set. This must be a value much
    * larger than 'MAINT_FREQUENCT_TIME' and 'STALE_PROCESS_TIMEOUT'.
+   * 
+   * This value must be at least 20 minutes to allow for broadcast listeners
+   * to have at least a 20 minute window for receiving messages between
+   * broadcast channel renewal requests.
    */
-  public static final int DISPOSABLE_PROCESS_TIMEOUT = 12 * 60 * 1000;
+  public static final int DISPOSABLE_PROCESS_TIMEOUT = 20 * 60 * 1000;
 //  // DEBUG VALUE
 //  public static final int DISPOSABLE_PROCESS_TIMEOUT = 18 * 1000;
 
@@ -313,6 +317,7 @@ public class ProcessServerService implements PEnvironment {
       Logger log = PROCESS_LOG;
       // The debug output level,
       log.setLevel(Level.parse(log_level));
+//      log.setLevel(Level.ALL);
       // Don't propogate log messages,
       log.setUseParentHandlers(false);
 
