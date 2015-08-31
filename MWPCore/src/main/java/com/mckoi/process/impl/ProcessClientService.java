@@ -34,8 +34,12 @@ import com.mckoi.odb.ODBList;
 import com.mckoi.odb.ODBObject;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.process.*;
+import com.mckoi.process.ProcessResultNotifier.Status;
 import com.mckoi.util.ByteArrayUtil;
 import com.mckoi.util.Cache;
+import com.mckoi.webplatform.impl.LoggerService;
+import com.mckoi.webplatform.impl.PlatformContextImpl;
+import com.mckoi.webplatform.util.LogUtils;
 import com.mckoi.webplatform.util.MonotonicTime;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -55,6 +59,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -150,7 +155,7 @@ public final class ProcessClientService {
   /**
    * Last time the process path list was checked.
    */
-  private volatile long last_checked = 0;
+  private volatile MonotonicTime last_checked = null;
   private volatile List<String> process_paths_list;
   private volatile List<ProcessServiceAddress> process_machines_list;
 
@@ -233,7 +238,7 @@ public final class ProcessClientService {
           }
         }
 
-        final long four_mins_ago = MonotonicTime.now(-(4 * 60 * 1000));
+        final MonotonicTime four_mins_ago = MonotonicTime.now(-(4 * 60 * 1000));
 
         Iterator<BroadcastQueue> bq_it = to_maintain.iterator();
         Iterator<ProcessChannel> pc_it = to_maintain_keys.iterator();
@@ -610,7 +615,7 @@ public final class ProcessClientService {
    * connection is currently stale (the connect time differs from when the
    * interface was created).
    */
-  private long getCurrentConnectTime(ProcessServiceAddress machine) {
+  private MonotonicTime getCurrentConnectTime(ProcessServiceAddress machine) {
     return getCurrentConnect(machine).getLastConnectedTime();
   }
 
@@ -639,6 +644,117 @@ public final class ProcessClientService {
       throw new InvalidProcessException("Not owned by account");
     }
     
+  }
+
+  /**
+   * Fails any notifiers that are currently sitting waiting for a message
+   * from the given machine address. This is called when a connection with a
+   * machine is unexpectedly closed.
+   * 
+   * @param machine_addr 
+   */
+  private void failNotifiersWaitingOnMachine(
+                                          ProcessServiceAddress machine_addr) {
+
+    final List<BroadcastQueue> fail_set = new ArrayList<>();
+
+    synchronized (broadcast_queues) {
+      Set<Map.Entry<ProcessChannel, BroadcastQueue>> entries =
+                                                  broadcast_queues.entrySet();
+      for (Map.Entry<ProcessChannel, BroadcastQueue> entry : entries) {
+        BroadcastQueue queue = entry.getValue();
+        ProcessServiceAddress remote_addr = queue.getRemoteMachine();
+        if (remote_addr.equals(machine_addr)) {
+          queue.resetConnectTime();
+          fail_set.add(queue);
+        }
+      }
+    }
+
+    // Fail all notifiers,
+    for (BroadcastQueue queue : fail_set) {
+      queue.failAllNotifiers(thread_pool);
+    }
+
+  }
+
+  /**
+   * Fail all pending process results waiting on the given machine.
+   * 
+   * @param machine_addr 
+   */
+  private void failPendingProcessResults(ProcessServiceAddress machine_addr) {
+
+    final List<ProcessResultImpl> fail_set = new ArrayList<>();
+
+    synchronized (process_result_list) {
+      for (ProcessResultImpl pr : process_result_list) {
+        if (pr.isFromRemote(machine_addr)) {
+          fail_set.add(pr);
+        }
+      }
+    }
+
+    // Notify failures,
+    for (ProcessResultImpl pr : fail_set) {
+      pr.notifyResult(Status.IO_ERROR);
+    }
+
+  }
+
+  /**
+   * This method handles failure of a connection to the given machine. This
+   * will reset the queues and add broadcast request messages for any waiting
+   * notifiers to the output queue so the broadcast listener will renew when
+   * the connection next succeeds.
+   * 
+   * @param machine_addr 
+   */
+  private void failBroadcastQueuesOn(ProcessServiceAddress machine_addr) {
+
+    List<Map.Entry<ProcessChannel, BroadcastQueue>> reestablish_set =
+                                                              new ArrayList<>();
+
+    // Reset connect times,
+    synchronized (broadcast_queues) {
+      Set<Map.Entry<ProcessChannel, BroadcastQueue>> entries =
+                                                  broadcast_queues.entrySet();
+      for (Map.Entry<ProcessChannel, BroadcastQueue> entry : entries) {
+        BroadcastQueue queue = entry.getValue();
+        ProcessServiceAddress remote_addr = queue.getRemoteMachine();
+        if (remote_addr.equals(machine_addr)) {
+          queue.resetConnectTime();
+          if (!queue.isEmpty()) {
+            reestablish_set.add(entry);
+          }
+        }
+      }
+    }
+
+    // Add broadcast request messages,
+    for (Map.Entry<ProcessChannel, BroadcastQueue> entry : reestablish_set) {
+      ProcessChannel process_channel = entry.getKey();
+      BroadcastQueue broadcast_queue = entry.getValue();
+      long min_sequence_val = broadcast_queue.getLastSequenceValue();
+      ProcessId process_id = process_channel.getProcessId();
+      PMessage pmsg = createBroadcastRequestMessage(
+                   process_id, process_channel.getChannel(), min_sequence_val);
+      putMessageOnOutput(new QueueMessage(machine_addr, pmsg));
+    }
+
+  }
+
+  /**
+   * Fails all notifiers waiting on events from the given machine address by
+   * issuing a Status.IO_ERROR event. This is used when a connection closes or
+   * the connection fails to establish.
+   * 
+   * @param machine_addr 
+   */
+  private void failNotifierOnMachineAddress(ProcessServiceAddress machine_addr) {
+    failBroadcastQueuesOn(machine_addr);
+    // Fail all pending process results,
+    failPendingProcessResults(machine_addr);
   }
 
   /**
@@ -823,6 +939,11 @@ public final class ProcessClientService {
         int channel_number = bb.getInt(16);
         ProcessChannel process_channel =
                                 new ProcessChannel(process_id, channel_number);
+
+        LOG.log(Level.FINE,
+              "Broadcast Request Acknowledge on channel {0}",
+              new Object[] { process_channel });
+
         // Put in the ack list,
         if (to_ack == null) {
           to_ack = new ArrayList<>();
@@ -847,10 +968,11 @@ public final class ProcessClientService {
     // If there are acknowledge messages,
     if (to_ack != null) {
       // The current connect time to the machine,
-      long connect_time = getCurrentConnectTime(machine_addr);
+      MonotonicTime connect_time = getCurrentConnectTime(machine_addr);
       for (ProcessChannel c : to_ack) {
         // Set them to receiving,
         BroadcastQueue broadcast_queue = getProcessChannelQueue(c);
+        broadcast_queue.setRemoteMachine(machine_addr);
         broadcast_queue.setConnectTime(connect_time);
       }
     }
@@ -927,7 +1049,7 @@ public final class ProcessClientService {
     // If there are results to notify,
     if (to_notify != null) {
       for (ProcessResultImpl process_result : to_notify) {
-        process_result.notifyResult();
+        process_result.notifyResult(Status.MESSAGES_WAITING);
       }
     }
 
@@ -942,7 +1064,7 @@ public final class ProcessClientService {
                     throws InterruptedException {
 
     synchronized (input_queue) {
-      final long start_time = MonotonicTime.now();
+      final MonotonicTime start_time = MonotonicTime.now();
       QueueMessage msg = input_queue.getFirst();
       while (true) {
         // Reached the end of the queue so we need to block,
@@ -979,7 +1101,7 @@ public final class ProcessClientService {
   private QueueMessage blockUntilConnectionInit(ProcessServiceAddress machine)
                                                   throws InterruptedException {
     synchronized (input_queue) {
-      final long start_time = MonotonicTime.now();
+      final MonotonicTime start_time = MonotonicTime.now();
       QueueMessage msg = input_queue.getFirst();
       while (true) {
         // Reached the end of the queue so we need to block,
@@ -1051,12 +1173,15 @@ public final class ProcessClientService {
                             getMachineNameFor(process_channel.getProcessId());
 
     // Get the connect time,
-    long connect_time = getCurrentConnectTime(machine);
+    MonotonicTime connect_time = getCurrentConnectTime(machine);
+    MonotonicTime queue_connect_time = queue.getConnectTime();
 
     // If we are not receiving on the queue or 4 minutes has passed since the
     // last request,
     boolean not_received_on_queue =
-                MonotonicTime.isInPastOf(queue.getConnectTime(), connect_time);
+               queue_connect_time == null || connect_time == null ||
+             ( queue_connect_time.equals(connect_time) );
+
     boolean timeout_on_request = queue.requestExpired();
     if (not_received_on_queue || timeout_on_request) {
 
@@ -1067,6 +1192,10 @@ public final class ProcessClientService {
       PMessage pmsg = createBroadcastRequestMessage(
                    process_id, process_channel.getChannel(), min_sequence_val);
       putMessageOnOutput(new QueueMessage(machine, pmsg));
+      
+      LOG.log(Level.FINE,
+              "Enqueued Broadcast Request message. Channel {0} to Machine {1}",
+              new Object[] { process_channel, machine });
 
     }
 
@@ -1123,9 +1252,9 @@ public final class ProcessClientService {
    */
   private List<String> getSystemProcessPaths() {
 
-    final long current_time = MonotonicTime.now();
+    final MonotonicTime current_time = MonotonicTime.now();
     if (process_paths_list == null ||
-        last_checked == 0 ||
+        last_checked == null ||
         MonotonicTime.millisDif(current_time, last_checked) > (2 * 60 * 1000)) {
 
       last_checked = current_time;
@@ -1211,8 +1340,6 @@ public final class ProcessClientService {
                                Set<ProcessServiceAddress> no_populate)
                                           throws ProcessUnavailableException {
 
-//    System.out.println("*** POPULATING ***");
-
     // Make 'process_machines', a list of available process servers,
     List<ProcessServiceAddress> process_machines = process_machines_list;
     if (no_populate != null && !no_populate.isEmpty()) {
@@ -1259,11 +1386,6 @@ public final class ProcessClientService {
       all_ids.add(process_ob);
       available_ids.add(process_ob);
     }
-
-//    // DEBUGGING,
-//    for (ODBObject id : available_ids) {
-//      System.out.println(id.getString("id") + ", " + id.getString("machine"));
-//    }
 
   }
 
@@ -2175,6 +2297,8 @@ public final class ProcessClientService {
                                                         new ArrayList<>(2);
     private PMessage reply = null;
 
+    private final AtomicBoolean notified = new AtomicBoolean(false);
+
     private ProcessResultImpl(ExecutorService thread_pool,
             String account_name, ContextBuilder contextifier,
             ProcessServiceAddress machine, int call_id, ProcessId process_id) {
@@ -2258,7 +2382,7 @@ public final class ProcessClientService {
     }
 
     // Notifies when result comes in,
-    private void notifyResult() {
+    private void notifyResult(final Status status) {
       // If there's something to notify then dispatch it,
       List<ProcessResultNotifier> to_notify;
       synchronized (notifiers) {
@@ -2270,27 +2394,42 @@ public final class ProcessClientService {
       thread_pool.submit(new Runnable() {
         @Override
         public void run() {
+
+          // Only allow the first notification to happen.
+          if (!notified.compareAndSet(false, true)) {
+            return;
+          }
+          
           for (ProcessResultNotifier n : set) {
             contextifier.enterContext();
-            n.lock();
             try {
+              n.lock();
               try {
-                n.notifyMessages();
+                n.notifyMessages(status);
               }
               catch (RuntimeException e) {
-                
-                // PENDING: 'notifyMessages' will potentially be calling into
-                // user-code here. We should probably log this to the account's
-                // log system.
                 // Oops,
-                LOG.log(Level.SEVERE,
-                        "Exception during message notification", e);
-                e.printStackTrace(System.err);
-
+                // 'notifyMessages' will potentially be calling into
+                // user-code here. We log this to the account's log system if
+                // the context was defined.
+                if (PlatformContextImpl.hasThreadContextDefined()) {
+                  LoggerService logger =
+                                    PlatformContextImpl.getCurrentThreadLogger();
+                  logger.secureLog(Level.SEVERE, "process",
+                          "Exception during message notification\n{0}",
+                          LogUtils.stringStackTrace(e));
+                }
+                else {
+                  LOG.log(Level.SEVERE,
+                          "Exception during message notification", e);
+                  e.printStackTrace(System.err);
+                }
+              }
+              finally {
+                n.unlock();
               }
             }
             finally {
-              n.unlock();
               contextifier.exitContext();
             }
           }
@@ -2323,6 +2462,17 @@ public final class ProcessClientService {
     @Override
     public int getCallId() {
       return call_id;
+    }
+
+    /**
+     * Returns true if this process result is based on the given machine
+     * address.
+     * 
+     * @param machine_addr
+     * @return 
+     */
+    private boolean isFromRemote(ProcessServiceAddress machine_addr) {
+      return machine.equals(machine_addr);
     }
 
     /**
@@ -2461,6 +2611,19 @@ public final class ProcessClientService {
 
     @Override
     public void connectionClosed(NIOConnection connection) {
+      LOG.log(Level.WARNING, "Connection Closed - dispatching to notifiers");
+      ProcessServiceAddress machine_addr = connection.getStateMachineName();
+      if (machine_addr != null) {
+        LOG.log(Level.WARNING, "Resetting connection");
+        synchronized (connections) {
+          ProcessClientConnection pcc = connections.get(machine_addr);
+          if (pcc != null) {
+            pcc.resetConnection();
+          }
+        }
+        // Fail all notifiers with an IO_ERROR status event.
+        failNotifierOnMachineAddress(machine_addr);
+      }
     }
 
     @Override
@@ -2515,12 +2678,12 @@ public final class ProcessClientService {
     /**
      * The time the connection was established.
      */
-    private volatile long time_connected = -1;
+    private volatile MonotonicTime time_connected = null;
 
     /**
-     * A fail check time, or -1 if connection is established.
+     * A fail check time, or null if connection is established.
      */
-    private volatile long fail_checkpoint = -1;
+    private volatile MonotonicTime fail_checkpoint = null;
 
     private final AtomicInteger flush_lock = new AtomicInteger(0);
 
@@ -2549,7 +2712,7 @@ public final class ProcessClientService {
     /**
      * Returns the time this connection was last established.
      */
-    long getLastConnectedTime() {
+    MonotonicTime getLastConnectedTime() {
       return time_connected;
     }
 
@@ -2558,7 +2721,7 @@ public final class ProcessClientService {
      * forces handshake with service.
      */
     private void resetConnection() {
-      time_connected = -1;
+      time_connected = null;
       nio_connection = null;
     }
 
@@ -2569,7 +2732,7 @@ public final class ProcessClientService {
      * currently available.
      */
     private boolean isKnownFailed() {
-      return fail_checkpoint != -1;
+      return fail_checkpoint != null;
     }
 
     /**
@@ -2580,7 +2743,7 @@ public final class ProcessClientService {
      */
     private boolean attemptEstablishConnection() {
       flushPendingMessages();
-      return (fail_checkpoint == -1);
+      return (fail_checkpoint == null);
     }
 
     /**
@@ -2592,18 +2755,50 @@ public final class ProcessClientService {
       QueueList to_fail = new QueueList();
       int fail_count = 0;
 
+      // We only create a failure message for certain types of calls,
+      // specifically;
+      //
+      //   CommConstants.PROCESS_QUERY
+      //   CommConstants.SEND_SIGNAL
+      //   CommConstants.SERVICE_QUERY
+      //   CommConstants.CALL_RET_EXPECTED_CC
+      //   CommConstants.FUNCTION_INIT_CC
+      //
+      // These types of functions all provide a 'call_id' therefore we
+      // can convey the failure back to the callee.
+      //
+      // Anything else we leave on the queue so it'll be resent next time a
+      // connection is established.
+
       // Remove all timed out messages from the queue,
       synchronized (queue) {
+
         QueueMessage msg = queue.getFirst();
         while (msg != null) {
           QueueMessage next_msg = msg.getNext();
-          // Remove,
-          queue.remove(msg);
-          to_fail.add(msg);
-          ++fail_count;
+
+          // The command code,
+          PMessage call_msg = msg.getMessage();
+          byte command_code = call_msg.getCommandCode();
+          // Only remove from the queue the types of messages we can
+          // immediately respond a failure status for,
+          if (command_code == CommConstants.PROCESS_QUERY ||
+              command_code == CommConstants.SEND_SIGNAL ||
+              command_code == CommConstants.SERVICE_QUERY ||
+              command_code == CommConstants.CALL_RET_EXPECTED_CC ||
+              command_code == CommConstants.FUNCTION_INIT_CC) {
+
+            // Remove,
+            queue.remove(msg);
+            to_fail.add(msg);
+            ++fail_count;
+
+          }
+
           // Next message,
           msg = next_msg;
         }
+
       }
 
       List<PMessage> fail_messages = new ArrayList<>(Math.max(fail_count, 8));
@@ -2613,44 +2808,19 @@ public final class ProcessClientService {
       while (msg != null) {
         QueueMessage next_msg = msg.getNext();
 
-        // We only create a failure message for certain types of calls,
-        // specifically;
-        //
-        //   CommConstants.PROCESS_QUERY
-        //   CommConstants.SEND_SIGNAL
-        //   CommConstants.SERVICE_QUERY
-        //   CommConstants.CALL_RET_EXPECTED_CC
-        //   CommConstants.FUNCTION_INIT_CC
-        //
-        // These types of functions all provide a 'call_id' therefore we
-        // can convey the failure back to the callee.
-
+        // The call_id,
         PMessage call_msg = msg.getMessage();
+        int call_id = call_msg.getCallId();
+        // The process_id,
+        ProcessId process_id = call_msg.getProcessId();
 
-        // The command code,
-        byte command_code = call_msg.getCommandCode();
+        // Make a failure message,
+        PMessage fail_msg = ProcessServerService.failMessage(
+                      process_id, call_id, "UNAVAILABLE",
+                      new PTimeoutException());
 
-        // Command codes we fail,
-        if (command_code == CommConstants.PROCESS_QUERY ||
-            command_code == CommConstants.SEND_SIGNAL ||
-            command_code == CommConstants.SERVICE_QUERY ||
-            command_code == CommConstants.CALL_RET_EXPECTED_CC ||
-            command_code == CommConstants.FUNCTION_INIT_CC) {
-
-          // The call_id,
-          int call_id = call_msg.getCallId();
-          // The process_id,
-          ProcessId process_id = call_msg.getProcessId();
-
-          // Make a failure message,
-          PMessage fail_msg = ProcessServerService.failMessage(
-                        process_id, call_id, "UNAVAILABLE",
-                        new PTimeoutException());
-
-          // Add to the list,
-          fail_messages.add(fail_msg);
-
-        }
+        // Add to the list,
+        fail_messages.add(fail_msg);
 
         // Go to next message,
         msg = next_msg;
@@ -2682,12 +2852,12 @@ public final class ProcessClientService {
         try {
 
 queue_empty_loop:
-          while (!isQueueEmpty() || fail_checkpoint != -1) {
+          while (!isQueueEmpty() || fail_checkpoint != null) {
 
             // Are we in fail immediately mode? If a connection failed to
             // establish within the last 5 seconds then yes,
-            long fail_ch_value = fail_checkpoint;
-            if ( fail_ch_value != -1 &&
+            MonotonicTime fail_ch_value = fail_checkpoint;
+            if ( fail_ch_value != null &&
                  MonotonicTime.millisSince(fail_ch_value) < 5000 ) {
               // If we failed to connect, empty the queue of all messages
               // and put failure messages on the output queue.
@@ -2721,7 +2891,7 @@ queue_empty_loop:
                   // network interface.
                   else if (!current_interface.equals(network_interface)) {
                     String err_msg = MessageFormat.format(
-                        "Machine address has a scope that doesn''t match " +
+                        "Machine address has a scope that does not match " +
                         "assigned network interface: {0}", addr);
                     LOG.log(Level.SEVERE, err_msg);
                     throw new IOException(err_msg);
@@ -2770,9 +2940,9 @@ queue_empty_loop:
                   nio_connection.flushSendMessages();
                   nio_connection.setStateLong((long) 0);
 
-                  long time_now = MonotonicTime.now();
-                  time_connected = time_now == -1 ? 1 : time_now;
-                  fail_checkpoint = -1;
+                  MonotonicTime time_now = MonotonicTime.now();
+                  time_connected = time_now;
+                  fail_checkpoint = null;
 
                   LOG.log(Level.INFO,
                           "Connection success: {0}", machine_addr);
@@ -2786,9 +2956,9 @@ queue_empty_loop:
                         new Object[] { machine_addr, exceptionMessage(e) });
                 resetConnection();
 
-                // Set timestamp but make sure it's not -1
-                long mono_ts = MonotonicTime.now();
-                fail_checkpoint = mono_ts == -1 ? 1 : mono_ts;
+                // Set timestamp
+                MonotonicTime mono_ts = MonotonicTime.now();
+                fail_checkpoint = mono_ts;
 
                 // If we failed to connect, empty the queue of all messages
                 // and put failure messages on the output queue.

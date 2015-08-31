@@ -178,6 +178,7 @@ class NIOServerThread extends Thread {
 
               // If it's an accept op from the server socket,
               if ((r_ops & SelectionKey.OP_ACCEPT) != 0) {
+
                 // The incoming socket channel,
                 SocketChannel sc = server_channel.accept();
 
@@ -224,11 +225,6 @@ class NIOServerThread extends Thread {
                 // Read data from channel
                 boolean close = conn.readDataFromChannel();
 
-  //              // If the queue was updated, notify listeners of the message
-  //              // queue,
-  //              if (conn.wasQueueUpdated()) {
-  //                getThreadPool().submit(env.handleMessages(conn));
-  //              }
                 // If the stream closed,
                 if (close) {
                   conn.close();

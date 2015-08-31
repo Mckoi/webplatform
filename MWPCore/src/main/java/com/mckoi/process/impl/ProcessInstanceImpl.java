@@ -154,7 +154,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
   /**
    * The time the process object was created.
    */
-  private long process_object_create_timestamp;
+  private MonotonicTime process_object_create_timestamp;
 
   /**
    * True if this process instance is terminated.
@@ -180,7 +180,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
    * Timestamp when the last 'function' method was called.
    */
   private volatile long time_of_last_function;
-  private volatile long monotonic_time_of_last_function;
+  private volatile MonotonicTime monotonic_time_of_last_function;
 
   /**
    * The number of times the 'function' method has been called.
@@ -788,7 +788,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
     }
 
     @Override
-    public void notifyMessages() {
+    public void notifyMessages(Status status) {
       // Delegate this to the thread pool,
       process_service.getThreadPool().submit(new Runnable() {
         @Override
@@ -1854,12 +1854,12 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * Timestamps of the requests on this instance by the given connection.
      * Used to determine when a connection is stale.
      */
-    private final List<Long> connection_timestamp_list;
+    private final List<MonotonicTime> connection_timestamp_list;
 
     /**
      * Last time the queue was cleaned.
      */
-    private volatile long last_queue_clean = -1;
+    private volatile MonotonicTime last_queue_clean = null;
 
 
     private BroadcastInstance() {
@@ -1885,14 +1885,14 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * client waits between polls.
      */
     private int cleanExpiredConnections() {
-      long twenty_four_mins_ago = MonotonicTime.now(-(24 * 60 * 1000));
+      MonotonicTime twenty_four_mins_ago = MonotonicTime.now(-(24 * 60 * 1000));
       int count = 0;
       synchronized (connection_list) {
         Iterator<NIOConnection> conn_it = connection_list.iterator();
-        Iterator<Long> connts_it = connection_timestamp_list.iterator();
+        Iterator<MonotonicTime> connts_it = connection_timestamp_list.iterator();
         while (conn_it.hasNext()) {
           NIOConnection connection = conn_it.next();
-          long ts = connts_it.next();
+          MonotonicTime ts = connts_it.next();
           if (MonotonicTime.isInPastOf(ts, twenty_four_mins_ago)) {
             conn_it.remove();
             connts_it.remove();
@@ -1911,10 +1911,10 @@ final class ProcessInstanceImpl implements ProcessInstance {
     private void removeNIOConnection(NIOConnection in_conn) {
       synchronized (connection_list) {
         Iterator<NIOConnection> conn_it = connection_list.iterator();
-        Iterator<Long> connts_it = connection_timestamp_list.iterator();
+        Iterator<MonotonicTime> connts_it = connection_timestamp_list.iterator();
         while (conn_it.hasNext()) {
           NIOConnection connection = conn_it.next();
-          long ts = connts_it.next();
+          MonotonicTime ts = connts_it.next();
           if (connection == in_conn) {
             conn_it.remove();
             connts_it.remove();
@@ -1930,8 +1930,8 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * broadcast queue.
      */
     private int cleanBroadcastQueue() {
-      final long monotonic_time_now = MonotonicTime.now();
-      long two_mins_ago =
+      final MonotonicTime monotonic_time_now = MonotonicTime.now();
+      MonotonicTime two_mins_ago =
                 MonotonicTime.millisSubtract(monotonic_time_now, 2 * 60 * 1000);
       last_queue_clean = monotonic_time_now;
       int count = 0;
@@ -1939,7 +1939,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
         QueueMessage msg = broadcast_queue.getFirst();
         while (msg != null) {
 
-          long bm_timestamp = msg.getQueueTimestamp();
+          MonotonicTime bm_timestamp = msg.getQueueTimestamp();
 
           // Preserve all the messages sooner than 2 mins ago,
           if (MonotonicTime.isInFutureOf(bm_timestamp, two_mins_ago)) {
@@ -1972,7 +1972,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
      * elements cleaned.
      */
     private int periodicClean() {
-      if (last_queue_clean == -1 ||
+      if (last_queue_clean == null ||
           MonotonicTime.millisSince(last_queue_clean) > (60 * 1000)) {
         return cleanBroadcastQueue();
       }
@@ -2110,7 +2110,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
                          int channel_num, NIOConnection connection,
                                    long min_sequence_val) throws IOException {
 
-      final long monotonic_time_now = MonotonicTime.now();
+      final MonotonicTime monotonic_time_now = MonotonicTime.now();
 
       // Add the connection to the list of listeners,
       synchronized (connection_list) {
@@ -2194,17 +2194,34 @@ final class ProcessInstanceImpl implements ProcessInstance {
     }
 
     @Override
-    public void notifyMessages() {
+    public void notifyMessages(Status status) {
 
-      // Get the result.
-      ProcessInputMessage result_msg = result.getResult();
-      ProcessInputMessage.Type result_type = result_msg.getType();
-      ProcessFunctionError error = result_msg.getError();
-      ProcessMessage msg = result_msg.getMessage();
+      // If messages waiting,
+      if (status.equals(Status.MESSAGES_WAITING)) {
 
-      // Push onto the queue
-      function_queue.pushToFunctionQueue(new FunctionQueueItem(
-                    call_id, result_type, msg, null, error, null, false));
+        // Get the result.
+        ProcessInputMessage result_msg = result.getResult();
+        ProcessInputMessage.Type result_type = result_msg.getType();
+        ProcessFunctionError error = result_msg.getError();
+        ProcessMessage msg = result_msg.getMessage();
+
+        // Push onto the queue
+        function_queue.pushToFunctionQueue(new FunctionQueueItem(
+                      call_id, result_type, msg, null, error, null, false));
+
+      }
+      // Otherwise, either an IO error or timeout. We post an appropriate error
+      // onto the function queue,
+      else {
+
+        String fail_msg = (status == Status.IO_ERROR) ? "ioerror" : "timeout";
+        ProcessFunctionError error = new ProcessFunctionError("ERROR", fail_msg);
+        ProcessMessage msg = ByteArrayProcessMessage.nullMessage();
+
+        function_queue.pushToFunctionQueue(new FunctionQueueItem(
+                call_id, Type.RETURN_EXCEPTION, msg, null, error, null, false));
+
+      }
 
       // And notify process service that the queue changed,
       process_service.notifyMessagesAvailable(process_id);

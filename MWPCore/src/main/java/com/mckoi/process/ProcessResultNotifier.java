@@ -47,13 +47,19 @@ public abstract class ProcessResultNotifier {
    * Initializes this notifier against the given consumer. If the context times
    * out then the method in the given CleanupHandler must be called to clean
    * up the process service.
+   * 
+   * @param cleanup_handler
    */
   public abstract void init(CleanupHandler cleanup_handler);
 
   /**
-   * Notifies that the messages are available to be consumed.
+   * Notifies that messages are available to be consumed, or the status of the
+   * channel has changed such that messages can no longer be consumed (an
+   * IO Error or time out has occurred).
+   * 
+   * @param status
    */
-  public abstract void notifyMessages();
+  public abstract void notifyMessages(Status status);
 
   /**
    * Lock used before 'notifyMessages' is called, and during initialization.
@@ -81,6 +87,15 @@ public abstract class ProcessResultNotifier {
 
   public static interface CleanupHandler {
     void performCleanup();
+  }
+
+  /**
+   * Status events when a message is consumed.
+   */
+  public static enum Status {
+    MESSAGES_WAITING,
+    TIMEOUT,
+    IO_ERROR
   }
 
 }

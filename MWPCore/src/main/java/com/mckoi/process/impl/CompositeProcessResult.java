@@ -26,9 +26,9 @@
 package com.mckoi.process.impl;
 
 import com.mckoi.process.ProcessInputMessage;
-import com.mckoi.process.ProcessMessage;
 import com.mckoi.process.ProcessResult;
 import com.mckoi.process.ProcessResultNotifier;
+import com.mckoi.process.ProcessResultNotifier.Status;
 import com.mckoi.process.ResultTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +45,7 @@ public abstract class CompositeProcessResult implements ProcessResult {
   private final int call_id;
   private final List<ProcessResult> results;
 
-  private final ArrayList<ProcessResultNotifier> notifiers = new ArrayList(2);
+  private final ArrayList<ProcessResultNotifier> notifiers = new ArrayList<>(2);
 
   private final Object NOTIFIED_LOCK = new Object();
   private boolean notified = false;
@@ -60,6 +60,9 @@ public abstract class CompositeProcessResult implements ProcessResult {
    * Either returns a list of all the ProcessMessage objects representing the
    * result of all the queries, or returns null and the given notifier will
    * be called when all the results are available.
+   * 
+   * @param notifier
+   * @return 
    */
   protected List<ProcessInputMessage> getAllResults(
                                         final ProcessResultNotifier notifier) {
@@ -72,7 +75,7 @@ public abstract class CompositeProcessResult implements ProcessResult {
     // Notifier that is triggered only when all results are available,
     final CompositeNotifier composite_notifier = new CompositeNotifier();
 
-    List<ProcessInputMessage> out = new ArrayList(results.size());
+    List<ProcessInputMessage> out = new ArrayList<>(results.size());
     
     notifier.lock();
     try {
@@ -119,13 +122,15 @@ public abstract class CompositeProcessResult implements ProcessResult {
    * Returns a list of all the ProcessMessage objects representing the result
    * of all the queries, or returns null if the result is not currently
    * available.
+   * 
+   * @return 
    */
   protected List<ProcessInputMessage> getAllResults() {
-    List<ProcessInputMessage> out = new ArrayList(results.size());
+    final List<ProcessInputMessage> out = new ArrayList<>(results.size());
     // Call 'getResult' on every result item,
     for (ProcessResult result : results) {
       ProcessInputMessage result_msg = result.getResult();
-      if (out != null && result_msg != null) {
+      if (result_msg != null) {
         out.add(result_msg);
       }
       else {
@@ -136,7 +141,7 @@ public abstract class CompositeProcessResult implements ProcessResult {
   }
 
   // Notifies when result comes in,
-  private void notifyResult() {
+  private void notifyResult(Status status) {
     // Make sure to notify only once,
     synchronized (NOTIFIED_LOCK) {
       if (notified) {
@@ -147,7 +152,7 @@ public abstract class CompositeProcessResult implements ProcessResult {
     // If there's something to notify then dispatch it,
     List<ProcessResultNotifier> to_notify;
     synchronized (notifiers) {
-      to_notify = new ArrayList(notifiers.size());
+      to_notify = new ArrayList<>(notifiers.size());
       to_notify.addAll(notifiers);
       // Unblock any waiting threads,
       notifiers.notifyAll();
@@ -156,7 +161,7 @@ public abstract class CompositeProcessResult implements ProcessResult {
     for (ProcessResultNotifier n : to_notify) {
       n.lock();
       try {
-        n.notifyMessages();
+        n.notifyMessages(status);
       }
       finally {
         n.unlock();
@@ -184,17 +189,17 @@ public abstract class CompositeProcessResult implements ProcessResult {
       // Remember the cleanup handler and call it during 'cleanup'
       if (!cleanup_handler.equals(NOOP_CLEANUP_HANDLER)) {
         if (cleanup_handlers == null) {
-          cleanup_handlers = new ArrayList();
+          cleanup_handlers = new ArrayList<>();
         }
         cleanup_handlers.add(cleanup_handler);
       }
     }
 
     @Override
-    public void notifyMessages() {
+    public void notifyMessages(Status status) {
       List<ProcessInputMessage> msg = getAllResults();
       if (msg != null) {
-        notifyResult();
+        notifyResult(status);
       }
     }
 
@@ -203,6 +208,9 @@ public abstract class CompositeProcessResult implements ProcessResult {
   /**
    * Called when a completed results set is available, and should format into
    * the result ProcessMessage.
+   * 
+   * @param results
+   * @return
    */
   protected abstract ProcessInputMessage formatAsProcessMessage(
                                             List<ProcessInputMessage> results);

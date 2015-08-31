@@ -34,15 +34,35 @@ package com.mckoi.webplatform.util;
 public class MonotonicTime {
   
   private static final long MILLISECONDS_IN_NANOSECOND = 1000000;
-  
+
+  private final long time;
+  MonotonicTime(long time) {
+    this.time = time;
+  }
+
+  @Override
+  public boolean equals(Object that) {
+    if (that == null || !(that instanceof MonotonicTime)) {
+      return false;
+    }
+    return time == ((MonotonicTime) that).time;
+  }
+
+  @Override
+  public int hashCode() {
+    int hash = 3;
+    hash = 59 * hash + (int) (this.time ^ (this.time >>> 32));
+    return hash;
+  }
+
   /**
    * Returns a number representing the number of nanoseconds since some
    * arbitrary point in time (defined when the VM is created).
    * 
    * @return 
    */
-  public static long now() {
-    return System.nanoTime();
+  public static MonotonicTime now() {
+    return new MonotonicTime(System.nanoTime());
   }
   
   /**
@@ -52,7 +72,7 @@ public class MonotonicTime {
    * @param milliseconds_diff
    * @return 
    */
-  public static long now(long milliseconds_diff) {
+  public static MonotonicTime now(long milliseconds_diff) {
     return millisAdd(now(), milliseconds_diff);
   }
 
@@ -65,8 +85,9 @@ public class MonotonicTime {
    * @param time_nanos2
    * @return 
    */
-  public static long millisDif(long time_nanos1, long time_nanos2) {
-    return Math.abs((time_nanos1 - time_nanos2) / MILLISECONDS_IN_NANOSECOND);
+  public static long millisDif(
+                        MonotonicTime time_nanos1, MonotonicTime time_nanos2) {
+    return Math.abs((time_nanos1.time - time_nanos2.time) / MILLISECONDS_IN_NANOSECOND);
   }
 
   /**
@@ -77,7 +98,7 @@ public class MonotonicTime {
    * @param time_nanos
    * @return 
    */
-  public static long millisSince(long time_nanos) {
+  public static long millisSince(MonotonicTime time_nanos) {
     return millisDif(now(), time_nanos);
   }
 
@@ -91,8 +112,10 @@ public class MonotonicTime {
    * @param time_millis
    * @return 
    */
-  public static long millisAdd(long time_nanos, long time_millis) {
-    return time_nanos + (time_millis * MILLISECONDS_IN_NANOSECOND);
+  public static MonotonicTime millisAdd(
+                                  MonotonicTime time_nanos, long time_millis) {
+    long ts = time_nanos.time + (time_millis * MILLISECONDS_IN_NANOSECOND);
+    return new MonotonicTime(ts);
   }
 
   /**
@@ -105,7 +128,8 @@ public class MonotonicTime {
    * @param time_millis
    * @return 
    */
-  public static long millisSubtract(long time_nanos, long time_millis) {
+  public static MonotonicTime millisSubtract(
+                                  MonotonicTime time_nanos, long time_millis) {
     return millisAdd(time_nanos, -time_millis);
   }
 
@@ -117,8 +141,9 @@ public class MonotonicTime {
    * @param time_nanos2
    * @return 
    */
-  public static boolean isInPastOf(long time_nanos1, long time_nanos2) {
-    return time_nanos1 < time_nanos2;
+  public static boolean isInPastOf(
+                        MonotonicTime time_nanos1, MonotonicTime time_nanos2) {
+    return (time_nanos1.time - time_nanos2.time) < 0;
   }
 
   /**
@@ -129,8 +154,9 @@ public class MonotonicTime {
    * @param time_nanos2
    * @return 
    */
-  public static boolean isInFutureOf(long time_nanos1, long time_nanos2) {
-    return time_nanos1 > time_nanos2;
+  public static boolean isInFutureOf(
+                        MonotonicTime time_nanos1, MonotonicTime time_nanos2) {
+    return (time_nanos1.time - time_nanos2.time) > 0;
   }
 
 }

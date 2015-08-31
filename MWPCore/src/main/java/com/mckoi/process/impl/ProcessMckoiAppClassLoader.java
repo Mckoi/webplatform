@@ -87,7 +87,7 @@ public final class ProcessMckoiAppClassLoader extends URLClassLoader {
   /**
    * The last time the db was checked for this class loader.
    */
-  private volatile long last_db_check;
+  private volatile MonotonicTime last_db_check;
 
   /**
    * Constructs the class loader using the class loader of this class as the
@@ -131,7 +131,7 @@ public final class ProcessMckoiAppClassLoader extends URLClassLoader {
   /**
    * Returns the last timestamp the db was checked for this class loader.
    */
-  long getLastDBCheck() {
+  MonotonicTime getLastDBCheck() {
     return last_db_check;
   }
 

@@ -198,7 +198,7 @@ public class ProcessServerService implements PEnvironment {
   /**
    * Last time the DB was loaded.
    */
-  private volatile long last_load_db_time;
+  private volatile MonotonicTime last_load_db_time;
 
   /**
    * The map of application class loaders in this service.
@@ -998,7 +998,7 @@ public class ProcessServerService implements PEnvironment {
       }
       else {
         // If it is defined, is it time to refresh from the db?
-        long last_db_check = cl.getLastDBCheck();
+        MonotonicTime last_db_check = cl.getLastDBCheck();
         if (MonotonicTime.millisSince(last_db_check) > (4 * 1000)) {
           // Refresh the class loader if necessary,
           cl = createClassLoaderForApplication(cl, account_app);
@@ -1954,6 +1954,8 @@ public class ProcessServerService implements PEnvironment {
    */
   @Override
   public void connectionClosed(NIOConnection connection) {
+    // PENDING: this is a callback from NIOConnection when the connection is
+    //   closed. This function may be needed to handle cleanup.
   }
 
   /**

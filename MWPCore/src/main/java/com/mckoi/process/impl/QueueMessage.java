@@ -45,7 +45,7 @@ class QueueMessage {
   private final PMessage message;
 
   // The timestamp this queue entry was created.
-  private final long timestamp;
+  private final MonotonicTime timestamp;
 
   // The next and previous messages in the queue,
   private QueueMessage next;
@@ -81,7 +81,7 @@ class QueueMessage {
     return machine;
   }
 
-  long getQueueTimestamp() {
+  MonotonicTime getQueueTimestamp() {
     return timestamp;
   }
 

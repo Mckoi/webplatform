@@ -114,7 +114,8 @@ public class AsyncServletProcessUtil {
 
   /**
    * When the CONSUME_STATUS_KEY attribute is set to CONSUME_STATUS_TIMEOUT
-   * it means the timeout limit was reached (default timeout is 3 minutes).
+   * it means the timeout limit was reached (default timeout is 3 minutes) or
+   * the process consumer channel timeout was reached.
    */
   public final static String CONSUME_STATUS_TIMEOUT = "timeout";
 
@@ -125,12 +126,27 @@ public class AsyncServletProcessUtil {
    */
   public final static String CONSUME_STATUS_AVAILABLE = "available";
 
+  /**
+   * When the CONSUME_STATUS_KEY attribute is set to CONSUME_STATUS_IOERROR
+   * it means the connection to the process through the channel consumer
+   * failed. Most typically this will happen because the network failed while
+   * the servers remained running.
+   */
+  public final static String CONSUME_STATUS_IOERROR = "ioerror";
+
+  /**
+   * Miscellaneous error.
+   */
+  public final static String CONSUME_STATUS_MISC_ERROR = "miscerror";
 
   /**
    * Creates a ProcessResultNotifier that will put the given ServletRequest
    * into asynchronous mode (see the Servlet 3.0 spec) and perform a call-back
    * dispatch when new messages are made available on the associated broadcast
    * channel.
+   * 
+   * @param request
+   * @return 
    */
   public static ProcessResultNotifier createNotifier(
                                                 final ServletRequest request) {
@@ -150,9 +166,29 @@ public class AsyncServletProcessUtil {
       }
 
       @Override
-      public void notifyMessages() {
+      public void notifyMessages(Status status) {
         // Dispatch 'available' status attribute,
-        request.setAttribute(CONSUME_STATUS_KEY, CONSUME_STATUS_AVAILABLE);
+        if (status == Status.MESSAGES_WAITING) {
+          request.setAttribute(CONSUME_STATUS_KEY, CONSUME_STATUS_AVAILABLE);
+        }
+        // Dispatch timeout,
+        // Note that this happens only when the client process API decides it
+        //   has been waiting for a message for too long. Typically this will
+        //   happen after 20 minutes.
+        //
+        // This shouldn't get called under default operation because the
+        //   servlet context timeout happens after 3 minutes.
+        else if (status == Status.TIMEOUT) {
+          request.setAttribute(CONSUME_STATUS_KEY, CONSUME_STATUS_TIMEOUT);
+        }
+        // Dispatch other errors,
+        else if (status == Status.IO_ERROR) {
+          request.setAttribute(CONSUME_STATUS_KEY, CONSUME_STATUS_IOERROR);
+        }
+        // Default,
+        else {
+          request.setAttribute(CONSUME_STATUS_KEY, CONSUME_STATUS_MISC_ERROR);
+        }
         request.getAsyncContext().dispatch();
       }
       

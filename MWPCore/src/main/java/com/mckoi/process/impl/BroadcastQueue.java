@@ -27,8 +27,9 @@ package com.mckoi.process.impl;
 
 import com.mckoi.mwpcore.ContextBuilder;
 import com.mckoi.process.ProcessResultNotifier;
+import com.mckoi.process.ProcessResultNotifier.Status;
+import com.mckoi.process.ProcessServiceAddress;
 import com.mckoi.webplatform.util.MonotonicTime;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -67,7 +68,7 @@ class BroadcastQueue {
   /**
    * The list of timestamps when the respective notifier was added to the list.
    */
-  private long[] timestamps;
+  private MonotonicTime[] timestamps;
 
   /**
    * The minimum sequence value we are listening for when the notifier is
@@ -93,12 +94,17 @@ class BroadcastQueue {
   /**
    * The currently receiving flag.
    */
-  private volatile long connect_time = -1;
+  private volatile MonotonicTime connect_time = null;
 
   /**
    * Used as a timer for sending the broadcast request.
    */
-  private volatile long request_expired_ts;
+  private volatile MonotonicTime request_expired_ts = null;
+
+  /**
+   * The last acknowledged machine address of the broadcasting process.
+   */
+  private volatile ProcessServiceAddress machine_addr;
 
   /**
    * Constructor.
@@ -108,7 +114,7 @@ class BroadcastQueue {
     this.count = 0;
     notifiers = new ProcessResultNotifier[size];
     contextifiers = new ContextBuilder[size];
-    timestamps = new long[size];
+    timestamps = new MonotonicTime[size];
     min_sequences = new long[size];
     listener_lock = 0;
   }
@@ -139,6 +145,9 @@ class BroadcastQueue {
    * over 4 minutes ago since 'setRequestNotExpired' was called).
    */
   boolean requestExpired() {
+    if (request_expired_ts == null) {
+      return true;
+    }
     return MonotonicTime.millisSince(request_expired_ts) > (4 * 60 * 1000);
   }
 
@@ -168,7 +177,7 @@ class BroadcastQueue {
 
       ProcessResultNotifier[] new_notifiers = new ProcessResultNotifier[size];
       ContextBuilder[] new_contextifiers = new ContextBuilder[size];
-      long[] new_timestamps = new long[size];
+      MonotonicTime[] new_timestamps = new MonotonicTime[size];
       long[] new_min_sequences = new long[size];
       System.arraycopy(notifiers, 0,
                        new_notifiers, 0, notifiers.length);
@@ -315,7 +324,7 @@ class BroadcastQueue {
   /**
    * Clears all notifiers older than the given time.
    */
-  void clearNotifiersOlderThan(long timestamp) {
+  void clearNotifiersOlderThan(MonotonicTime timestamp) {
 
     synchronized (this) {
 
@@ -367,7 +376,7 @@ class BroadcastQueue {
   /**
    * Returns the connect time when this queue started receiving.
    */
-  long getConnectTime() {
+  MonotonicTime getConnectTime() {
     return connect_time;
   }
 
@@ -376,8 +385,38 @@ class BroadcastQueue {
    * currently receiving input from the process service for this queue with
    * a connection established with the given timestamp.
    */
-  void setConnectTime(long connect_time) {
+  void setConnectTime(MonotonicTime connect_time) {
     this.connect_time = connect_time;
+  }
+
+  /**
+   * Resets the connect time of the queue, forcing a re-acknowledge of this
+   * broadcast channel next access.
+   */
+  void resetConnectTime() {
+    this.connect_time = null;
+  }
+
+  /**
+   * Returns the current remote machine address of the process that is
+   * currently broadcasting on this queue. The value is set when a broadcast
+   * acknowledge is received from the originating server. Note that this
+   * may return null if the acknowledgement has yet been received.
+   * 
+   * @return 
+   */
+  ProcessServiceAddress getRemoteMachine() {
+    return this.machine_addr;
+  }
+
+  /**
+   * Sets the current machine address of the process this queue is being
+   * broadcast from. This is called when a broadcast request is acknowledged.
+   * 
+   * @param machine_addr 
+   */
+  void setRemoteMachine(ProcessServiceAddress machine_addr) {
+    this.machine_addr = machine_addr;
   }
 
 
@@ -399,13 +438,13 @@ class BroadcastQueue {
 
     synchronized (this) {
 
-      long two_mins_ago = MonotonicTime.now(-(2 * 60 * 1000));
+      MonotonicTime two_mins_ago = MonotonicTime.now(-(2 * 60 * 1000));
       int clean_count = 0;
 
       QueueMessage msg = queue_list.getFirst();
       while (msg != null) {
 
-        long bm_timestamp = msg.getQueueTimestamp();
+        MonotonicTime bm_timestamp = msg.getQueueTimestamp();
 
         // Preserve all the messages sooner than 2 mins ago,
         if (MonotonicTime.isInFutureOf(bm_timestamp, two_mins_ago)) {
@@ -434,6 +473,69 @@ class BroadcastQueue {
 
     }
 
+  }
+
+  private void dispatchMessageNotifiers(
+                        List<NotifierAndContext> to_trigger, Status status) {
+
+    // Now do the trigger callback,
+    if (to_trigger != null) {
+      // We could probably avoid a lot of context switching here if we
+      // can group identical contextifiers together and notify messages
+      // in each group.
+      for (NotifierAndContext t : to_trigger) {
+        t.contextifier.enterContext();
+        t.notifier.lock();
+        try {
+          t.notifier.notifyMessages(status);
+        }
+        finally {
+          t.notifier.unlock();
+          t.contextifier.exitContext();
+        }
+      }
+    }
+
+  }
+
+  /**
+   * Dispatches io failure messages to all notifiers on this queue.
+   * 
+   * @param thread_pool 
+   */
+  void failAllNotifiers(ExecutorService thread_pool) {
+
+    thread_pool.submit(new Runnable() {
+      @Override
+      public void run() {
+
+        // The list of notifiers to be triggered,
+        List<NotifierAndContext> to_trigger = null;
+
+        // NOTE: synchronized over the BroadcastQueue here. Notification can
+        //   only every happen once.
+
+        synchronized (BroadcastQueue.this) {
+          // Notifiers to inform,
+          if (count > 0) {
+            // Assume it's the whole list
+            to_trigger = new ArrayList<>(count);
+            for (int i = 0; i < count; ++i) {
+              to_trigger.add(new NotifierAndContext(
+                                            notifiers[i], contextifiers[i]));
+            }
+            // Clear all notifiers,
+            clearNotifiers();
+          }
+        }
+
+        // Callback,
+        dispatchMessageNotifiers(to_trigger, Status.IO_ERROR);
+        
+      }
+
+    });
+    
   }
 
   private static class NotifierAndContext {
@@ -476,7 +578,8 @@ class BroadcastQueue {
           // The list of notifiers to be triggered,
           List<NotifierAndContext> to_trigger = null;
 
-          // NOTE: synchronized over the BroadcastQueue here
+          // NOTE: synchronized over the BroadcastQueue here. Notification can
+          //   only every happen once.
 
           // Populate 'to_trigger' with the notifiers to trigger and remove
           // those notifiers from the list in this broadcast queue.
@@ -505,23 +608,8 @@ class BroadcastQueue {
             scheduled_seq_num = 0;
           }
 
-          // Now do the trigger callback,
-          if (to_trigger != null) {
-            // We could probably avoid a lot of context switching here if we
-            // can group identical contextifiers together and notify messages
-            // in each group.
-            for (NotifierAndContext t : to_trigger) {
-              t.contextifier.enterContext();
-              t.notifier.lock();
-              try {
-                t.notifier.notifyMessages();
-              }
-              finally {
-                t.notifier.unlock();
-                t.contextifier.exitContext();
-              }
-            }
-          }
+          // Callback,
+          dispatchMessageNotifiers(to_trigger, Status.MESSAGES_WAITING);
 
         }
 
