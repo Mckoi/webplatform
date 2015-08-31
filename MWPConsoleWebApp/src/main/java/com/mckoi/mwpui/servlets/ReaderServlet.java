@@ -46,6 +46,7 @@ import javax.servlet.http.HttpServletResponse;
 
 //@WebServlet(name = "MainServlet", urlPatterns = {"/M"},
 //            asyncSupported = true)
+@SuppressWarnings("serial")
 public class ReaderServlet extends HttpServlet {
 
   
@@ -96,6 +97,7 @@ public class ReaderServlet extends HttpServlet {
    * @throws IOException if an I/O error occurs
    * @throws com.mckoi.process.ProcessUnavailableException
    */
+  @SuppressWarnings("unchecked")
   protected void processRequest(
                   HttpServletRequest request, HttpServletResponse response)
                                       throws ServletException, IOException,
@@ -149,7 +151,9 @@ public class ReaderServlet extends HttpServlet {
       }
 
     }
-    // Either a timeout or available status - consume anything available,
+    // Either a timeout, IO error or available status - consume anything
+    // available anyway. In the case of IO error or timeout this will return
+    // an empty list.
     else {
       messages = consumer.consumeFromChannel(100);
     }

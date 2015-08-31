@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
+import org.eclipse.jetty.websocket.api.CloseStatus;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
@@ -99,8 +100,20 @@ public class WSockServlet extends WebSocketServlet {
               WSEvents.this.cleanup_handler = cleanup_handler;
             }
             @Override
-            public void notifyMessages() {
-              continueNotifierChain();
+            public void notifyMessages(Status status) {
+              if (status == Status.MESSAGES_WAITING ||
+                  status == Status.TIMEOUT) {
+                continueNotifierChain();
+              }
+              // Failures,
+              else if (status == Status.IO_ERROR) {
+                getSession().close(
+                          new CloseStatus(1011, "Process consumer IO error"));
+              }
+              else {
+                getSession().close(
+                          new CloseStatus(1011, "Process consumer error"));
+              }
             }
           };
           // Consume messages,
@@ -121,12 +134,15 @@ public class WSockServlet extends WebSocketServlet {
 
       }
       catch (ProcessUnavailableException ex) {
+        ex.printStackTrace(System.err);
         throw new RuntimeException(ex);
       }
       catch (IOException ex) {
+        ex.printStackTrace(System.err);
         throw new RuntimeException(ex);
       }
       catch (Exception e) {
+        e.printStackTrace(System.err);
         throw e;
       }
 
@@ -141,7 +157,7 @@ public class WSockServlet extends WebSocketServlet {
     public void onWebSocketClose(int statusCode, String reason) {
       super.onWebSocketClose(statusCode, reason);
       if (cleanup_handler != null) {
-        cleanup_handler.performCleanup();
+        cleanup_handler.detach();
       }
     }
 

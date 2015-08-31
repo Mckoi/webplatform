@@ -31,6 +31,7 @@ import com.mckoi.odb.ODBClass;
 import com.mckoi.odb.ODBObject;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.process.*;
+import static com.mckoi.process.AsyncServletProcessUtil.*;
 import com.mckoi.webplatform.DDBResourceAccess;
 import com.mckoi.webplatform.MckoiDDBPath;
 import com.mckoi.webplatform.PlatformContext;
@@ -215,8 +216,7 @@ public class DBBrowserServlet extends HttpServlet {
     try {
 
       // Is this a dispatch?
-      Object consume_status_key =
-              request.getAttribute(AsyncServletProcessUtil.CONSUME_STATUS_KEY);
+      Object consume_status_key = request.getAttribute(CONSUME_STATUS_KEY);
 
       // Make a process client,
       PlatformContext ctx = PlatformContextFactory.getPlatformContext();
@@ -274,17 +274,20 @@ public class DBBrowserServlet extends HttpServlet {
 
       }
       // Not initial,
-      else {
+      else if (consume_status_key.equals(CONSUME_STATUS_AVAILABLE)) {
         result_ob = (ProcessResult) request.getAttribute(getClass().getName());
         result = result_ob.getResult();
       }
-
-      // This would be a timeout,
-      if (result == null) {
-        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                           "Timed out waiting for response");
+      // This would be a timeout or io error,
+      else {
+        String fail_msg = "Timed out waiting for response";
+        if (consume_status_key.equals(CONSUME_STATUS_IOERROR) ) {
+          fail_msg = "IO Error while waiting for response";
+        }
+        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, fail_msg);
         return;
       }
+
       if (result.getType() == ProcessInputMessage.Type.RETURN_EXCEPTION) {
         throw new ServletException(result.getError());
       }
