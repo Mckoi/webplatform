@@ -219,6 +219,7 @@ public final class ProcessClientService {
   /**
    * The maintenance task being run on the process client.
    */
+  private int last_queue_size = -1;
   private class MaintenanceTimerTask extends TimerTask {
     @Override
     public void run() {
@@ -227,10 +228,21 @@ public final class ProcessClientService {
 //        // Report,
 //        System.out.println(report());
 
-        List<BroadcastQueue> to_maintain = new ArrayList<>(256);
-        List<ProcessChannel> to_maintain_keys = new ArrayList<>(256);
+        List<BroadcastQueue> to_maintain;
+        List<ProcessChannel> to_maintain_keys;
+        if (last_queue_size == -1) {
+          to_maintain = new ArrayList<>(256);
+          to_maintain_keys = new ArrayList<>(256);
+        }
+        else {
+          int sz = Math.min(256, last_queue_size + 4);
+          to_maintain = new ArrayList<>(sz);
+          to_maintain_keys = new ArrayList<>(sz);
+        }
         synchronized (broadcast_queues) {
-          for (ProcessChannel chan : broadcast_queues.keySet()) {
+          Set<ProcessChannel> channels = broadcast_queues.keySet();
+          last_queue_size = channels.size();
+          for (ProcessChannel chan : channels) {
             to_maintain.add(broadcast_queues.get(chan));
             to_maintain_keys.add(chan);
           }
