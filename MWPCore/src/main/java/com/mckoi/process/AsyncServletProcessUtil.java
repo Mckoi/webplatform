@@ -203,10 +203,10 @@ public class AsyncServletProcessUtil {
    */
   private static final class PMAsyncListener implements AsyncListener {
 
-    private final CleanupHandler timeout_handler;
+    private final CleanupHandler cleanup_handler;
 
-    private PMAsyncListener(CleanupHandler timeout_handler) {
-      this.timeout_handler = timeout_handler;
+    private PMAsyncListener(CleanupHandler cleanup_handler) {
+      this.cleanup_handler = cleanup_handler;
     }
 
     @Override
@@ -217,7 +217,7 @@ public class AsyncServletProcessUtil {
     public void onTimeout(AsyncEvent event) throws IOException {
       // Dispatch a 'timeout' status attribute,
       // On timeout we remove the notifier from the queue,
-      timeout_handler.performCleanup();
+      cleanup_handler.detach();
       // And dispatch,
       ServletRequest request = event.getSuppliedRequest();
       request.setAttribute(CONSUME_STATUS_KEY, CONSUME_STATUS_TIMEOUT);

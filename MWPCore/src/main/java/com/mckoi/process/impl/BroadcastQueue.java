@@ -249,7 +249,9 @@ class BroadcastQueue {
   }
 
   /**
-   * Remove the given notifier from the list.
+   * Remove the given notifier from the list. If the notifier is not found in
+   * the list then nothing happens. It's intended that this is called from
+   * user-code to detatch a notifier that we don't care to be notified anymore.
    */
   void removeNotifier(ProcessResultNotifier notifier) {
 
@@ -270,7 +272,7 @@ class BroadcastQueue {
           --i;
         }
       }
-      // Clean out tailing notifiers,
+      // Clean out tailing notifiers (for GC),
       for (int i = limit; i < count; ++i) {
         notifiers[i] = null;
         contextifiers[i] = null;
@@ -322,10 +324,13 @@ class BroadcastQueue {
   }
 
   /**
-   * Clears all notifiers older than the given time.
+   * Times out all notifiers older than the given time.
    */
-  void clearNotifiersOlderThan(MonotonicTime timestamp) {
+  void timeoutNotifiersOlderThan(
+                        ExecutorService thread_pool, MonotonicTime timestamp) {
 
+    List<NotifierAndContext> to_timeout = null;
+    
     synchronized (this) {
 
       int limit = count;
@@ -340,6 +345,13 @@ class BroadcastQueue {
       }
       // Clear,
       if (end > 0) {
+
+        // List of notifiers to timeout,
+        to_timeout = new ArrayList<>(Math.max(8, end));
+        for (int i = 0; i < end; ++i) {
+          to_timeout.add(new NotifierAndContext(notifiers[i], contextifiers[i]));
+        }
+        
         System.arraycopy(notifiers, end,
                          notifiers, 0, limit - end);
         System.arraycopy(contextifiers, end,
@@ -358,20 +370,18 @@ class BroadcastQueue {
 
     }
 
-  }
+    // Dispatch,
+    if (to_timeout != null) {
+      final List<NotifierAndContext> to_trigger = to_timeout;
+      thread_pool.submit(new Runnable() {
+        @Override
+        public void run() {
+          dispatchMessageNotifiers(to_trigger, Status.TIMEOUT);
+        }
+      });
+    }
 
-//  /**
-//   * Returns true if there are currently notifiers waiting on messages with a
-//   * sequence value greater than the given.
-//   */
-//  private boolean areNotifiersFor(long sequence_num) {
-//    for (int i = 0; i < count; ++i) {
-//      if (sequence_num > min_sequences[i]) {
-//        return true;
-//      }
-//    }
-//    return false;
-//  }
+  }
 
   /**
    * Returns the connect time when this queue started receiving.
@@ -488,6 +498,13 @@ class BroadcastQueue {
         t.notifier.lock();
         try {
           t.notifier.notifyMessages(status);
+        }
+        catch (VirtualMachineError e) {
+          throw e;
+        }
+        catch (Throwable e) {
+          // PENDING: Log message,
+          e.printStackTrace(System.err);
         }
         finally {
           t.notifier.unlock();

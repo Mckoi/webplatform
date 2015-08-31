@@ -882,7 +882,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
       client_service.removeBroadcastQueueListenerLock(process_channel);
 
       // Remove the notifier from the broadcast queue in client service
-      pi_channel_listener.cleanup_handler.performCleanup();
+      pi_channel_listener.cleanup_handler.detach();
 
     }
 

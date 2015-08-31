@@ -161,9 +161,9 @@ class ChannelConsumerImpl implements ChannelConsumer {
           // Initialize the notifier and return,
           notifier.init(new CleanupHandler() {
             @Override
-            public void performCleanup() {
+            public void detach() {
               try {
-                // On timeout we make sure to remove the notifier from the list,
+                // Detach this notifier from the system,
                 removeNotifier(notifier);
               }
               catch (ProcessUnavailableException e) {

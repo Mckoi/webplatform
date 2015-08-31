@@ -101,7 +101,7 @@ public abstract class CompositeProcessResult implements ProcessResult {
       if (out == null) {
         notifier.init(new ProcessResultNotifier.CleanupHandler() {
           @Override
-          public void performCleanup() {
+          public void detach() {
             synchronized (notifiers) {
               notifiers.remove(notifier);
               composite_notifier.cleanup();
@@ -179,7 +179,7 @@ public abstract class CompositeProcessResult implements ProcessResult {
     private void cleanup() {
       if (cleanup_handlers != null) {
         for (CleanupHandler h : cleanup_handlers) {
-          h.performCleanup();
+          h.detach();
        } 
       }
     }

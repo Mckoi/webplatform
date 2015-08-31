@@ -46,7 +46,9 @@ public abstract class ProcessResultNotifier {
   /**
    * Initializes this notifier against the given consumer. If the context times
    * out then the method in the given CleanupHandler must be called to clean
-   * up the process service.
+   * up the process service. The CleanupHandler is used to detatch this
+   * notifier from the system because there's no interest in the message(s)
+   * anymore.
    * 
    * @param cleanup_handler
    */
@@ -80,13 +82,25 @@ public abstract class ProcessResultNotifier {
   public static final CleanupHandler NOOP_CLEANUP_HANDLER =
                                                          new CleanupHandler() {
     @Override
-    public void performCleanup() {
+    public void detach() {
       // No operation
     }
   };
 
+  /**
+   * The CleanupHandler has a single method that we use to detach the notifier
+   * from the system. This is necessary when some user-code event happens that
+   * makes it so we are no longer interested in being notified.
+   */
   public static interface CleanupHandler {
-    void performCleanup();
+    
+    /**
+     * Detaches the notifier from the system. After this returns, the notifier
+     * will no longer be used by the system to notify messages for the events
+     * it was attached to.
+     */
+    void detach();
+
   }
 
   /**

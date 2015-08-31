@@ -209,18 +209,17 @@ public final class ProcessClientService {
     this.thread_pool = shared_thread_pool;
 
     this.network_interface = net_if;
-    
+
     // The process timer thread,
     process_client_timer = new Timer("Mckoi Process Client Timer");
-    process_client_timer.scheduleAtFixedRate(
-                           maintenance_task, (2 * 60 * 1000), (2 * 60 * 1000));
+    process_client_timer.schedule(new MaintenanceTimerTask(), 30 * 1000);
 
   }
 
   /**
    * The maintenance task being run on the process client.
    */
-  private final TimerTask maintenance_task = new TimerTask() {
+  private class MaintenanceTimerTask extends TimerTask {
     @Override
     public void run() {
       try {
@@ -228,7 +227,6 @@ public final class ProcessClientService {
 //        // Report,
 //        System.out.println(report());
 
-        // Purge all the broadcast queues of data older than 2 minutes.
         List<BroadcastQueue> to_maintain = new ArrayList<>(256);
         List<ProcessChannel> to_maintain_keys = new ArrayList<>(256);
         synchronized (broadcast_queues) {
@@ -238,7 +236,12 @@ public final class ProcessClientService {
           }
         }
 
-        final MonotonicTime four_mins_ago = MonotonicTime.now(-(4 * 60 * 1000));
+        // Actually, twenty minutes and 15 seconds,
+        // NOTE: This is the period at which a notifier will be sent a
+        //   Status.TIMEOUT. A notifier may be cleaned up before the timeout
+        //   is reached by the user code.
+        final MonotonicTime twenty_mins_ago =
+                     MonotonicTime.now(-((20 * 60 * 1000) + (15 * 1000)));
 
         Iterator<BroadcastQueue> bq_it = to_maintain.iterator();
         Iterator<ProcessChannel> pc_it = to_maintain_keys.iterator();
@@ -251,9 +254,12 @@ public final class ProcessClientService {
           ProcessChannel process_channel = pc_it.next();
 
           int clean_count;
-          // Clear any notifiers older than four minutes ago,
-          queue.clearNotifiersOlderThan(four_mins_ago);
+
+          // Time out any notifiers older than twenty minutes,
+          queue.timeoutNotifiersOlderThan(thread_pool, twenty_mins_ago);
           // Clear the broadcast queue of any messages that are expired,
+          // ( expired messages typically will has sit on the queue for ~2
+          //   minutes )
           clean_count = queue.cleanExpiredBroadcastMessages();
 
           // If the process id for this broadcast queue is terminated then
@@ -263,7 +269,7 @@ public final class ProcessClientService {
             queue.close();
           }
           else {
-          
+
             // If the queue has listener locks then ensure we are receiving
             // broadcast requests for this channel,
             if (queue.hasListenerLocks()) {
@@ -315,6 +321,11 @@ public final class ProcessClientService {
       catch (Throwable e) {
         e.printStackTrace(System.err);
         LOG.log(Level.SEVERE, "Exception during maintenance task", e);
+      }
+      // Schedule next maintenance
+      finally {
+        // Schedule next task for 8 seconds from end of this task,
+        process_client_timer.schedule(new MaintenanceTimerTask(), 8 * 1000);
       }
     }
   };
