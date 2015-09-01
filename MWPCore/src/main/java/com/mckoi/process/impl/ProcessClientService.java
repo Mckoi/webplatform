@@ -315,8 +315,9 @@ public final class ProcessClientService {
         synchronized (connections) {
           Collection<ProcessClientConnection> pcs_list = connections.values();
           for (final ProcessClientConnection c : pcs_list) {
-            // If it's known failed, then create a thread task that attempts
-            // to re-establish connection,
+            // If the connection is known failed then submit a task that
+            // attempts to re-establish the connection.
+            // 
             if (c.isKnownFailed()) {
               thread_pool.submit(new Runnable() {
                 @Override
@@ -327,7 +328,6 @@ public final class ProcessClientService {
             }
           }
         }
-        
 
       }
       catch (Throwable e) {

@@ -50,7 +50,7 @@ public class NashornInstanceGlobalFactory {
   private static final String[] DEFAULT_NASHORN_ARGS = new String[] {
       "--no-java=false",
       "--global-per-engine=false",
-      "--lazy-compilation=true",
+//      "--lazy-compilation=true",
       "--loader-per-compile=false",
 //      "--optimistic-types=false"
   };
