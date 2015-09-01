@@ -26,7 +26,7 @@
     }
   };
 
-  // The Timer object 
+  // The Timer object
 
   var Timer = (function() {
     function Timer() { };
@@ -95,7 +95,7 @@
   // self-invoking anon function.
 
   // --- contextify ---
-  
+
   function ContextifyScript(code, options) {
     if (!(this instanceof ContextifyScript)) {
       throw new Error("Expecting construction");
@@ -353,7 +353,7 @@
 
 
   /**
-   * 
+   *
    * @param {String} arg
    * @returns {} native function result.
    */
@@ -413,18 +413,6 @@
   function cwd() {
     return $i.process_cwd();
   }
-
-//  // We shouldn't show the function content when inspected.
-//  // NOTE: This is easily reversed by calling 'delete class.toString;'
-//
-//  var NATIVETOSTRING = 'function() { [native] }';
-//  var native_functions = [
-//        nativeBinding, nativeSetupNextTick, nativeCWD, nativeRunMicrotasks,
-//        ContextifyScript
-//      ];
-//  native_functions.forEach(function(f) {
-//    f.toString = NATIVETOSTRING;
-//  });
 
   // Check if Array.splice behaves like V8,
   if (JSON.stringify([1, 2, 3, 4].splice(2)) !== JSON.stringify([3, 4])) {
@@ -527,7 +515,7 @@
   };
   process.platform = 'mwp';
   $i.process_setupProcessJS(process);
-  
+
   process.binding = binding;
   process._setupNextTick = _setupNextTick;
   process.cwd = cwd;

@@ -30,7 +30,7 @@ import org.mozilla.javascript.Script;
 public class NodeSourceLoader {
 
   /**
-   * The path where node libraries are resolved against (eg. '/admin/bin/lib/')
+   * The path where node libraries are resolved against (eg. '/admin/nbin/lib/')
    */
   private final FileName library_path;
 
@@ -119,7 +119,7 @@ public class NodeSourceLoader {
 
   /**
    * Returns true if the module is native (it's not a user space module). A
-   * native library is located in the /bin/lib/ directory of the file system.
+   * native library is located in the /nbin/lib/ directory of the file system.
    * 
    * @param module_id
    * @return 
@@ -128,7 +128,7 @@ public class NodeSourceLoader {
     FileName module_fname = resolveFileName(module_id);
     // Get the path part of the fname,
     String path_file = module_fname.getPathFile();
-    if (path_file.startsWith("/bin/lib/")) {
+    if (path_file.startsWith("/nbin/lib/")) {
       return VMScriptCache.checkModuleExists(module_fname);
     }
     return false;

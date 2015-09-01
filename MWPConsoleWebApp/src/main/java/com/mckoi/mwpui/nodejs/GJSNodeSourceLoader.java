@@ -28,7 +28,7 @@ import java.io.IOException;
 public class GJSNodeSourceLoader {
   
   /**
-   * The path where node libraries are resolved against (eg. '/admin/bin/lib/')
+   * The path where node libraries are resolved against (eg. '/admin/nbin/lib/')
    */
   private final FileName library_path;
 
@@ -116,7 +116,7 @@ public class GJSNodeSourceLoader {
 
   /**
    * Returns true if the module is native (it's not a user space module). A
-   * native library is located in the /bin/lib/ directory of the file system.
+   * native library is located in the /nbin/lib/ directory of the file system.
    * 
    * @param module_id
    * @return 
@@ -125,7 +125,7 @@ public class GJSNodeSourceLoader {
     FileName module_fname = resolveFileName(module_id);
     // Get the path part of the fname,
     String path_file = module_fname.getPathFile();
-    if (path_file.startsWith("/bin/lib/node/")) {
+    if (path_file.startsWith("/nbin/lib/node/")) {
       return VMScriptCache.checkModuleExists(module_fname);
     }
     return false;

@@ -17,6 +17,7 @@
 
 package com.mckoi.mwpui;
 
+import com.mckoi.apihelper.ScriptResourceAccess;
 import com.mckoi.apihelper.TextUtils;
 import com.mckoi.mwpui.nodejs.GJSNodeSourceLoader;
 import com.mckoi.mwpui.nodejs.GJSObject;
@@ -27,9 +28,12 @@ import com.mckoi.mwpui.nodejs.IOEvent;
 import com.mckoi.mwpui.nodejs.NodeMckoiInternal;
 import com.mckoi.mwpui.nodejs.nashorn.NashornJSSystem;
 import com.mckoi.mwpui.nodejs.rhino.RhinoJSSystem;
+import com.mckoi.odb.util.FileInfo;
 import com.mckoi.odb.util.FileName;
 import com.mckoi.process.*;
 import com.mckoi.process.ProcessInputMessage.Type;
+import com.mckoi.webplatform.FileRepository;
+import com.mckoi.webplatform.PlatformContext;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,6 +63,11 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
   private final GJSProcessSharedState shared_process_state;
 
   /**
+   * The execution arguments.
+   */
+  private final String[] cmd_args;
+
+  /**
    * The Rhino JavaScript engine wrap implementation.
    */
   private GJSSystem js_system;
@@ -71,10 +80,42 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
   
   private boolean enable_benchmarks = false;
 
-  NodeJSWrapSCommand(String reference, FileName lib_path) {
+  private NodeJSWrapSCommand(String reference,
+                                      String[] cmd_args, FileName lib_path) {
     super(reference);
     node_source_loader = new GJSNodeSourceLoader(lib_path);
     shared_process_state = new GJSProcessSharedState(this);
+    this.cmd_args = cmd_args;
+  }
+
+//  NodeJSWrapSCommand(String reference, FileName lib_path) {
+//    this(reference, null, lib_path);
+//  }
+
+  /**
+   * Returns a String[] array that represents the execution arguments that
+   * would be needed to run the given script.
+   * 
+   * @param envs
+   * @param script_file_name
+   * @param fi
+   * @return 
+   */
+  private static String[] buildLoadArguments(
+                                    EnvironmentVariables envs,
+                                    FileName script_file_name, FileInfo fi) {
+
+    String[] std_args = TextUtils.splitCommandLineAndUnquote(envs.get("cline"));
+
+    List<String> arg_gen = new ArrayList<>(std_args.length + 4);
+
+    arg_gen.add("node");
+    arg_gen.add(script_file_name.toString());
+    for (int i = 1; i < std_args.length; ++i) {
+      arg_gen.add(std_args[i]);
+    }
+
+    return arg_gen.toArray(new String[arg_gen.size()]);
   }
 
   /**
@@ -94,9 +135,79 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
     String account_name = sctx.getAccountName();
 
     // PENDING: Read the library path from a system setting maybe?
-    FileName lib_path = new FileName("/" + account_name + "/bin/lib/node/");
+    FileName lib_path = new FileName("/" + account_name + "/nbin/lib/node/");
 
-    return new NodeJSWrapSCommand(reference, lib_path);
+    // Command line must be 'node (options) [script name] [args]'
+    String[] cmd_args = TextUtils.splitCommandLineAndUnquote(envs.get("cline"));
+
+    return new NodeJSWrapSCommand(reference, cmd_args, lib_path);
+
+  }
+
+  /**
+   * Attempts to load the JS command with the given name (prg_name). This
+   * first tries to resolve the name against the account's 'bin/' directory.
+   * If unable to, then against the current directory. Returns null if no
+   * script was found.
+   */
+  static NodeJSWrapSCommand loadJSCommand(
+                         String reference,
+                         String prg_name, EnvironmentVariables envs,
+                         ServerCommandContext sctx) {
+
+    String account_name = sctx.getAccountName();
+
+    // PENDING: Read the library path from a system setting maybe?
+    FileName lib_path = new FileName("/" + account_name + "/nbin/lib/node/");
+
+    PlatformContext ctx = sctx.getPlatformContext();
+
+    // If the program name doesn't contain '/' then try and resolve against
+    // the bin directory,
+    FileRepository fs;
+    FileInfo fi;
+    FileName file_name;
+    if (!prg_name.contains("/")) {
+      file_name = new FileName(
+                      "/" + account_name + "/nbin/" + prg_name + ".js");
+      fs = ctx.getFileRepositoryFor(file_name);
+      if (fs != null) {
+        fi = fs.getFileInfo(file_name.getPathFile());
+        if (fi != null) {
+          // node (options) file_name args*
+          String[] cmd_args = buildLoadArguments(envs, file_name, fi);
+          return new NodeJSWrapSCommand(reference, cmd_args, lib_path);
+        }
+      }
+    }
+
+    // Try and resolve it against the pwd,
+    String pwd = envs.get("pwd");
+    FileName pwd_fn = new FileName(pwd);
+
+    FileName potential_fname = pwd_fn.resolve(new FileName(prg_name));
+    String pfn_str = potential_fname.toString();
+    if (!pfn_str.endsWith(".js")) {
+      pfn_str = pfn_str + ".js";
+    }
+    potential_fname = new FileName(pfn_str);
+
+    // Check for class loader resources first,
+    String repository_id = potential_fname.getRepositoryId();
+    String pathname = potential_fname.getPathFile();
+
+    fs = ctx.getFileRepository(repository_id);
+    if (fs != null) {
+      fi = fs.getFileInfo(pathname);
+      if (fi != null && fi.isFile()) {
+        // node (options) potential_fname args*
+        String[] cmd_args = buildLoadArguments(envs, potential_fname, fi);
+        return new NodeJSWrapSCommand(reference, cmd_args, lib_path);
+      }
+    }
+
+    // Not found,
+    return null;
 
   }
 
@@ -221,7 +332,6 @@ public class NodeJSWrapSCommand extends DefaultSCommand {
   public String init(ServerCommandContext ctx, EnvironmentVariables env) {
 
     // Command line must be 'node (options) [script name] [args]'
-    String[] cmd_args = TextUtils.splitCommandLineAndUnquote(env.get("cline"));
 
     exec_args_v = new ArrayList<>(3);
     args_v = new ArrayList<>(6);

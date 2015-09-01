@@ -209,8 +209,12 @@ public class SessionProcessOperation implements ProcessOperation {
         return NodeJSWrapSCommand.loadNodeJSCommand(prg_reference, envs, sctx);
       }
       // Otherwise try and load the legacy JavaScript command,
-      command = JSWrapSCommand.loadJSCommand(
+      command = NodeJSWrapSCommand.loadJSCommand(
                                       prg_reference, prg_name, envs, sctx);
+      if (command == null) {
+        command = JSWrapSCommand.loadJSCommand(
+                                      prg_reference, prg_name, envs, sctx);
+      }
     }
     return command;
 

@@ -67,7 +67,7 @@ public class SCommandConsole extends DefaultSCommand
     // PENDING: These should be loaded from an 'rc' file of some sort.
     var.put("prompt", "$pwd> ");
     var.put("NODE_PATH",
-                   "/" + ctx.getAccountName() + "/bin/lib/node_modules/");
+                   "/" + ctx.getAccountName() + "/nbin/lib/node_modules/");
 
     // No need to init,
     return WINDOW_MODE;

@@ -733,15 +733,30 @@ public class SystemSupportServlet extends HttpServlet {
       }
 
       // Are there any mjs scripts to copy into the /bin/ directory?
-      String mjs_script_path = loc_path + "WEB-INF/classes/mjs/bin/";
-      FileInfo script_dir_fi = fs.getFileInfo(mjs_script_path);
-      if (script_dir_fi != null && script_dir_fi.isDirectory()) {
-        // Yes, so copy the files to the /bin directory,
-        DirectorySynchronizer s =
-             DirectorySynchronizer.getMckoiToMckoiSynchronizer(null,
-                                            fs, mjs_script_path, fs, "/bin/");
-        s.setDeleteFilesFlag(false);
-        mjs_scripts_count += s.synchronize();
+      {
+        String mjs_script_path = loc_path + "WEB-INF/classes/mjs/bin/";
+        FileInfo script_dir_fi = fs.getFileInfo(mjs_script_path);
+        if (script_dir_fi != null && script_dir_fi.isDirectory()) {
+          // Yes, so copy the files to the /bin directory,
+          DirectorySynchronizer s =
+               DirectorySynchronizer.getMckoiToMckoiSynchronizer(null,
+                                              fs, mjs_script_path, fs, "/bin/");
+          s.setDeleteFilesFlag(false);
+          mjs_scripts_count += s.synchronize();
+        }
+      }
+      // Are there any mjs scripts to copy into the /nbin/ directory?
+      {
+        String mjs_script_path = loc_path + "WEB-INF/classes/mjs/nbin/";
+        FileInfo script_dir_fi = fs.getFileInfo(mjs_script_path);
+        if (script_dir_fi != null && script_dir_fi.isDirectory()) {
+          // Yes, so copy the files to the /bin directory,
+          DirectorySynchronizer s =
+               DirectorySynchronizer.getMckoiToMckoiSynchronizer(null,
+                                              fs, mjs_script_path, fs, "/nbin/");
+          s.setDeleteFilesFlag(false);
+          mjs_scripts_count += s.synchronize();
+        }
       }
 
       boolean changes_made;
