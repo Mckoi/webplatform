@@ -2405,7 +2405,7 @@ public class AppCoreAdmin {
 
     }
 
-    out.println("Updating '/bin/' directory from application " +
+    out.println("Updating '/bin/', '/nbin/' directory from application " +
                 rep_fname, "info");
     // Are there any 'mjs' scripts in this distribution to copy into the /bin
     // directory?
@@ -2414,16 +2414,32 @@ public class AppCoreAdmin {
     // to install '.js' scripts into the /bin directory, possibly overwriting
     // core commands.
 
-    String mjs_script_path = found_repository_path + "WEB-INF/classes/mjs/bin/";
-    FileInfo script_dir_fi = repos_file_sys.getFileInfo(mjs_script_path);
-    if (script_dir_fi != null && script_dir_fi.isDirectory()) {
-      // Yes, so copy the files to the /bin directory,
-      DirectorySynchronizer s =
-           DirectorySynchronizer.getMckoiToMckoiSynchronizer(
-                   new DirectorySynchronizer.StyledDSFeedback(out),
-                   repos_file_sys, mjs_script_path, repos_file_sys, "/bin/");
-      s.setDeleteFilesFlag(false);
-      update_count += s.synchronize();
+    {
+      String mjs_script_path = found_repository_path + "WEB-INF/classes/mjs/bin/";
+      FileInfo script_dir_fi = repos_file_sys.getFileInfo(mjs_script_path);
+      if (script_dir_fi != null && script_dir_fi.isDirectory()) {
+        // Yes, so copy the files to the /bin directory,
+        DirectorySynchronizer s =
+             DirectorySynchronizer.getMckoiToMckoiSynchronizer(
+                     new DirectorySynchronizer.StyledDSFeedback(out),
+                     repos_file_sys, mjs_script_path, repos_file_sys, "/bin/");
+        s.setDeleteFilesFlag(false);
+        update_count += s.synchronize();
+      }
+    }
+    // Node bin directory
+    {
+      String mjs_script_path = found_repository_path + "WEB-INF/classes/mjs/nbin/";
+      FileInfo script_dir_fi = repos_file_sys.getFileInfo(mjs_script_path);
+      if (script_dir_fi != null && script_dir_fi.isDirectory()) {
+        // Yes, so copy the files to the /bin directory,
+        DirectorySynchronizer s =
+             DirectorySynchronizer.getMckoiToMckoiSynchronizer(
+                     new DirectorySynchronizer.StyledDSFeedback(out),
+                     repos_file_sys, mjs_script_path, repos_file_sys, "/nbin/");
+        s.setDeleteFilesFlag(false);
+        update_count += s.synchronize();
+      }
     }
 
     // If there's something to update,
