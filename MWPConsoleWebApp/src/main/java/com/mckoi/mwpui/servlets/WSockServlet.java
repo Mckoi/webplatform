@@ -29,10 +29,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
+import java.util.concurrent.Future;
 import org.eclipse.jetty.websocket.api.CloseStatus;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
+import org.eclipse.jetty.websocket.common.WebSocketSession;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.json.JSONException;
@@ -70,6 +72,7 @@ public class WSockServlet extends WebSocketServlet {
     private void dispatchMessages(
                   String session_state, Collection<ProcessMessage> messages)
                                                           throws IOException {
+      WebSocketSession sess;
       StringWriter sout = new StringWriter();
       try (PrintWriter out = new PrintWriter(sout)) {
         out.append("<");
@@ -78,7 +81,11 @@ public class WSockServlet extends WebSocketServlet {
       }
       RemoteEndpoint remote = getRemote();
       if (remote != null) {
-        remote.sendString(sout.toString());
+        // Note that we don't know for sure if this message will actually be
+        // sent because the end point may close before the message goes out. It
+        // doesn't matter however, because the client will just ask for the
+        // messages that were not sent on the next request,
+        Future<Void> future = remote.sendStringByFuture(sout.toString());
       }
     }
 
@@ -236,7 +243,7 @@ public class WSockServlet extends WebSocketServlet {
           if (ack_id >= 0) {
             // Send the reply message if it needs acknowlegment.
             String reply_message = sout.toString();
-            getRemote().sendString(
+            getRemote().sendStringByFuture(
                         "!" + Integer.toString(ack_id) + " " + reply_message);
           }
 
