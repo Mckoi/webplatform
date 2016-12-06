@@ -104,6 +104,7 @@ public class NodeInstallTool {
   // Support 'install_dev' directory,
   private File verified_install_dev_path;
   private File verified_security_path;
+  private File verified_templates_path;
 
   private File found_jdk_directory;
 
@@ -236,6 +237,9 @@ public class NodeInstallTool {
 
     // The security path if it exists,
     verified_security_path = new File(support_path, "security");
+
+    // The templates path if it exists,
+    verified_templates_path = new File(support_path, "templates");
 
     fpln("Ok, found the support files.");
   }
@@ -479,20 +483,17 @@ public class NodeInstallTool {
 
   }
 
-  private File installFile(HashMap properties, String qualif_resource_name,
-          File path, String destination_name,
-          boolean escape_dash, boolean error_on_invalid_property)
-                                                           throws IOException {
+  private File installFile(HashMap properties, InputStream template_input_stream,
+                           File path, String destination_name,
+                           boolean escape_dash, boolean error_on_invalid_property)
+                                                            throws IOException {
 
     Pattern var_pattern = Pattern.compile("\\$\\{([^\\}]+)\\}");
 
     String newline = System.getProperty("line.separator");
 
-    InputStream ins =
-            NodeInstallTool.class.getResourceAsStream(qualif_resource_name);
+    InputStreamReader r = new InputStreamReader(template_input_stream, "UTF-8");
 
-    InputStreamReader r = new InputStreamReader(ins, "UTF-8");
-    
     BufferedReader br = new BufferedReader(r);
     StringBuilder b = new StringBuilder();
     while (true) {
@@ -535,13 +536,13 @@ public class NodeInstallTool {
 
             int start = matcher.start();
             int end = matcher.end();
-            
+
             // Make the substitution,
             out_line.append(line.substring(0, start));
             out_line.append(prop_value);
 
             line = line.substring(end);
-            
+
 //            String cline = line.substring(0, start) + prop_value +
 //                           line.substring(end);
 //            line = cline;
@@ -569,17 +570,45 @@ public class NodeInstallTool {
     return towrite;
 
   }
+
+
+  private File installFile(HashMap properties, String qualif_resource_name,
+          File path, String destination_name,
+          boolean escape_dash, boolean error_on_invalid_property)
+                                                           throws IOException {
+
+    // Install from a resource template,
+    InputStream ins =
+            NodeInstallTool.class.getResourceAsStream(qualif_resource_name);
+
+    return installFile(properties, ins, path, destination_name, escape_dash, error_on_invalid_property);
+
+  }
   
   /**
    * Install the template resource file into the given path in the local
    * file system.
    */
-  private void installTemplate(
+  private void installResourceTemplate(
           HashMap properties, String template_resource_name,
           File path, String destination_name) throws IOException {
 
     String qual_name = "/com/mckoi/appcore/conf/" + template_resource_name;
-    installFile(properties, qual_name, path, destination_name, true, true);
+    installFile(properties, qual_name, path, destination_name,
+               true, true);
+
+  }
+
+  /**
+   * Install the template resource file into the given path in the local
+   * file system.
+   */
+  private void installFileTemplate(
+          HashMap properties, File template_file,
+          File path, String destination_name) throws IOException {
+
+    installFile(properties, new FileInputStream(template_file), path, destination_name,
+               true, true);
 
   }
 
@@ -631,15 +660,19 @@ public class NodeInstallTool {
    */
   private String askJDKPath() throws IOException {
 
+    String java_home_path = "";
+
     boolean ask_for_jdk_dir = true;
-    String java_home_path = found_jdk_directory.getCanonicalPath();
     if (found_jdk_directory != null) {
       pln("I found a JDK path. Is it correct?");
       boolean use_found_jdk = askYNQ(
               "Is the JDK path '" + found_jdk_directory.getCanonicalPath() +
-              "' correct? (Y/N/Q): ");
+                      "' correct? (Y/N/Q): ");
       if (use_found_jdk) {
         ask_for_jdk_dir = false;
+      }
+      else {
+        java_home_path = found_jdk_directory.getCanonicalPath();
       }
     }
     if (ask_for_jdk_dir) {
@@ -666,6 +699,26 @@ public class NodeInstallTool {
            "Enter installation path: ", path_valid_check);
 
     return dir;
+
+  }
+
+  /**
+   * Asks for the default port for the HTTP service.
+   * @return
+   * @throws IOException
+   */
+  private String askHttpDefaultPort() throws IOException {
+
+    String default_port = askString(
+              "HTTP Port (Default 80): ", http_port_check);
+
+    default_port = default_port.trim();
+    if (default_port.equals("")) {
+      return "80";
+    }
+    else {
+      return default_port;
+    }
 
   }
 
@@ -1040,11 +1093,18 @@ public class NodeInstallTool {
 
     }
 
+    pln();
     pln(" ---");
-    pln("An administration account will be created inside the Mckoi Web");
-    pln("Platform to provide access to administration functions. You");
-    pln("will need to provide a username and password for this");
-    pln("adminstration account.");
+    pln("On which TCP port would you like the Mckoi Web Platform HTTP");
+    pln("service to be available.");
+    pln();
+    String http_port = askHttpDefaultPort();
+
+    pln();
+    pln(" ---");
+    pln("An admin account will be created inside the Mckoi Web Platform for");
+    pln("administration functions. You will need to provide a username and");
+    pln("password for this account.");
     pln();
     String admin_username = askString("Web Platform Admin Username: ",
                                       username_valid_check);
@@ -1061,24 +1121,11 @@ public class NodeInstallTool {
       pln("Please enter password again.");
     }
 
-    
-    
-    // Summarize the options,
+    pln();
+    pln("Installing files now..");
+    pln();
 
-    pln();
-    pln("Summary of Installation");
-    pln("-----------------------");
-    pln();
-    pln("Type:              Stand-alone installation");
-    pln("OS:                " + os_text);
-    pln("Install Directory: " + dir);
-    pln("Is Public Server:  " + (is_public ? "Yes" : "No"));
-    if (is_public) {
-      pln("Interface IP:      " + public_ip);
-    }
-    pln("Admin username:    " + admin_username);
-
-    pln();
+    // PENDING: Wait on confirmation by the user.
 
     // Make the installation path,
     File install_path = new File(dir);
@@ -1091,7 +1138,7 @@ public class NodeInstallTool {
     // Make the install_dev path
     File install_dev_path = new File(install_path, "install_dev");
     File install_dev_cert_path = new File(install_dev_path, "cert");
-//    File install_dev_conf_path = new File(install_dev_path, "conf");
+    File install_dev_conf_path = new File(install_dev_path, "conf");
 //    File install_dev_lib_path = new File(install_dev_path, "lib");
 
     File bin_path = new File(install_path, "bin");
@@ -1176,6 +1223,16 @@ public class NodeInstallTool {
     properties.put("lib_directory", lib_path.getCanonicalPath());
     properties.put("root_directory", install_path.getCanonicalPath());
 
+    // Set the http_port_line of the app_service_properties,
+    if (http_port.trim().equals("80")) {
+      properties.put("http_port_line", "#http_port = 80");
+      properties.put("https_port_line", "#https_port = 443");
+    }
+    else {
+      properties.put("http_port_line", "http_port = " + http_port.trim());
+      properties.put("https_port_line", "#https_port = 443");
+    }
+
     // Property for the mwp_main.conf file,
     if (is_win) {
       // If it's windows, we don't set the extra argument,
@@ -1188,37 +1245,41 @@ public class NodeInstallTool {
                      "java_args=-Djava.security.egd=file:/dev/./urandom");
     }
 
-    // Install some configuration files with these properties,
-
-    installTemplate(new HashMap(), "README",
-                        install_path, "README");
-    installTemplate(new HashMap(), "LICENSE_GPL3",
-                        install_path, "LICENSE_GPL3");
-
-    installTemplate(properties, "client_conf.template",
-                        install_path, "client.conf");
-    pln("Wrote: client.conf");
-    installTemplate(properties, "network_conf.template",
-                        install_path, "network.conf");
-    pln("Wrote: network.conf");
-    installTemplate(properties, "node_info.template",
-                        install_path, "node_info");
-    pln("Wrote: node_info");
-    installTemplate(properties, "netconf_info.template",
-                        install_path, "netconf_info");
-    pln("Wrote: netconf_info");
-    installTemplate(properties, "node_conf.template",
-                        install_path, "node.conf");
-    pln("Wrote: node.conf");
-    installTemplate(properties, "mwp_main.template",
-                        install_path, "mwp_main.conf");
-    pln("Wrote: mwp_main.conf");
-
-    boolean install_dev_ready;
-
     if (verified_install_dev_path.exists()) {
+
+      // Install some configuration files with these properties,
+
+      installResourceTemplate(new HashMap(), "README",
+                          install_path, "README");
+      installResourceTemplate(new HashMap(), "LICENSE_GPL3",
+                          install_path, "LICENSE_GPL3");
+
+      installResourceTemplate(properties, "client_conf.template",
+                          install_path, "client.conf");
+      pln("Wrote: client.conf");
+      installResourceTemplate(properties, "network_conf.template",
+                          install_path, "network.conf");
+      pln("Wrote: network.conf");
+      installResourceTemplate(properties, "node_info.template",
+                          install_path, "node_info");
+      pln("Wrote: node_info");
+      installResourceTemplate(properties, "netconf_info.template",
+                          install_path, "netconf_info");
+      pln("Wrote: netconf_info");
+      installResourceTemplate(properties, "node_conf.template",
+                          install_path, "node.conf");
+      pln("Wrote: node.conf");
+      installResourceTemplate(properties, "mwp_main.template",
+                          install_path, "mwp_main.conf");
+      pln("Wrote: mwp_main.conf");
+
       // Copy the install_dev directory from the support directory,
       copyPath(verified_install_dev_path, install_dev_path);
+
+      // Write the App Server configuration file into the install_dev,
+      installFileTemplate(properties, new File(verified_templates_path, "app_service_properties.template"),
+                          install_dev_conf_path, "app_service.properties");
+
       File lib_dest = new File(install_dev_path, "lib");
       lib_dest = new File(lib_dest, "base");
 
@@ -1247,11 +1308,10 @@ public class NodeInstallTool {
              new File(security_dest, "security.policy"));
 
       pln("Finished building 'install_dev' path.");
-      install_dev_ready = true;
     }
     else {
       pln("Copy failed: 'install_dev' path not found.");
-      install_dev_ready = false;
+      throw new QuitException();
     }
 
     // Create platform-specific scripts in the /bin directory
@@ -1454,9 +1514,33 @@ public class NodeInstallTool {
     node.waitUntilFinished();
     pln("MckoiDDB Stopped.");
 
+    String http_port_string = "";
+    if (!http_port.trim().equals("80")) {
+      http_port_string = ":" + http_port.trim();
+    }
+
+    pln();
     pln();
     pln("-- Installation completed. --");
-    
+
+    pln();
+    // Summarize the options,
+
+    pln();
+    pln("Summary of Installation");
+    pln("-----------------------");
+    pln();
+    pln("Type:              Stand-alone installation");
+    pln("OS:                " + os_text);
+    pln("Install Directory: " + dir);
+    pln("Is Public Server:  " + (is_public ? "Yes" : "No"));
+    if (is_public) {
+      pln("Interface IP:      " + public_ip);
+    }
+    pln("HTTP Service Port: " + http_port);
+    pln("Admin username:    " + admin_username);
+
+    pln();
     pln();
     pln("To start the MckoiDDB and Mckoi Web Platform 'daemon' on this");
     pln("machine, use the following command:");
@@ -1466,8 +1550,8 @@ public class NodeInstallTool {
     pln("When the service has started the Mckoi Web Platform console is");
     pln("accessed by going to one of the following URLs;");
     pln();
-    pln("  http://" + vhost_name + "/console/");
-    pln("  http://" + public_ip + "/console/");
+    pln("  http://" + vhost_name + http_port_string + "/console/");
+    pln("  http://" + public_ip + http_port_string + "/console/");
     pln();
 
 
@@ -1728,8 +1812,8 @@ public class NodeInstallTool {
       pln("The network password, or hash code, is used by DDB whenever a");
       pln("connection is made between nodes. It confirms that the nodes");
       pln("are in agreement on the DDB network being talked to. It is");
-      pln("NOT a security feature. All DDB networks should have a unique");
-      pln("password value.");
+      pln("NOT a security feature. All separate Mckoi DDB networks should");
+      pln("have a unique code.");
       pln();
       pln("Either I can create a unique code for you, or you can enter");
       pln("one yourself.");
@@ -1796,7 +1880,7 @@ public class NodeInstallTool {
                 priv_ip, ddb_port);
         if (!networkconf_good) {
           pln("The given 'network.conf' does not have this server");
-          pln("whitelisted. You must edit this file and ensure the IP");
+          pln("white-listed. You must edit this file and ensure the IP");
           pln("address (" + priv_ip + ") is included in the");
           pln("'connect_whitelist' property. You must also ensure that");
           pln("'" + priv_ip + ":" + ddb_port + "' is included in the");
@@ -1918,7 +2002,7 @@ public class NodeInstallTool {
 
     pln(" ---");
     pln();
-    pln("I now have enough information to install the Mckoi softare on");
+    pln("I now have enough information to install the Mckoi software on");
     pln("this server.");
     pln();
     if (!existing_network) {
@@ -1933,7 +2017,7 @@ public class NodeInstallTool {
       pln("and selecting option 3 from the first menu.");
       pln();
     }
-    else if (mwp_installation_found == false) {
+    else if (!mwp_installation_found) {
       // Existing network but the Mckoi Web Platform is not installed,
       pln("Please note that once you have installed the software on the");
       pln("servers in your network you will need to initialize the Mckoi");
@@ -2047,29 +2131,29 @@ public class NodeInstallTool {
 
     // Install some configuration files with these properties,
 
-    installTemplate(new HashMap(), "README",
+    installResourceTemplate(new HashMap(), "README",
                         install_path, "README");
-    installTemplate(new HashMap(), "LICENSE_GPL3",
+    installResourceTemplate(new HashMap(), "LICENSE_GPL3",
                         install_path, "LICENSE_GPL3");
 
-    installTemplate(properties, "client_conf.template",
+    installResourceTemplate(properties, "client_conf.template",
                         install_path, "client.conf");
     pln("Wrote: client.conf");
     if (!ask_netconf_loc) {
-      installTemplate(properties, "network_conf.template",
+      installResourceTemplate(properties, "network_conf.template",
                           install_path, "network.conf");
     }
     pln("Wrote: network.conf");
-    installTemplate(properties, "node_info.template",
+    installResourceTemplate(properties, "node_info.template",
                         install_path, "node_info");
     pln("Wrote: node_info");
-    installTemplate(properties, "netconf_info.template",
+    installResourceTemplate(properties, "netconf_info.template",
                         install_path, "netconf_info");
     pln("Wrote: netconf_info");
-    installTemplate(properties, "node_conf.template",
+    installResourceTemplate(properties, "node_conf.template",
                         install_path, "node.conf");
     pln("Wrote: node.conf");
-    installTemplate(properties, "mwp_main.template",
+    installResourceTemplate(properties, "mwp_main.template",
                         install_path, "mwp_main.conf");
     pln("Wrote: mwp_main.conf");
 
@@ -2180,7 +2264,7 @@ public class NodeInstallTool {
     else if (!mwp_installation_found) {
       pln("Remember that you will need to install the Mckoi Web");
       pln("Platform on the MckoiDDB network. To do this, run this");
-      pln("tool again and select '3' from the intial menu.");
+      pln("tool again and select '3' from the initial menu.");
       pln();
     }
     else {
@@ -2225,6 +2309,7 @@ public class NodeInstallTool {
 
     // The install_dev_path;
     File install_dev_path = new File(dir, "install_dev");
+    File install_dev_conf_path = new File(install_dev_path, "conf");
 
     pln();
     pln("You are about to initialize a Mckoi Web Platform installation");
@@ -2400,10 +2485,15 @@ root_srv_check:
 
     pln();
     pln(" ---");
-    pln("An administration account will be created inside the Mckoi Web");
-    pln("Platform to provide access to administration functions. You");
-    pln("will need to provide a username and password for this");
-    pln("adminstration account.");
+    pln("On which TCP port would you like the Mckoi Web Platform HTTP");
+    pln("service to be available.");
+    String http_port = askHttpDefaultPort();
+
+    pln();
+    pln(" ---");
+    pln("An admin account will be created inside the Mckoi Web Platform for");
+    pln("administration functions. You will need to provide a username and");
+    pln("password for this account.");
     pln();
     String admin_username = askString("Web Platform Admin Username: ",
                                       username_valid_check);
@@ -2422,15 +2512,14 @@ root_srv_check:
 
     pln();
     pln(" ---");
-    pln("I need a comma deliminated list of virtual host names that will");
+    pln("I need a comma delimited list of virtual host names that will");
     pln("resolve (via domain name resolution) to one of more of the");
     pln("servers in your Mckoi Web Platform infrastructure, and that");
     pln("you wish to use to access the administration console. The vhost");
     pln("names may also be IP addresses.");
     pln();
-    pln("Please make sure any host names given here already resolve to");
-    pln("your servers with the Mckoi software installed via domain name");
-    pln("resolution (eg. DNS).");
+    pln("Please ensure any host names given here resolve to your Mckoi");
+    pln("servers via DNS.");
     pln();
     pln("An example; 'admin.mydomain.com, 192.168.100.1'");
     pln("With the above example vhost list, after installation the");
@@ -2477,11 +2566,25 @@ root_srv_check:
       throw new QuitException();
     }
 
-    boolean install_dev_ready;
-
     if (verified_install_dev_path.exists()) {
       // Copy the install_dev directory from the support directory,
       copyPath(verified_install_dev_path, install_dev_path);
+
+      // Set the template properties,
+      HashMap properties = new HashMap();
+      if (http_port.trim().equals("80")) {
+        properties.put("http_port_line", "#http_port = 80");
+        properties.put("https_port_line", "#https_port = 443");
+      }
+      else {
+        properties.put("http_port_line", "http_port = " + http_port.trim());
+        properties.put("https_port_line", "#https_port = 443");
+      }
+
+      // Write the App Server configuration file into the install_dev,
+      installFileTemplate(properties, new File(verified_templates_path, "app_service_properties.template"),
+              install_dev_conf_path, "app_service.properties");
+
       File lib_dest = new File(install_dev_path, "lib");
       lib_dest = new File(lib_dest, "base");
 
@@ -2510,16 +2613,15 @@ root_srv_check:
              new File(security_dest, "security.policy"));
 
       pln("Finished building 'install_dev' path.");
-      install_dev_ready = true;
     }
     else {
       pln("Copy failed: 'install_dev' path not found.");
-      install_dev_ready = false;
+      throw new QuitException();
     }
 
     // ----- MWP Installation -----
     
-    // This intializes the system platform and process path, registers the
+    // This initializes the system platform and process path, registers the
     // server and creates a normal install for the service.
     // Also creates an admin user account.
 
@@ -2540,7 +2642,7 @@ root_srv_check:
     PathLocation sys_path = new PathLocation(
                               sys_plat_root_servers[0], sys_plat_root_servers);
 
-    // Intialize the system platform,
+    // Initialize the system platform,
     app_core.initializeSystemPlatform(std_out, sys_path);
     // Initialize the process service,
     app_core.initializeProcesses(std_out, sys_path);
@@ -2622,6 +2724,12 @@ root_srv_check:
     pln();
     pln("Once the server is registered you will be able to access the");
     pln("administration console by going to one of the following URLs;");
+
+    String http_port_string = "";
+    if (!http_port.trim().equals("80")) {
+      http_port_string = ":" + http_port.trim();
+    }
+
     for (String vhost_name : vhosts_set) {
       String domain = null;
       if (vhost_name.endsWith(":http")) {
@@ -2631,7 +2739,7 @@ root_srv_check:
         domain = vhost_name.substring(0, vhost_name.length() - 6);
       }
       if (domain != null) {
-        pln("  http://" + domain + "/console/");
+        pln("  http://" + domain + http_port_string + "/console/");
       }
     }
     pln();
@@ -2826,6 +2934,27 @@ root_srv_check:
       }
 
       return true;
+    }
+  };
+
+  private AnswerValidator http_port_check = new AnswerValidator() {
+    @Override
+    public boolean isValidAnswer(String answer) {
+      try {
+        // If nothing entered then valid default of port '80',
+        if (answer.trim().equals("")) {
+          return true;
+        }
+        // Try and parse the port into a number between 1 and 65535
+        int port_num = Integer.parseInt(answer);
+        if (port_num > 0 && port_num < 65536) {
+          return true;
+        }
+      }
+      catch (NumberFormatException e) {
+        // Invalid,
+      }
+      return false;
     }
   };
 

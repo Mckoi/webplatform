@@ -16,9 +16,16 @@
       <directory>${project.basedir}/examples/</directory>
       <outputDirectory>support/install_dev/conf/</outputDirectory>
       <includes>
-        <include>app_service.properties</include>
         <include>system_classes.policy</include>
       </includes>
+    </fileSet>
+
+    <fileSet>
+    <directory>${project.basedir}/examples/</directory>
+    <outputDirectory>support/templates/</outputDirectory>
+    <includes>
+      <include>app_service_properties.template</include>
+    </includes>
     </fileSet>
 
     <!-- Insert an empty file just to make the cert directory -->
