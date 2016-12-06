@@ -66,10 +66,7 @@ import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.log.Logger;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 import org.eclipse.jetty.util.thread.Scheduler;
-import org.eclipse.jetty.websocket.api.InvalidWebSocketException;
-import org.eclipse.jetty.websocket.api.StatusCode;
-import org.eclipse.jetty.websocket.api.WebSocketException;
-import org.eclipse.jetty.websocket.api.WebSocketPolicy;
+import org.eclipse.jetty.websocket.api.*;
 import org.eclipse.jetty.websocket.api.extensions.ExtensionFactory;
 import org.eclipse.jetty.websocket.api.extensions.Frame;
 import org.eclipse.jetty.websocket.api.util.QuoteUtil;
@@ -650,6 +647,11 @@ public class MckoiWebSocketServerFactory extends ContainerLifeCycle implements W
     @Override
     public WebSocketSession getSession() {
       return backed.getSession();
+    }
+
+    @Override
+    public BatchMode getBatchMode() {
+      return backed.getBatchMode();
     }
 
     @Override

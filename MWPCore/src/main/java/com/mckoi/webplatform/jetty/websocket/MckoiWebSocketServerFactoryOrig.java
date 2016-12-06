@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+
+import org.eclipse.jetty.websocket.api.BatchMode;
 import org.eclipse.jetty.websocket.api.WebSocketPolicy;
 import org.eclipse.jetty.websocket.api.extensions.Frame;
 import org.eclipse.jetty.websocket.common.CloseInfo;
@@ -142,6 +144,11 @@ public final class MckoiWebSocketServerFactoryOrig extends WebSocketServerFactor
     @Override
     public WebSocketSession getSession() {
       return backed.getSession();
+    }
+
+    @Override
+    public BatchMode getBatchMode() {
+      return backed.getBatchMode();
     }
 
     @Override

@@ -101,33 +101,39 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>9.2.13.v20150730</version>
+      <version>9.2.19.v20160908</version>
+<!--      <version>9.2.13.v20150730</version> -->
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-webapp</artifactId>
-      <version>9.2.13.v20150730</version>
+      <version>9.2.19.v20160908</version>
+      <!--      <version>9.2.13.v20150730</version> -->
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-continuation</artifactId>
-      <version>9.2.13.v20150730</version>
+      <version>9.2.19.v20160908</version>
+      <!--      <version>9.2.13.v20150730</version> -->
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-annotations</artifactId>
-      <version>9.2.13.v20150730</version>
+      <version>9.2.19.v20160908</version>
+      <!--      <version>9.2.13.v20150730</version> -->
     </dependency>
 
     <dependency>
       <groupId>org.eclipse.jetty.websocket</groupId>
       <artifactId>websocket-server</artifactId>
-      <version>9.2.13.v20150730</version>
+      <version>9.2.19.v20160908</version>
+      <!--      <version>9.2.13.v20150730</version> -->
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.websocket</groupId>
       <artifactId>websocket-servlet</artifactId>
-      <version>9.2.13.v20150730</version>
+      <version>9.2.19.v20160908</version>
+      <!--      <version>9.2.13.v20150730</version> -->
     </dependency>
     
     

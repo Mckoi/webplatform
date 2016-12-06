@@ -43,13 +43,13 @@ public class JettyMckoiServer extends Server {
   }
 
   @Override
-  public void handle(HttpChannel<?> connection)
+  public void handle(HttpChannel connection)
                                          throws IOException, ServletException {
     super.handle(connection);
   }
 
   @Override
-  public void handleAsync(HttpChannel<?> connection)
+  public void handleAsync(HttpChannel connection)
                                          throws IOException, ServletException {
     super.handleAsync(connection);
   }
