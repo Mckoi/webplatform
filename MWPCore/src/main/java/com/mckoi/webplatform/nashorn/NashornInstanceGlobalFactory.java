@@ -28,16 +28,15 @@ import jdk.nashorn.api.scripting.NashornScriptEngineFactory;
 import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import jdk.nashorn.internal.objects.Global;
 import jdk.nashorn.internal.runtime.Context;
-import jdk.nashorn.internal.runtime.PropertyMap;
 import jdk.nashorn.internal.runtime.ScriptObject;
 import jdk.nashorn.internal.runtime.ScriptRuntime;
 import jdk.nashorn.internal.runtime.Source;
 import jdk.nashorn.internal.scripts.JO;
 
 /**
- * An extention to the Nashorn script engine that provides a mechanism where
+ * An extension to the Nashorn script engine that provides a mechanism where
  * new isolated JavaScript instances can be created via the
- * 'createInstaceGlobal' method.
+ * 'createInstanceGlobal' method.
  * <p>
  * NOTE: This class is experimental. It may only work in some versions of 1.8.
  *   As the Nashorn internal API stabilizes then so use of this object can
@@ -378,8 +377,7 @@ public class NashornInstanceGlobalFactory {
         }
         else {
           ScriptObject object_prototype = Global.objectPrototype();
-          new_object = new ClassedJO(
-                    class_name, object_prototype, ClassedJO.getInitialMap());
+          new_object = new ClassedJO(class_name, object_prototype);
         }
         return wrap(new_object);
 
@@ -408,8 +406,8 @@ public class NashornInstanceGlobalFactory {
    */
   private static class ClassedJO extends JO {
     private final String class_name;
-    public ClassedJO(String class_name, ScriptObject proto, PropertyMap map) {
-      super(proto, map);
+    public ClassedJO(String class_name, ScriptObject proto) {
+      super(proto);
       this.class_name = class_name;
     }
     @Override
