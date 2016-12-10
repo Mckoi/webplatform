@@ -49,7 +49,6 @@ public class MWPCoreMain {
     Map<String, String> env = System.getenv();
 
     // The 'java_home' and 'install_path' properties,
-    File java_home = new File(env.get("mwp.config.javahome"));
     File install_path = new File(env.get("mwp.config.install"));
     
     // Create a ClassLoader for all our libs in the install_path
