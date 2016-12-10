@@ -43,6 +43,7 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.URL;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.*;
@@ -71,6 +72,22 @@ public final class AppServiceNode {
    */
   public static final Logger APPCORE_LOG =
                                      Logger.getLogger("com.mckoi.appcore.Log");
+
+  // The Jetty/Java web and process services
+  private static final String JETTY_JAVA_SERVICE_CLASS = "com.mckoi.mwpcore.MWPCoreMain";
+
+  // For the node.js JavaScript web and process services,
+  private static final String NODEJS_SERVICE_CLASS = "com.mckoi.nodecore.MWPServiceNode";
+
+  private static final Map<String, String> ROLE_TO_SERVICE_MAP = new HashMap<>();
+  static {
+    ROLE_TO_SERVICE_MAP.put("http", JETTY_JAVA_SERVICE_CLASS);
+    ROLE_TO_SERVICE_MAP.put("https", JETTY_JAVA_SERVICE_CLASS);
+    ROLE_TO_SERVICE_MAP.put("process", JETTY_JAVA_SERVICE_CLASS);
+    ROLE_TO_SERVICE_MAP.put("nodejs_http", NODEJS_SERVICE_CLASS);
+    ROLE_TO_SERVICE_MAP.put("nodejs_https", NODEJS_SERVICE_CLASS);
+    ROLE_TO_SERVICE_MAP.put("nodejs_process", NODEJS_SERVICE_CLASS);
+  }
 
   /**
    * The Mckoi client.
@@ -107,7 +124,7 @@ public final class AppServiceNode {
   private String loaded_install_name = null;
   private String loaded_install_version = null;
 
-  private ProcessThread mwpcore_process = null;
+  private Map<String, ProcessThread> service_lookup = new HashMap<>();
 
   private List<String> cur_role_list;
 
@@ -228,16 +245,9 @@ public final class AppServiceNode {
 
     // Handle nulls,
     if (list1 == null) {
-      if (list2 == null) {
-        return true;
-      }
-      return false;
+      return (list2 == null);
     }
-    if (list2 == null) {
-      return false;
-    }
-
-    return list1.equals(list2);
+    return list2 != null && list1.equals(list2);
 
   }
 
@@ -266,10 +276,22 @@ public final class AppServiceNode {
   }
 
   /**
-   * Starts a core process.
+   * Returns a ProcessThread for the given role, or null if the role
+   * isn't recognised.
    */
-  private void startCore(String install_name, String install_ver)
-                                                           throws IOException {
+  private ProcessThread getProcessThreadFor(String service_role)
+                                                          throws IOException {
+
+    // Is the service process already running?
+    String service_classname = ROLE_TO_SERVICE_MAP.get(service_role);
+    // If role not found,
+    if (service_classname == null) {
+      return null;
+    }
+    ProcessThread service_process = service_lookup.get(service_classname);
+    if (service_process != null) {
+      return service_process;
+    }
 
     File java_cmd = new File(java_home, "bin");
     java_cmd = new File(java_cmd, "java");
@@ -277,8 +299,8 @@ public final class AppServiceNode {
     File java_tools = new File(java_home, "lib");
     java_tools = new File(java_tools, "tools.jar");
 
-    File this_installs_path = new File(installs_path, install_name);
-    this_installs_path = new File(this_installs_path, install_ver);
+    File this_installs_path = new File(installs_path, loaded_install_name);
+    this_installs_path = new File(this_installs_path, loaded_install_version);
 
     File lib_dir = new File(this_installs_path, "lib");
     File base_lib_dir = new File(lib_dir, "base");
@@ -294,7 +316,7 @@ public final class AppServiceNode {
 
     // Encode the public and private ip addresses,
 
-    List<String> args = new ArrayList();
+    List<String> args = new ArrayList<>();
 
     // The java process command,
     args.add(java_cmd.toString());
@@ -332,17 +354,47 @@ public final class AppServiceNode {
 
     // Start the java process in a new thread,
     pb.redirectErrorStream(true);
-    
-    mwpcore_process = new ProcessThread(pb.start());
-    mwpcore_process.start();
+
+    service_process = new ProcessThread(pb.start());
+    service_process.start();
+
+    // Put it in the lookup map,
+    service_lookup.put(service_classname, service_process);
+
+    // Return the process object,
+    return service_process;
 
   }
 
   /**
-   * Sends a command to the currently running core process.
+   * Routes a role command to the process handling the given role type.
    */
-  private String runCoreFunction(String cmd) throws IOException {
-    return mwpcore_process.send(cmd);
+  private String routeToCoreFunction(String role, String cmd) throws IOException {
+    // Get the process thread. Note that this will create and start a process is
+    // there's not one currently operating for the given role type.
+    ProcessThread service_process = getProcessThreadFor(role);
+    if (service_process == null) {
+      String err_msg = MessageFormat.format(
+              "Unable to execute command ''{1}'' for role ''{0}'' because the role is unrecognized",
+              role, cmd);
+      APPCORE_LOG.log(Level.SEVERE, err_msg);
+      System.err.println(err_msg);
+      return null;
+    }
+    else {
+      return service_process.send(cmd + " " + role);
+    }
+  }
+
+  /**
+   * Shuts down all the service processes.
+   */
+  private void shutdownAllCoreFunctions() throws IOException {
+    Collection<ProcessThread> values = service_lookup.values();
+    for (ProcessThread process_service : values) {
+      process_service.send("shutdown");
+    }
+    service_lookup.clear();
   }
 
   /**
@@ -415,7 +467,7 @@ public final class AppServiceNode {
     ODBObject roles_ob = t.getNamedItem("roles");
     ODBList servers = roles_ob.getList("serverIdx");
     servers = servers.tail(canonical_private_ip);
-    List<String> role_list = new ArrayList();
+    List<String> role_list = new ArrayList<>();
     for (ODBObject server : servers) {
       if (!server.getString("server").equals(canonical_private_ip)) {
         break;
@@ -469,13 +521,13 @@ public final class AppServiceNode {
         Logger log = APPCORE_LOG;
         // The debug output level,
         log.setLevel(Level.INFO);
-        // Don't propogate log messages,
+        // Don't propagate log messages,
         log.setUseParentHandlers(false);
 
         // Output to the log file,
         String log_file_name = new File(log_path, "appcore.log").getCanonicalPath();
         FileHandler fhandler =
-            new FileHandler(log_file_name, logfile_limit, logfile_count, true);
+                new FileHandler(log_file_name, logfile_limit, logfile_count, true);
         fhandler.setFormatter(new AppCoreLogFormatter());
         log.addHandler(fhandler);
       }
@@ -485,13 +537,22 @@ public final class AppServiceNode {
 
       // The unique id of this service node,
       canonical_private_ip =
-                          ServerRolesSchema.canonicalIPString(private_ip_inet);
+              ServerRolesSchema.canonicalIPString(private_ip_inet);
       canonical_public_ip =
-                          ServerRolesSchema.canonicalIPString(public_ip_inet);
+              ServerRolesSchema.canonicalIPString(public_ip_inet);
 
-      int log_fail_retry = 1;
+    }
+    catch (IOException e) {
+      System.err.println("Failed to initialize App Service");
+      e.printStackTrace(System.err);
+      return;
+    }
 
-      while (true) {
+    int log_fail_retry = 1;
+
+    while (true) {
+
+      try {
 
         int ms_to_wait = 30 * 1000;
         boolean fail_retry = false;
@@ -506,12 +567,8 @@ public final class AppServiceNode {
 
           // Did we load a new install?
           if (loaded_new) {
-            // Yes, so shutdown the existing process,
-            if (mwpcore_process != null) {
-              String result = runCoreFunction("shutdown");
-            }
-            // Start up a new one
-            startCore(loaded_install_name, loaded_install_version);
+            // Yes, so shutdown any existing processes,
+            shutdownAllCoreFunctions();
             old_roles_list = null;
           }
 
@@ -524,7 +581,7 @@ public final class AppServiceNode {
             if (old_roles_list != null) {
               for (String role : old_roles_list) {
                 if (!cur_role_list.contains(role)) {
-                  runCoreFunction("stop " + role);
+                  routeToCoreFunction(role, "stop");
                 }
               }
             }
@@ -532,7 +589,7 @@ public final class AppServiceNode {
             // The roles to start,
             for (String role : cur_role_list) {
               if (old_roles_list == null || !old_roles_list.contains(role)) {
-                runCoreFunction("start " + role);
+                routeToCoreFunction(role, "start");
               }
             }
 
@@ -584,13 +641,14 @@ public final class AppServiceNode {
           new Thread(stop_runnable).start();
         }
 
+      }
+      catch (IOException e) {
+        APPCORE_LOG.log(Level.SEVERE, "Error during service loop", e);
+        e.printStackTrace(System.err);
+        APPCORE_LOG.log(Level.SEVERE, "Loop is not terminating because of error.");
+      }
 
-      } // while (true)
-      
-    }
-    catch (IOException e) {
-      e.printStackTrace(System.err);
-    }
+    } // while (true)
 
   }
 
@@ -915,6 +973,7 @@ public final class AppServiceNode {
           b.append(sw.toString());
         }
         catch (Exception ex) {
+          // Don't throw an exception here
         }
       }
       return b.toString();
