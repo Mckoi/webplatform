@@ -213,6 +213,11 @@ public class ProcessServerService implements PEnvironment {
                                         broadcast_connect_map = new HashMap<>();
 
   /**
+   * The set of all NIOConnection objects created.
+   */
+  private final Set<NIOConnection> all_connections = new HashSet<>();
+
+  /**
    * Secure random number generator.
    */
   static final SecureRandom SECURE_RNG;
@@ -514,6 +519,10 @@ public class ProcessServerService implements PEnvironment {
     process_timer.scheduleAtFixedRate(new ProcessMaintenanceTimerTask(),
                                       15 * 1000, MAINT_FREQUENCY_TIME);
 
+    System.out.println(MessageFormat.format(
+            "Process Service Started on {0}:{1}",
+            process_bind_address, Integer.toString(process_port)));
+
   }
 
   /**
@@ -541,6 +550,16 @@ public class ProcessServerService implements PEnvironment {
     // Stop the accept thread,
     server_thread.finish();
     server_thread = null;
+
+    // Close all NIOConnections,
+    HashSet<NIOConnection> connections_to_close = new HashSet<>(all_connections);
+    for (NIOConnection c : connections_to_close) {
+      c.close();
+    }
+
+    System.out.println(MessageFormat.format(
+            "Process Service Stopped on {0}:{1}",
+            process_bind_address, Integer.toString(process_port)));
 
   }
 
@@ -1917,6 +1936,10 @@ public class ProcessServerService implements PEnvironment {
    */
   @Override
   public void initializeConnection(NIOConnection connection) {
+
+    // Add this connection to the set of all connections,
+    all_connections.add(connection);
+
     // Pick a value used for connection handshake that is not between 0 and 256
     long rand_val = 0;
     while (rand_val >= 0 && rand_val < 256) {
@@ -1956,6 +1979,10 @@ public class ProcessServerService implements PEnvironment {
   public void connectionClosed(NIOConnection connection) {
     // PENDING: this is a callback from NIOConnection when the connection is
     //   closed. This function may be needed to handle cleanup.
+
+    // Remove the connection from the set of all connections,
+    all_connections.remove(connection);
+
   }
 
   /**

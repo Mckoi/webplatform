@@ -409,7 +409,7 @@ public final class ProcessClientService {
       // This simply cycles through every OP_READ key on the selector and
       // pushes any pending messages through to the PEnvironment.
       try {
-        while (true) {
+        while (selector.isOpen()) {
           // Block until we have something to read,
           selector_lock.lock();
           selector_lock.unlock();

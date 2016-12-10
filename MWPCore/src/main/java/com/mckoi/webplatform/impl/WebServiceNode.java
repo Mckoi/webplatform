@@ -32,6 +32,7 @@ import com.mckoi.mwpcore.MWPClassLoaderSet;
 import com.mckoi.mwpcore.SSLExtraConfig;
 import com.mckoi.process.impl.ProcessClientService;
 import java.io.File;
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Locale;
@@ -162,9 +163,9 @@ public class WebServiceNode {
       logfile_count = Integer.parseInt(lf_count);
     }
 
-    // --------------------------------------------
-    // ---- Hacky SecurityManager work arounds ----
-    // --------------------------------------------
+    // -------------------------------------------
+    // ---- Hacky SecurityManager workarounds ----
+    // -------------------------------------------
     // These are calls that are necessary because they perform operations
     // within static methods that need privileges that are not allowed
     // by the security context they normally get initially used in.
@@ -211,7 +212,7 @@ public class WebServiceNode {
       Logger log = Logger.getLogger(logger.getName());
       // The debug output level,
       log.setLevel(Level.parse(log_level.toUpperCase(Locale.ENGLISH)));
-      // Don't propogate log messages,
+      // Don't propagate log messages,
       log.setUseParentHandlers(false);
 
       // Output to the log file,
@@ -339,6 +340,11 @@ public class WebServiceNode {
     int http_port_i = Integer.parseInt(http_port);
     // This is done by adding the http connector,
     http_service.startHTTP(http_address, http_port_i);
+
+    System.out.println(MessageFormat.format(
+            "Jetty HTTP Started on ''{0}'' port {1}",
+            http_address, http_port));
+
   }
 
   /**
@@ -347,6 +353,11 @@ public class WebServiceNode {
   public void stopHttp() {
     initCheck();
     http_service.stopHTTP();
+
+    System.out.println(MessageFormat.format(
+            "Jetty HTTP Stopped on ''{0}'' port {1}",
+            http_address, http_port));
+
   }
 
   /**
@@ -367,6 +378,11 @@ public class WebServiceNode {
     http_service.startHTTPS(https_address, https_port_i,
                             key_store_file, key_store_pwd,
                             key_store_manager_pwd);
+
+    System.out.println(MessageFormat.format(
+            "Jetty HTTPS Started on ''{0}'' port {1}",
+            https_address, https_port));
+
   }
   
   /**
@@ -375,6 +391,11 @@ public class WebServiceNode {
   public void stopHttps() {
     initCheck();
     http_service.stopHTTPS();
+
+    System.out.println(MessageFormat.format(
+            "Jetty HTTPS Stopped on ''{0}'' port {1}",
+            https_address, https_port));
+
   }
 
 

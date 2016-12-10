@@ -28,6 +28,7 @@ package com.mckoi.process.impl;
 import com.mckoi.process.ProcessServiceAddress;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -154,6 +155,7 @@ public class NIOConnection {
 //          key.cancel();
 //        }
 //      }
+
       // Deregister from the write selector,
       try {
         write_selector.deregister(this);
@@ -161,8 +163,18 @@ public class NIOConnection {
       catch (IOException e) {
         LOG.log(Level.SEVERE, "IO exception when closing", e);
       }
+      catch (ClosedSelectorException e) {
+        // It's acceptable to ignore this exception here,
+      }
+
       // Close the channel
-      NIOServerThread.forceCloseChannel(sc);
+      try {
+        NIOServerThread.forceCloseChannel(sc);
+      }
+      catch (ClosedSelectorException e) {
+        // It's acceptable to ignore this exception here,
+      }
+
       // Tell the environment we closed,
       process_env.connectionClosed(this);
 
