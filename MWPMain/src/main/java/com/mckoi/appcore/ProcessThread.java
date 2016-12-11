@@ -27,6 +27,7 @@ package com.mckoi.appcore;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -69,7 +70,7 @@ public class ProcessThread extends Thread {
     process_out = new BufferedWriter(
             new OutputStreamWriter(process.getOutputStream(), "UTF-8"));
 
-    reply_log = new ArrayList(4);
+    reply_log = new LinkedList<>();
   }
 
   /**
@@ -166,7 +167,7 @@ public class ProcessThread extends Thread {
           synchronized (reply_log) {
             reply_log.add(new Reply(reply_command_id, reply_message));
             // Don't let the reply log get too large,
-            if (reply_log.size() > 512) {
+            while (reply_log.size() > 512) {
               // Remove the first,
               reply_log.remove(0);
             }
