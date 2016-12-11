@@ -25,7 +25,7 @@
 
 package com.mckoi.process.impl;
 
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.network.MckoiDDBClient;
 import com.mckoi.network.MckoiDDBClientUtils;
 import com.mckoi.network.NetworkConfigResource;
@@ -214,8 +214,8 @@ public class TestClientFixture {
                                  MckoiDDBClientUtils.connectTCP(client_conf_p);
 
     // Create the global sessions cache (1 second age),
-    DBSessionCache sessions_cache =
-                            new DBSessionCache(client, network_resource, 1000);
+    MWPDBSessionCache sessions_cache =
+                            new MWPDBSessionCache(client, network_resource, 1000);
     // Create the process client service,
     ProcessClientService process_client_service = new ProcessClientService(
                           sessions_cache, shared_thread_pool, network_interface);

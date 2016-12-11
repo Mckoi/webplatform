@@ -28,7 +28,7 @@ package com.mckoi.webplatform.impl;
 import com.mckoi.appcore.SystemStatics;
 import com.mckoi.mwpcore.ClassNameValidator;
 import com.mckoi.mwpcore.ContextBuilder;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.mwpcore.MWPUserClassLoader;
 import com.mckoi.network.MckoiDDBAccess;
 import com.mckoi.network.NetworkAccess;
@@ -124,7 +124,7 @@ public final class PlatformContextImpl implements PlatformContext {
   private static void setCurrentThreadContext(
             boolean is_app_service_context,
             PlatformContextBuilder context_builder,
-            DBSessionCache sessions_cache,
+            MWPDBSessionCache sessions_cache,
             ProcessClientService process_client_service,
             ProcessInstance process_instance,
             String account_name, String vhost, String protocol,
@@ -163,7 +163,7 @@ public final class PlatformContextImpl implements PlatformContext {
    * given details.
    */
   public static void setCurrentThreadContextForProcessService(
-              DBSessionCache session_cache,
+              MWPDBSessionCache session_cache,
               ProcessInstance process_instance,
               String account_name, String vhost, String protocol,
               String webapp_name,
@@ -709,7 +709,7 @@ public final class PlatformContextImpl implements PlatformContext {
 //    ThreadContext thread_ctx = getCurrentThreadContext();
 //
 //    boolean is_app_service_context = thread_ctx.is_app_service_context;
-//    DBSessionCache sessions_cache = thread_ctx.sessions_cache;
+//    MWPDBSessionCache sessions_cache = thread_ctx.sessions_cache;
 //    ProcessClientService process_client_server = thread_ctx.process_client_service;
 //    ProcessInstance process_instance = thread_ctx.process_instance;
 //    String account_name = thread_ctx.account_name;
@@ -880,7 +880,7 @@ public final class PlatformContextImpl implements PlatformContext {
 
     private final boolean is_app_service_context;
     private final PlatformContextBuilder context_builder;
-    private final DBSessionCache sessions_cache;
+    private final MWPDBSessionCache sessions_cache;
     private final ProcessClientService process_client_service;
     private final ProcessInstance process_instance;
     private final String account_name;
@@ -897,7 +897,7 @@ public final class PlatformContextImpl implements PlatformContext {
 
     ThreadContext(boolean is_app_service_context,
                   PlatformContextBuilder context_builder,
-                  DBSessionCache sessions_cache,
+                  MWPDBSessionCache sessions_cache,
                   ProcessClientService process_client_service,
                   ProcessInstance process_instance,
                   String account_name, String vhost_name,

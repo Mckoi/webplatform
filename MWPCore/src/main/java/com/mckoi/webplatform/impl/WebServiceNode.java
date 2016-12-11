@@ -26,7 +26,7 @@
 package com.mckoi.webplatform.impl;
 
 import com.mckoi.mwpcore.ClassNameValidator;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.mwpcore.GeneralLogFormatter;
 import com.mckoi.mwpcore.MWPClassLoaderSet;
 import com.mckoi.mwpcore.SSLExtraConfig;
@@ -70,7 +70,7 @@ public class WebServiceNode {
   private File local_temp_folder;
 
   // Set via pre-security init,
-  private DBSessionCache sessions_cache;
+  private MWPDBSessionCache sessions_cache;
   private ProcessClientService process_client_service;
 
   private Logger JETTY_LOG;
@@ -133,7 +133,7 @@ public class WebServiceNode {
    * @param process_client_service
    */
   public void preSecurityInit(Properties web_config,
-                              DBSessionCache sessions_cache,
+                              MWPDBSessionCache sessions_cache,
                               ProcessClientService process_client_service) {
 
     if (web_config == null) throw new NullPointerException();

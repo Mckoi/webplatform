@@ -18,7 +18,7 @@
 package com.mckoi.webplatform.impl;
 
 import com.mckoi.mwpcore.ClassNameValidator;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.mwpcore.MWPClassLoaderSet;
 import com.mckoi.process.impl.ProcessClientService;
 import com.mckoi.webplatform.jetty.websocket.MckoiWebSocketServerFactory;
@@ -52,7 +52,7 @@ public final class PlatformContextBuilder {
   /**
    * The session cache.
    */
-  private final DBSessionCache sessions_cache;
+  private final MWPDBSessionCache sessions_cache;
 
   /**
    * The ProcessClientService that supports messaging to process services on
@@ -91,7 +91,7 @@ public final class PlatformContextBuilder {
    * @param local_temp_folder 
    */
   PlatformContextBuilder(
-                  DBSessionCache sessions_cache,
+                  MWPDBSessionCache sessions_cache,
                   ProcessClientService process_client_service,
                   Timer system_timer,
                   ClassNameValidator general_allowed_sys_classes,
@@ -113,7 +113,7 @@ public final class PlatformContextBuilder {
     }
   }
   
-  DBSessionCache getSessionsCache() {
+  MWPDBSessionCache getSessionsCache() {
     return sessions_cache;
   }
 

@@ -25,6 +25,7 @@
 
 package com.mckoi.mwpcore;
 
+import com.mckoi.appcore.AbstractCoreProcess;
 import com.mckoi.network.MckoiDDBClient;
 import com.mckoi.network.MckoiDDBClientUtils;
 import com.mckoi.network.NetworkConfigResource;
@@ -44,8 +45,8 @@ import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
 import java.security.Policy;
 import java.text.MessageFormat;
+import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -120,9 +121,8 @@ public class MWPCoreProcess extends AbstractCoreProcess {
   /**
    * Perform some customized initialization stuff.
    */
-  @Override
   protected void init() {
-    super.init();
+    super.init("jetty_mwp.log", "jetty_ddb.log");
 
     try {
 
@@ -349,9 +349,8 @@ public class MWPCoreProcess extends AbstractCoreProcess {
             "Either {0}, {1} or {2} (from ''shared_threadpool_min_threads'', " +
             "''shared_threadpool_max_threads'' or ''shared_threadpool_timeout_seconds'') " +
             "are not numbers",
-                  new Object[] { shared_threadpool_min,
-                                 shared_threadpool_max,
-                                 shared_threadpool_timeout_seconds });
+            shared_threadpool_min, shared_threadpool_max,
+            shared_threadpool_timeout_seconds);
         throw new RuntimeException(err_msg);
       }
 
@@ -369,7 +368,7 @@ public class MWPCoreProcess extends AbstractCoreProcess {
         throw new RuntimeException("'shared_threadpool_timeout_seconds' < 1");
       }
 
-      ThreadPoolExecutor thread_pool_executor =
+      ThreadPoolExecutor shared_thread_pool =
                new ThreadPoolExecutor(shared_tp_min, shared_tp_max,
                                       shared_tp_timeout, TimeUnit.SECONDS,
                                       new LinkedBlockingQueue<Runnable>());      
@@ -393,98 +392,16 @@ public class MWPCoreProcess extends AbstractCoreProcess {
       MWPClassLoaderSet class_loader_set =
                       new MWPClassLoaderSet(sys_classloader, user_path_urls);
 
-      // Client.conf properties,
-      final String network_conf_location = getNetworkConf().toString();
-      final String client_config_file = getClientConf().toString();
-
-      // PENDING: Give option to load from URL?
-      Properties client_conf_p = new Properties();
-      client_conf_p.load(new BufferedInputStream(new FileInputStream(
-                                             new File (client_config_file))));
-
-      // Set default cache settings,
-      String transaction_cache_size_str =
-              client_conf_p.getProperty("transaction_cache_size", "14MB");
-      client_conf_p.setProperty(
-              "transaction_cache_size", transaction_cache_size_str);
-
-      String global_cache_size_str =
-              client_conf_p.getProperty("global_cache_size", "32MB");
-      client_conf_p.setProperty(
-              "global_cache_size", global_cache_size_str);
-
-      // The name of the network interface to be used to talk with the DDB
-      // network (for IPv6 link local)
-      String net_interface_name = client_conf_p.getProperty("net_interface");
-      NetworkInterface net_if = null;
-      if (net_interface_name == null) {
-        System.out.println(
-            "WARNING: No 'net_interface' property found in client.conf.");
-        System.out.println(
-            "  This means you will not be able to connect to machines with IPv6");
-        System.out.println(
-            "  link-local addresses.");
-        System.out.println(
-            "  If you are using IPv6 you can fix this by adding a 'net_interface'");
-        System.out.println(
-            "  property to client.conf.");
-        System.out.println(
-            "  For example; 'net_interface=eth0'");
-      }
-      else {
-        // Check the net interface binds to a NetworkInterface on this machine,
-        net_if = NetworkInterface.getByName(net_interface_name);
-        if (net_if == null) {
-          String err_msg = MessageFormat.format(
-              "The ''net_interface'' property in client.conf does not match a " +
-              "network interface on this machine. net_interface = ''{0}''",
-              net_interface_name);
-          System.out.println("ERROR: " + err_msg);
-          throw new RuntimeException(err_msg);
-        }
-      }
-
-      // Report the configuration settings,
-      System.out.println("Client Configuration");
-      if (net_if != null) {
-        System.out.println(
-                "  network_interface = " + net_if);
-      }
-      System.out.println(
-              "  transaction_cache_size = " + transaction_cache_size_str);
-      System.out.println(
-              "  global_cache_size = " + global_cache_size_str);
-      System.out.println();
-
-      System.out.println("Web Node Configuration");
-
-      // Get the MckoiDDB client connection,
-      final MckoiDDBClient client =
-                                 MckoiDDBClientUtils.connectTCP(client_conf_p);
-
-      // Load the network resource,
-      NetworkConfigResource network_resource;
-
-      String net_resource_str;
-      try {
-        URL nc_url = new URL(network_conf_location);
-        network_resource = NetworkConfigResource.getNetConfig(nc_url);
-        net_resource_str = nc_url.toString();
-      }
-      catch (MalformedURLException e) {
-        // Try as a file,
-        File net_conf_file = new File(network_conf_location);
-        network_resource = NetworkConfigResource.getNetConfig(net_conf_file);
-        net_resource_str = net_conf_file.getCanonicalPath();
-      }
-      System.out.println("  Network Resource = " + net_resource_str);
-
-      // Create the shared thread pool,
-      ExecutorService shared_thread_pool = thread_pool_executor;
+      // Initialize connection to the MckoiDDB network as configured,
+      Map<String, Object> ret_values = super.initializeDDBConnections();
+      MckoiDDBClient client = (MckoiDDBClient) ret_values.get("mckoiddb_client");
+      NetworkConfigResource network_resource =
+                  (NetworkConfigResource) ret_values.get("network_config_resource");
+      NetworkInterface net_if = (NetworkInterface) ret_values.get("network_interface");
 
       // Create the global sessions cache (1 second age),
-      DBSessionCache sessions_cache =
-                            new DBSessionCache(client, network_resource, 1000);
+      MWPDBSessionCache sessions_cache =
+                            new MWPDBSessionCache(client, network_resource, 1000);
       // Create the process client service,
       ProcessClientService process_client_service = new ProcessClientService(
                           sessions_cache, shared_thread_pool, net_if);
@@ -566,30 +483,30 @@ public class MWPCoreProcess extends AbstractCoreProcess {
 
   @Override
   protected String runCommand(String command) {
-    if (command.equals("start http")) {
-      startHttp();
-    }
-    else if (command.equals("start https")) {
-      startHttps();
-    }
-    else if (command.equals("start process")) {
-      startProcess();
-    }
-    else if (command.equals("stop http")) {
-      stopHttp();
-    }
-    else if (command.equals("stop https")) {
-      stopHttps();
-    }
-    else if (command.equals("stop process")) {
-      stopProcess();
-    }
-    else if (command.equals("shutdown")) {
-      shutdown();
-    }
-
-    else {
-      return "FAIL: Unknown command: " + command;
+    switch (command) {
+      case "start http":
+        startHttp();
+        break;
+      case "start https":
+        startHttps();
+        break;
+      case "start process":
+        startProcess();
+        break;
+      case "stop http":
+        stopHttp();
+        break;
+      case "stop https":
+        stopHttps();
+        break;
+      case "stop process":
+        stopProcess();
+        break;
+      case "shutdown":
+        shutdown();
+        break;
+      default:
+        return "FAIL: Unknown command: " + command;
     }
 
     return "OK";

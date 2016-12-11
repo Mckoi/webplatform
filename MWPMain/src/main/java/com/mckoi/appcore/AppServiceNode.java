@@ -73,6 +73,9 @@ public final class AppServiceNode {
   public static final Logger APPCORE_LOG =
                                      Logger.getLogger("com.mckoi.appcore.Log");
 
+  // Default database check interval for system updates,
+  private static final int UPDATE_CHECK_INTERVAL = (4 * 1000);
+
   // The Jetty/Java web and process services
   private static final String JETTY_JAVA_SERVICE_CLASS = "com.mckoi.mwpcore.MWPCoreMain";
 
@@ -329,7 +332,7 @@ public final class AppServiceNode {
     // The remainnig Java commands
     args.add("-cp");
     args.add(class_path.toString());
-    args.add("com.mckoi.mwpcore.MWPCoreMain");
+    args.add(service_classname);
 
     System.out.println("Command: " + args);
 
@@ -382,7 +385,8 @@ public final class AppServiceNode {
       return null;
     }
     else {
-      return service_process.send(cmd + " " + role);
+      int cmd_id = service_process.sendWithoutReply(cmd + " " + role);
+      return Integer.toString(cmd_id);
     }
   }
 
@@ -392,7 +396,29 @@ public final class AppServiceNode {
   private void shutdownAllCoreFunctions() throws IOException {
     Collection<ProcessThread> values = service_lookup.values();
     for (ProcessThread process_service : values) {
-      process_service.send("shutdown");
+      try {
+        process_service.send("shutdown");
+      }
+      catch (IOException ex) {
+        String err_msg = MessageFormat.format(
+                "Shutdown failed because of IO Exception", 0);
+        APPCORE_LOG.log(Level.SEVERE, err_msg, ex);
+        System.err.println(err_msg);
+        ex.printStackTrace(System.err);
+      }
+      finally {
+        // Make sure the process is killed,
+        try {
+          process_service.kill();
+        }
+        catch (Throwable ex) {
+          String err_msg = MessageFormat.format(
+                  "Kill process failed", 0);
+          APPCORE_LOG.log(Level.SEVERE, err_msg, ex);
+          System.err.println(err_msg);
+          ex.printStackTrace(System.err);
+        }
+      }
     }
     service_lookup.clear();
   }
@@ -554,7 +580,7 @@ public final class AppServiceNode {
 
       try {
 
-        int ms_to_wait = 30 * 1000;
+        int ms_to_wait = UPDATE_CHECK_INTERVAL;
         boolean fail_retry = false;
         Throwable fail_e = null;
 

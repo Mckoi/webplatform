@@ -31,7 +31,7 @@ import com.mckoi.appcore.SystemStatics;
 import com.mckoi.data.DataFile;
 import com.mckoi.data.DataFileUtils;
 import com.mckoi.data.PropertySet;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.network.*;
 import com.mckoi.odb.*;
 import java.io.*;
@@ -59,7 +59,7 @@ public class WebPlatformAdmin {
   /**
    * The session cache.
    */
-  private final DBSessionCache sessions_cache;
+  private final MWPDBSessionCache sessions_cache;
 
   /**
    * The network connection.
@@ -74,7 +74,7 @@ public class WebPlatformAdmin {
   /**
    * Constructor.
    */
-  WebPlatformAdmin(DBSessionCache sessions_cache,
+  WebPlatformAdmin(MWPDBSessionCache sessions_cache,
                    MckoiDDBClient client,
                    NetworkConfigResource network_resource) {
     this.sessions_cache = sessions_cache;

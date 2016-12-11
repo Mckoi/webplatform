@@ -71,25 +71,25 @@ public class ProcessThread extends Thread {
 
     reply_log = new ArrayList(4);
   }
-  
+
+  /**
+   * Kill the process.
+   */
+  public void kill() {
+    process.destroy();
+  }
+
   /**
    * Sends a command to the process and waits for a reply.
    */
   public String send(String cmd) throws IOException {
     synchronized (reply_log) {
-      int used_command_id = command_id;
-      ++command_id;
-      // Unique id for this command,
-      process_out.append(Integer.toString(used_command_id));
-      process_out.newLine();
-      // Flush the command,
-      process_out.append(cmd);
-      process_out.newLine();
-      process_out.flush();
+      int used_command_id = sendWithoutReply(cmd);
       // Wait for a reply,
-      while (true) {
+      long timeout_start = System.currentTimeMillis();
+      while ((System.currentTimeMillis() - timeout_start) < 15000) {
         try {
-          reply_log.wait();
+          reply_log.wait(3000);
         }
         catch (InterruptedException e) { }
         int sz = reply_log.size();
@@ -102,6 +102,25 @@ public class ProcessThread extends Thread {
           }
         }
       }
+    }
+    return "TIMEOUT";
+  }
+
+  /**
+   * Send a command without caring if we get a reply from the server or not.
+   */
+  public int sendWithoutReply(String cmd) throws IOException {
+    synchronized (reply_log) {
+      int used_command_id = command_id;
+      ++command_id;
+      // Unique id for this command,
+      process_out.append(Integer.toString(used_command_id));
+      process_out.newLine();
+      // Flush the command,
+      process_out.append(cmd);
+      process_out.newLine();
+      process_out.flush();
+      return used_command_id;
     }
   }
 
@@ -146,6 +165,11 @@ public class ProcessThread extends Thread {
           int reply_command_id = Integer.parseInt(command.substring(1));
           synchronized (reply_log) {
             reply_log.add(new Reply(reply_command_id, reply_message));
+            // Don't let the reply log get too large,
+            if (reply_log.size() > 512) {
+              // Remove the first,
+              reply_log.remove(0);
+            }
             reply_log.notifyAll();
           }
         }

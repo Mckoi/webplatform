@@ -27,7 +27,7 @@ package com.mckoi.process.impl;
 
 import com.mckoi.appcore.SystemStatics;
 import com.mckoi.mwpcore.ContextBuilder;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.network.CommitFaultException;
 import com.mckoi.odb.ODBClass;
 import com.mckoi.odb.ODBList;
@@ -90,10 +90,10 @@ public final class ProcessClientService {
   private static final int FUNCTION_TIMEOUT_MS = 15000;
 
   /**
-   * The DBSessionCache used to query the sysprocessxx paths to query and
+   * The MWPDBSessionCache used to query the sysprocessxx paths to query and
    * manage process state information.
    */
-  private final DBSessionCache sessions_cache;
+  private final MWPDBSessionCache sessions_cache;
 
   /**
    * The map of all connections to process clients.
@@ -185,7 +185,7 @@ public final class ProcessClientService {
    * @param net_if the network interface used to communicate with the DDB
    *   network (used for link local IP resolution).
    */
-  public ProcessClientService(DBSessionCache sessions_cache,
+  public ProcessClientService(MWPDBSessionCache sessions_cache,
                               ExecutorService shared_thread_pool,
                               NetworkInterface net_if) {
     // Null check,

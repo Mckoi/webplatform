@@ -27,7 +27,7 @@ package com.mckoi.process.impl;
 
 import com.mckoi.mwpcore.ClassNameValidator;
 import com.mckoi.mwpcore.ContextBuilder;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.mwpcore.MWPUserClassLoader;
 import com.mckoi.mwpcore.ThreadUsageStatics;
 import com.mckoi.odb.ODBData;
@@ -35,7 +35,6 @@ import com.mckoi.odb.ODBObject;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.process.*;
 import com.mckoi.process.ProcessInputMessage.Type;
-import com.mckoi.process.ProcessResultNotifier.CleanupHandler;
 import com.mckoi.webplatform.impl.LoggerService;
 import com.mckoi.webplatform.impl.PlatformContextImpl;
 import com.mckoi.webplatform.util.MonotonicTime;
@@ -950,7 +949,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
       //   code.
 
       // Set the platform context for this process,
-      DBSessionCache session_cache = process_service.getDBSessionCache();
+      MWPDBSessionCache session_cache = process_service.getDBSessionCache();
       ClassNameValidator allowed_classes =
                                      process_service.getAllowedSystemClasses();
       
@@ -1505,7 +1504,7 @@ final class ProcessInstanceImpl implements ProcessInstance {
           // NOTE; this loads 'cached_process_class_loader'
           ProcessMckoiAppClassLoader class_loader = getProcessClassLoader();
           // To create the transaction,
-          DBSessionCache session_cache = process_service.getDBSessionCache();
+          MWPDBSessionCache session_cache = process_service.getDBSessionCache();
 
           // Set the version transaction used for the URL handler,
           ODBTransaction version_t = session_cache.createODBTransaction(

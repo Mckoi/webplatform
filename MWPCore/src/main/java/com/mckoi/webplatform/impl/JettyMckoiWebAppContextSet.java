@@ -28,7 +28,7 @@ package com.mckoi.webplatform.impl;
 import com.mckoi.appcore.UserApplicationsSchema;
 import com.mckoi.data.DataFile;
 import com.mckoi.data.PropertySet;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.odb.ODBTransaction;
 import com.mckoi.odb.util.FileInfo;
 import com.mckoi.odb.util.FileName;
@@ -126,7 +126,7 @@ public final class JettyMckoiWebAppContextSet extends AbstractHandler {
    */
   private void initializeWebApps() {
 
-    DBSessionCache sessions_cache = context_builder.getSessionsCache();
+    MWPDBSessionCache sessions_cache = context_builder.getSessionsCache();
 
     // Get the account file system,
     ODBTransaction fs_t =

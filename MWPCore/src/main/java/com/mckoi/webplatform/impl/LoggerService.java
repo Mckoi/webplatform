@@ -25,7 +25,7 @@
 
 package com.mckoi.webplatform.impl;
 
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.network.CommitFaultException;
 import com.mckoi.odb.ODBClass;
 import com.mckoi.odb.ODBList;
@@ -61,7 +61,7 @@ public final class LoggerService {
   /**
    * The session cache.
    */
-  private final DBSessionCache sessions_cache;
+  private final MWPDBSessionCache sessions_cache;
 
   /**
    * The log_path where the log events are written to.
@@ -92,7 +92,7 @@ public final class LoggerService {
    * @param log_path
    * @param system_timer
    */
-  public LoggerService(DBSessionCache sessions_cache,
+  public LoggerService(MWPDBSessionCache sessions_cache,
                       String log_path, Timer system_timer) {
     checkSecurity();
     this.sessions_cache = sessions_cache;

@@ -25,7 +25,7 @@
 
 package com.mckoi.webplatform.impl;
 
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.odb.ODBList;
 import com.mckoi.odb.ODBObject;
 import com.mckoi.odb.ODBTransaction;
@@ -52,7 +52,7 @@ class DDBResourceAccessImpl implements DDBResourceAccess {
   /**
    * The session cache.
    */
-  private final DBSessionCache sessions_cache;
+  private final MWPDBSessionCache sessions_cache;
 
   /**
    * The account name.
@@ -77,7 +77,7 @@ class DDBResourceAccessImpl implements DDBResourceAccess {
   /**
    * Constructor.
    */
-  DDBResourceAccessImpl(DBSessionCache sessions_cache, String account_name) {
+  DDBResourceAccessImpl(MWPDBSessionCache sessions_cache, String account_name) {
     this.sessions_cache = sessions_cache;
     this.account_name = account_name;
 
@@ -92,7 +92,7 @@ class DDBResourceAccessImpl implements DDBResourceAccess {
       account_info_loaded = true;
 
       // Session manager,
-      DBSessionCache session_manager = sessions_cache;
+      MWPDBSessionCache session_manager = sessions_cache;
       // Access the system platform,
       ODBTransaction t = session_manager.getODBTransaction("sysplatform");
 

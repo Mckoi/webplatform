@@ -25,7 +25,7 @@
 
 package com.mckoi.webplatform.impl;
 
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.network.CommitFaultException;
 import com.mckoi.odb.*;
 import com.mckoi.webplatform.CookieInfo;
@@ -52,7 +52,7 @@ final class SessionAuthenticatorImpl implements SessionAuthenticator {
   /**
    * The session cache.
    */
-  private final DBSessionCache sessions_cache;
+  private final MWPDBSessionCache sessions_cache;
 
   /**
    * Secure random number generator.
@@ -86,7 +86,7 @@ final class SessionAuthenticatorImpl implements SessionAuthenticator {
   /**
    * Constructor.
    */
-  SessionAuthenticatorImpl(DBSessionCache sessions_cache,
+  SessionAuthenticatorImpl(MWPDBSessionCache sessions_cache,
                            String vhost, String account_name) {
     this.sessions_cache = sessions_cache;
     this.vhost = vhost;

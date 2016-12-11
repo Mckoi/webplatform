@@ -25,9 +25,7 @@
 
 package com.mckoi.process.impl;
 
-import com.mckoi.appcore.ServerRolesSchema;
-import com.mckoi.appcore.SystemStatics;
-import com.mckoi.appcore.UserApplicationsSchema;
+import com.mckoi.appcore.*;
 import com.mckoi.data.PropertySet;
 import com.mckoi.mwpcore.*;
 import com.mckoi.network.CommitFaultException;
@@ -113,7 +111,7 @@ public class ProcessServerService implements PEnvironment {
   /**
    * The sessions cache object.
    */
-  private DBSessionCache sessions_cache;
+  private MWPDBSessionCache sessions_cache;
 
   /**
    * The ProcessClientService of this process service. (This object manages
@@ -250,9 +248,9 @@ public class ProcessServerService implements PEnvironment {
   }
 
   /**
-   * Returns the DBSessionCache object for this service.
+   * Returns the MWPDBSessionCache object for this service.
    */
-  DBSessionCache getDBSessionCache() {
+  MWPDBSessionCache getDBSessionCache() {
     return sessions_cache;
   }
 
@@ -287,7 +285,7 @@ public class ProcessServerService implements PEnvironment {
    * @param process_client_service
    */
   public void preSecurityInit(Properties web_config,
-                              DBSessionCache sessions_cache,
+                              MWPDBSessionCache sessions_cache,
                               ProcessClientService process_client_service) {
 
     if (web_config == null) throw new NullPointerException();
@@ -520,7 +518,7 @@ public class ProcessServerService implements PEnvironment {
                                       15 * 1000, MAINT_FREQUENCY_TIME);
 
     System.out.println(MessageFormat.format(
-            "Process Service Started on {0}:{1}",
+            "Process Service Started on ''{0}'' port {1}",
             process_bind_address, Integer.toString(process_port)));
 
   }
@@ -558,7 +556,7 @@ public class ProcessServerService implements PEnvironment {
     }
 
     System.out.println(MessageFormat.format(
-            "Process Service Stopped on {0}:{1}",
+            "Process Service Stopped on ''{0}'' port {1}",
             process_bind_address, Integer.toString(process_port)));
 
   }

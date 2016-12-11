@@ -25,7 +25,7 @@
 
 package com.mckoi.webplatform.impl;
 
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.odb.ODBList;
 import com.mckoi.odb.ODBObject;
 import com.mckoi.odb.ODBTransaction;
@@ -47,7 +47,7 @@ class LogSystemImpl implements LogSystem {
   /**
    * The session cache.
    */
-  private final DBSessionCache sessions_cache;
+  private final MWPDBSessionCache sessions_cache;
 
   private final String account_name;
   private final LoggerService log_system;
@@ -55,7 +55,7 @@ class LogSystemImpl implements LogSystem {
   /**
    * Constructor.
    */
-  LogSystemImpl(DBSessionCache sessions_cache,
+  LogSystemImpl(MWPDBSessionCache sessions_cache,
                String account_name, LoggerService log_system) {
     this.sessions_cache = sessions_cache;
     this.account_name = account_name;

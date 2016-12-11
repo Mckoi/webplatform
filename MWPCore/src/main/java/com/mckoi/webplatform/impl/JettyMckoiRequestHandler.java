@@ -26,7 +26,7 @@
 package com.mckoi.webplatform.impl;
 
 import com.mckoi.appcore.SystemStatics;
-import com.mckoi.mwpcore.DBSessionCache;
+import com.mckoi.mwpcore.MWPDBSessionCache;
 import com.mckoi.odb.ODBList;
 import com.mckoi.odb.ODBObject;
 import com.mckoi.odb.ODBTransaction;
@@ -79,7 +79,7 @@ class JettyMckoiRequestHandler extends AbstractHandler {
    * path.
    */
   private ODBTransaction getSystemPathTransaction() {
-    DBSessionCache sessions_cache = context_builder.getSessionsCache();
+    MWPDBSessionCache sessions_cache = context_builder.getSessionsCache();
     return sessions_cache.getODBTransaction(SystemStatics.SYSTEM_PATH);
   }
 
@@ -143,7 +143,7 @@ class JettyMckoiRequestHandler extends AbstractHandler {
                              getWebAppContextForAccount(String account_name) {
 
     JettyMckoiWebAppContextSet web_app;
-    DBSessionCache sessions_cache = context_builder.getSessionsCache();
+    MWPDBSessionCache sessions_cache = context_builder.getSessionsCache();
     Timer system_timer = context_builder.getSystemTimer();
 
     // Is it in the cache?
