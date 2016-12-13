@@ -1,0 +1,49 @@
+#
+# Node application service properties
+#
+
+
+
+######
+#
+# MWP API service
+#
+######
+
+#api_host=localhost
+#api_port=22944
+
+
+######
+#
+# Web Server Ports
+#
+######
+
+# The http and https ports
+
+${http_port_line}
+${https_port_line}
+
+
+
+######
+#
+# Shared Thread Pool Settings
+#
+######
+
+# The minimum and maximum number of threads that may be
+# created in the shared thread pool.
+
+#shared_threadpool_min_threads = 4
+#shared_threadpool_max_threads = 256
+
+# The time in seconds that a thread is idle for it to be
+# reclaimed.
+
+#shared_threadpool_timeout_seconds = 60
+
+
+
+

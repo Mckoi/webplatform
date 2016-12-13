@@ -25,6 +25,7 @@
     <outputDirectory>support/templates/</outputDirectory>
     <includes>
       <include>app_service_properties.template</include>
+      <include>nodejs_app_service_properties.template</include>
     </includes>
     </fileSet>
 
@@ -43,6 +44,17 @@
       <outputDirectory>support/install_dev/lib/user/</outputDirectory>
       <includes>
         <include>empty.zip</include>
+      </includes>
+    </fileSet>
+
+    <!-- Copy the NodeJS support files -->
+    <fileSet>
+      <directory>${project.basedir}/../MWPNodeJS/node_src/mwp-webservice/</directory>
+      <outputDirectory>support/install_dev/lib/nodejs/</outputDirectory>
+      <includes>
+        <include>*.js</include>
+        <include>*.json</include>
+        <include>node_modules/</include>
       </includes>
     </fileSet>
 
@@ -95,16 +107,42 @@
       <outputDirectory>support/</outputDirectory>
     </dependencySet>
 
-    <!-- The application server dependencies -->
+    <!-- The Node.js application server dependencies -->
+    <dependencySet>
+      <includes>
+        <include>com.mckoi.platform:MWPNodeJS</include>
+      </includes>
+      <useProjectArtifact>false</useProjectArtifact>
+      <useTransitiveFiltering>false</useTransitiveFiltering>
+      <outputDirectory>support/install_dev/lib/base/</outputDirectory>
+    </dependencySet>
+
+
+
+
+    <!-- The Jetty application server dependencies -->
     <dependencySet>
       <includes>
         <include>com.mckoi.jasper:ModJasper</include>
-        <include>org.eclipse.jetty:jetty-server</include>
-        <include>org.eclipse.jetty:jetty-webapp</include>
-        <include>org.eclipse.jetty:jetty-continuation</include>
-        <include>org.eclipse.jetty:jetty-annotations</include>
+
+        <include>org.eclipse.jetty.websocket:websocket-api</include>
+        <include>org.eclipse.jetty.websocket:websocket-client</include>
+        <include>org.eclipse.jetty.websocket:websocket-common</include>
         <include>org.eclipse.jetty.websocket:websocket-server</include>
         <include>org.eclipse.jetty.websocket:websocket-servlet</include>
+        <include>org.eclipse.jetty:jetty-annotations</include>
+        <include>org.eclipse.jetty:jetty-continuation</include>
+        <include>org.eclipse.jetty:jetty-http</include>
+        <include>org.eclipse.jetty:jetty-io</include>
+        <include>org.eclipse.jetty:jetty-jndi</include>
+        <include>org.eclipse.jetty:jetty-plus</include>
+        <include>org.eclipse.jetty:jetty-security</include>
+        <include>org.eclipse.jetty:jetty-server</include>
+        <include>org.eclipse.jetty:jetty-servlet</include>
+        <include>org.eclipse.jetty:jetty-util</include>
+        <include>org.eclipse.jetty:jetty-webapp</include>
+        <include>org.eclipse.jetty:jetty-xml</include>
+
         <include>asm:asm-all</include>
         <include>junit:junit</include>
       </includes>
