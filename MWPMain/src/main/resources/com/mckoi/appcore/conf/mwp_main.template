@@ -2,7 +2,7 @@
 # ----------------------------------------------------
 # Configuration properties for the Mckoi Web Platform
 # web/process server. This defines machine specific
-# information used for initialization of the software.
+# information used for operation of the software.
 # ----------------------------------------------------
 
 # The location of the JDK (Java Developers Kit) directory.
@@ -10,6 +10,13 @@
 # library containing the JDK tools (compiler, etc).
 
 java_home=${java_home}
+
+
+# The location of the node.js executable. This is the
+# command to execute to run a node process.
+# ( eg. /usr/bin/node )
+
+nodejs_executable=${nodejs_executable}
 
 
 # The location of various support files and directories for

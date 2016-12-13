@@ -109,6 +109,7 @@ public final class AppServiceNode {
   private NetworkConfigResource net_config;
 
   private File java_home;
+  private String nodejs_executable;
   private File installs_path;
   private File temporary_path;
   private File log_path;
@@ -144,6 +145,10 @@ public final class AppServiceNode {
 
   public void setJavaHome(File java_home) {
     this.java_home = java_home;
+  }
+
+  public void setNodeJSExecutable(String nodejs_executable) {
+    this.nodejs_executable = nodejs_executable;
   }
 
   public void setInstallsPath(File installs_path) {
@@ -329,7 +334,7 @@ public final class AppServiceNode {
       args.add(java_args);
     }
 
-    // The remainnig Java commands
+    // The remaining Java commands
     args.add("-cp");
     args.add(class_path.toString());
     args.add(service_classname);
@@ -343,6 +348,7 @@ public final class AppServiceNode {
     env.put("mwp.config.client", client_conf_file.getCanonicalPath());
     env.put("mwp.config.network", network_conf_url.toString());
     env.put("mwp.config.javahome", java_home.getCanonicalPath());
+    env.put("mwp.config.nodejsexecutable", nodejs_executable);
     env.put("mwp.config.install", this_installs_path.getCanonicalPath());
     env.put("mwp.io.log", log_path.getCanonicalPath());
     env.put("mwp.io.temp", temporary_path.getCanonicalPath());
@@ -741,6 +747,9 @@ public final class AppServiceNode {
         mwp_main_conf_properties.getProperty("java_home", "./");
     File java_home_path = new File(java_home_dir).getCanonicalFile();
 
+    String nodejs_executable =
+        mwp_main_conf_properties.getProperty("nodejs_executable", "node");
+
     String installs_dir =
         mwp_main_conf_properties.getProperty("installs_dir", "./installs/");
     File installs_path = new File(home_path, installs_dir);
@@ -847,6 +856,7 @@ public final class AppServiceNode {
     System.out.println("Configuration:");
     System.out.println("  home_dir = " + home_path);
     System.out.println("  java_home = " + java_home_path);
+    System.out.println("  nodejs_ex = " + nodejs_executable);
     System.out.println("  installs_dir = " + installs_path);
     System.out.println("  mckoi_client = " + client_conf_file);
     System.out.println("  mckoi_network = " + network_conf_url);
@@ -874,6 +884,7 @@ public final class AppServiceNode {
     AppServiceNode server = new AppServiceNode(client, network_resource);
     server.setInstallsPath(installs_path);
     server.setJavaHome(java_home_path);
+    server.setNodeJSExecutable(nodejs_executable);
     server.setTemporaryPath(temporary_path);
     server.setLogPath(log_path);
     server.setLogFileLimit(logfile_limit);

@@ -63,6 +63,7 @@ public abstract class AbstractCoreProcess {
   private File client_conf;
   private URL network_conf_url;
   private File java_home;
+  private String nodejs_executable;
   private File install_path;
   private File log_path;
   private int logfile_limit;
@@ -103,6 +104,10 @@ public abstract class AbstractCoreProcess {
 
   public File getJavaHome() {
     return java_home;
+  }
+
+  public String getNodeJsExecutable() {
+    return nodejs_executable;
   }
 
   public File getLogPath() {
@@ -167,6 +172,7 @@ public abstract class AbstractCoreProcess {
       client_conf = new File(env.get("mwp.config.client"));
       network_conf_url = new URL(env.get("mwp.config.network"));
       java_home = new File(env.get("mwp.config.javahome"));
+      nodejs_executable = env.get("mwp.config.nodejsexecutable");
       install_path = new File(env.get("mwp.config.install"));
       log_path = new File(env.get("mwp.io.log"));
       temp_path = new File(env.get("mwp.io.temp"));
@@ -226,6 +232,7 @@ public abstract class AbstractCoreProcess {
       MWPCORE_LOG.log(Level.INFO, "Client: {0}", client_conf);
       MWPCORE_LOG.log(Level.INFO, "Network: {0}", network_conf_url.toString());
       MWPCORE_LOG.log(Level.INFO, "Java Home: {0}", java_home);
+      MWPCORE_LOG.log(Level.INFO, "Node JS: {0}", nodejs_executable);
       MWPCORE_LOG.log(Level.INFO, "Log Path: {0}", log_path);
       MWPCORE_LOG.log(Level.INFO, "Temp Path: {0}", temp_path);
       MWPCORE_LOG.log(Level.INFO, "Private IP: {0}", private_ip);

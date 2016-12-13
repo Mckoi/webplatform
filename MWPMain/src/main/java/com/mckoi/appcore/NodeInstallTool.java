@@ -107,6 +107,8 @@ public class NodeInstallTool {
   private File verified_templates_path;
 
   private File found_jdk_directory;
+  private String found_nodejs_executable;
+  private String found_nodejs_version;
 
   // True if making a windows installation,
   private boolean is_win = false;
@@ -114,6 +116,8 @@ public class NodeInstallTool {
   private String ex_path = "/mckoiddb/";
   // An example JDK path
   private String ex_jdk_path = "/usr/lib/jvm/java-1.6.0-openjdk";
+  // An example nodejs executable
+  private String ex_nodejs_executable = "/usr/bin/node";
   // The operating system text (either 'Unix' or 'Windows')
   private String os_text;
   
@@ -253,13 +257,83 @@ public class NodeInstallTool {
     File jh_file = new File(sys_java_home);
     if (isJDKDirectory(jh_file)) {
       found_jdk_directory = jh_file;
+      return;
     }
-    else {
-      jh_file = jh_file.getParentFile();
-      if (isJDKDirectory(jh_file)) {
-        found_jdk_directory = jh_file;
+    File jh_parent = jh_file.getParentFile();
+    if (isJDKDirectory(jh_parent)) {
+      found_jdk_directory = jh_parent;
+      return;
+    }
+
+    // Otherwise look for 'jre' and substitute for 'jdk'
+    String dir_name = jh_file.getName();
+    String[] parts = dir_name.split("jre");
+    if (parts.length == 2) {
+      String alt_test_name = parts[0] + "jdk" + parts[1];
+      File jh_jdk_name = new File(jh_parent, alt_test_name);
+      if (isJDKDirectory(jh_jdk_name)) {
+        found_jdk_directory = jh_jdk_name;
+        return;
       }
     }
+
+    // JDK directory not found :(
+
+  }
+
+  /**
+   * Generalized OS command execution.
+   */
+  private List<String> executeCommand(String[] args) throws IOException {
+    List<String> arglist = Arrays.asList(args);
+
+    ProcessBuilder pb = new ProcessBuilder(arglist);
+//    Map<String, String> env = pb.environment();
+    Process p;
+
+    p = pb.start();
+    BufferedReader ins_reader = new BufferedReader(
+            new InputStreamReader(p.getInputStream(), "UTF-8"));
+
+    List<String> stdout_lines = new ArrayList<>();
+
+    while (true) {
+      String line = ins_reader.readLine();
+      if (line == null) {
+        break;
+      }
+      stdout_lines.add(line);
+    }
+
+    if (p.exitValue() != 0) {
+      throw new IOException("Process terminated with exit code " + p.exitValue());
+    }
+
+    return stdout_lines;
+
+  }
+
+  /**
+   * Determines the nodejs executable location, or sets the location to 'null'
+   * if it's unknown.
+   */
+  private void determineNodeJSExecutableLocation() {
+
+    // We test node is running by simply starting a 'node' process and see the
+    // result. If it works then the node command becomes the executable.
+
+    try {
+      List<String> lines = executeCommand(new String[]{"node", "-v"});
+      found_nodejs_executable = "node";
+      found_nodejs_version = lines.get(0);
+    }
+    catch (IOException ex) {
+      // Ignore this,
+    }
+
+    // Otherwise the user must specify the location of the node executable on
+    // this machine.
+
   }
 
   /**
@@ -405,6 +479,18 @@ public class NodeInstallTool {
     File lib = new File(f, "lib");
     File toolsjar = new File(lib, "tools.jar");
     return (toolsjar.exists() && toolsjar.isFile());
+  }
+
+  /**
+   * Returns true if the given file location is the nodejs executable.
+   */
+  private static boolean isNodeJsExecutableLocation(File f) {
+    if (f.exists() && f.canExecute()) {
+      String file_name = f.getName();
+      return (file_name.equals("node") || file_name.equals("nodejs") ||
+              file_name.equals("node.exe") || file_name.equals("nodejs.exe"));
+    }
+    return false;
   }
 
   /**
@@ -636,6 +722,7 @@ public class NodeInstallTool {
     ex_path = "/mckoiddb/";
     ex_jdk_path = "/usr/lib/jvm/java-1.6.0-openjdk";
     os_text = "Unix";
+    ex_nodejs_executable = "/usr/bin/node";
 
     String os = askOpt("uw",
            "Are you installing on (U)nix or (W)indows? (Default = 'U'): ");
@@ -649,6 +736,7 @@ public class NodeInstallTool {
       ex_path = "C:\\mckoiddb\\";
       os_text = "Windows";
       ex_jdk_path = "C:\\Program Files\\Java\\jdk1.6.0_34\\";
+      ex_nodejs_executable = "C:\\Program Files\\nodejs\\node.exe";
     }
 
     return os;
@@ -689,16 +777,44 @@ public class NodeInstallTool {
   }
 
   /**
+   * Asks for the Node.js executable.
+   */
+  private String askNodeJSExecutable() throws IOException {
+
+    String nodejs_ex_location = found_nodejs_executable;
+
+    boolean ask_for_nodejs_dir = true;
+    if (found_nodejs_executable != null) {
+      pln("I found a version of Nodejs on this machine (version '" +
+              found_nodejs_version + "').");
+      boolean use_found_nodejs = askYNQ(
+              "Should I use this version? (Y/N/Q): ");
+      if (use_found_nodejs) {
+        ask_for_nodejs_dir = false;
+      }
+    }
+    if (ask_for_nodejs_dir) {
+      pln();
+      pln("Please enter the location of the nodejs executable on this machine.");
+      pln("For example; " + ex_nodejs_executable);
+      nodejs_ex_location = askString(
+              "'nodejs' executable location: ", nodejs_executable_valid_check);
+    }
+
+    return nodejs_ex_location;
+
+  }
+
+
+  /**
    * Asks for the installation path.
    */
   private String askInstallPath() throws IOException {
 
     pln("The Mckoi software must be installed to a directory on this");
     pln("machine. For example; " + ex_path);
-    String dir = askString(
+    return askString(
            "Enter installation path: ", path_valid_check);
-
-    return dir;
 
   }
 
@@ -896,6 +1012,9 @@ public class NodeInstallTool {
             throw new RuntimeException(e2);
           }
         }
+        else {
+          throw new RuntimeException("Network config file not found");
+        }
       }
 
       // Load the properties from the location,
@@ -928,10 +1047,7 @@ public class NodeInstallTool {
       }
 
       // If the white lists are set up correctly,
-      if (connect_ok && node_addr_ok) {
-        return true;
-      }
-      return false;
+      return connect_ok && node_addr_ok;
 
     }
     catch (IOException e) {
@@ -970,6 +1086,10 @@ public class NodeInstallTool {
     pln(" ---");
     pln();
     String java_home_path = askJDKPath();
+
+    pln(" ---");
+    pln();
+    String nodejs_executable = askNodeJSExecutable();
 
     pln(" ---");
     pln();
@@ -1168,7 +1288,7 @@ public class NodeInstallTool {
     File netconf_info_file = new File(install_path, "netconf_info");
 
     // Set up a properties object,
-    HashMap properties = new HashMap();
+    HashMap<String, Object> properties = new HashMap<>();
     properties.put("os_text", os_text);
     properties.put("install_path", dir);
     if (public_ip != null) {
@@ -1222,6 +1342,9 @@ public class NodeInstallTool {
     properties.put("log_directory", ddb_log_path.getCanonicalPath());
     properties.put("lib_directory", lib_path.getCanonicalPath());
     properties.put("root_directory", install_path.getCanonicalPath());
+
+    properties.put("nodejs_executable", nodejs_executable);
+    properties.put("nodejs_extra_args", "");
 
     // Set the http_port_line of the app_service_properties,
     if (http_port.trim().equals("80")) {
@@ -1278,7 +1401,9 @@ public class NodeInstallTool {
 
       // Write the App Server configuration file into the install_dev,
       installFileTemplate(properties, new File(verified_templates_path, "app_service_properties.template"),
-                          install_dev_conf_path, "app_service.properties");
+              install_dev_conf_path, "app_service.properties");
+      installFileTemplate(properties, new File(verified_templates_path, "nodejs_app_service_properties.template"),
+              install_dev_conf_path, "nodejs_app_service.properties");
 
       File lib_dest = new File(install_dev_path, "lib");
       lib_dest = new File(lib_dest, "base");
@@ -1592,6 +1717,10 @@ public class NodeInstallTool {
 
     pln(" ---");
     pln();
+    String nodejs_executable = askNodeJSExecutable();
+
+    pln(" ---");
+    pln();
     final String dir = askInstallPath();
     File install_path = new File(dir);
 
@@ -1728,7 +1857,7 @@ public class NodeInstallTool {
       pln("follows:");
       Enumeration<NetworkInterface> local_ifs =
                                       NetworkInterface.getNetworkInterfaces();
-      List<NetworkInterface> if_list = new ArrayList();
+      List<NetworkInterface> if_list = new ArrayList<>();
       int index = 1;
       while (local_ifs.hasMoreElements()) {
         NetworkInterface net_if = local_ifs.nextElement();
@@ -2092,7 +2221,7 @@ public class NodeInstallTool {
              new File(lib_path, verified_json_jar.getName()));
 
     // Set up a properties object,
-    HashMap properties = new HashMap();
+    HashMap<String, Object> properties = new HashMap<>();
     properties.put("os_text", os_text);
     properties.put("install_path", dir);
     properties.put("public_ip", public_ip);
@@ -2116,6 +2245,9 @@ public class NodeInstallTool {
     properties.put("log_directory", ddb_log_path.getCanonicalPath());
     properties.put("lib_directory", lib_path.getCanonicalPath());
     properties.put("root_directory", install_path.getCanonicalPath());
+
+    properties.put("nodejs_executable", nodejs_executable);
+    properties.put("nodejs_extra_args", "");
 
     // Property for the mwp_main.conf file,
     if (is_win) {
@@ -2443,7 +2575,7 @@ public class NodeInstallTool {
       pln("  " + m.getServiceAddress().formatString());
     }
     pln();
-    pln("The root server(s) to use must be listed as a comma deliminated");
+    pln("The root server(s) to use must be listed as a comma delimited");
     pln("list. Some examples follow;");
     pln("  192.168.1.100:13030");
     pln("  192.168.1.103:13030, 192.168.1.104:13030");
@@ -2571,7 +2703,8 @@ root_srv_check:
       copyPath(verified_install_dev_path, install_dev_path);
 
       // Set the template properties,
-      HashMap properties = new HashMap();
+      HashMap<String, Object> properties = new HashMap<>();
+
       if (http_port.trim().equals("80")) {
         properties.put("http_port_line", "#http_port = 80");
         properties.put("https_port_line", "#https_port = 443");
@@ -2584,6 +2717,8 @@ root_srv_check:
       // Write the App Server configuration file into the install_dev,
       installFileTemplate(properties, new File(verified_templates_path, "app_service_properties.template"),
               install_dev_conf_path, "app_service.properties");
+      installFileTemplate(properties, new File(verified_templates_path, "nodejs_app_service_properties.template"),
+              install_dev_conf_path, "nodejs_app_service.properties");
 
       File lib_dest = new File(install_dev_path, "lib");
       lib_dest = new File(lib_dest, "base");
@@ -2788,6 +2923,8 @@ root_srv_check:
 
       fpln("Looking for JDK directory.");
       determineJDKPath();
+      fpln("Looking for NodeJS executable location.");
+      determineNodeJSExecutableLocation();
       
       pln();
       pln("=====");
@@ -2977,6 +3114,26 @@ root_srv_check:
     }
 
   };
+
+  private AnswerValidator nodejs_executable_valid_check = new AnswerValidator() {
+    @Override
+    public boolean isValidAnswer(String answer) {
+      File f = new File(answer);
+
+      if (!f.exists() || !f.isDirectory()) {
+        epln("The executable does not exist.");
+        return false;
+      }
+
+      if (!isNodeJsExecutableLocation(f)) {
+        epln("Unable to find node executable at this location.");
+        return false;
+      }
+
+      return true;
+    }
+  };
+
 
   private AnswerValidator tcp_port_valid_check = new AnswerValidator() {
     @Override

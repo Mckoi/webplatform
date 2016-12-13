@@ -122,7 +122,7 @@ public class RunAllServices {
       }
 
       Logger log = Logger.getLogger("com.mckoi.network.Log");
-      // Don't propogate log messages,
+      // Don't propagate log messages,
       log.setUseParentHandlers(false);
 
       // There's now enough information to start the services,
