@@ -246,6 +246,30 @@ public abstract class AbstractCoreProcess {
   }
 
   /**
+   * Creates a NetworkInterface object given the if name from a property in the
+   * given configuration file (config_file_name is used to generate an appropriate
+   * error message in the failure case).
+   */
+  protected NetworkInterface getNetworkInterfaceFor(
+              String net_interface_name, String config_file_name) throws IOException {
+
+    if (net_interface_name == null || net_interface_name.trim().equals("")) {
+      return null;
+    }
+    NetworkInterface net_if = NetworkInterface.getByName(net_interface_name);
+    if (net_if == null) {
+      String err_msg = MessageFormat.format(
+              "The given network interface property in ''{1}'' does not match a " +
+                      "network interface on this machine. net_interface = ''{0}''",
+              net_interface_name, config_file_name);
+      System.out.println("ERROR: " + err_msg);
+      throw new IOException(err_msg);
+    }
+
+    return net_if;
+  }
+
+  /**
    * Initializes connections to the MckoiDDB network. Returns a map containing
    * the Java objects generated.
    * <p>
@@ -299,16 +323,7 @@ public abstract class AbstractCoreProcess {
               "  For example; 'net_interface=eth0'");
     }
     else {
-      // Check the net interface binds to a NetworkInterface on this machine,
-      net_if = NetworkInterface.getByName(net_interface_name);
-      if (net_if == null) {
-        String err_msg = MessageFormat.format(
-                "The ''net_interface'' property in client.conf does not match a " +
-                        "network interface on this machine. net_interface = ''{0}''",
-                net_interface_name);
-        System.out.println("ERROR: " + err_msg);
-        throw new RuntimeException(err_msg);
-      }
+      net_if = getNetworkInterfaceFor(net_interface_name, "client.conf");
     }
 
     // Report the configuration settings,
@@ -350,7 +365,7 @@ public abstract class AbstractCoreProcess {
     Map<String, Object> ret_values = new HashMap<>();
     ret_values.put("mckoiddb_client", client);
     ret_values.put("network_config_resource", network_resource);
-    ret_values.put("network_interface", net_if);
+//    ret_values.put("network_interface", net_if);
     return ret_values;
 
   }
