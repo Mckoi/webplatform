@@ -39,6 +39,10 @@ public class BlockingIOMessageStream implements MessageStreamReader {
   @Override
   public int read(ByteBuffer buf) throws IOException {
     int max_read = buf.remaining();
-    return input_stream.read(buf.array(), buf.arrayOffset(), max_read);
+    int act_read = input_stream.read(buf.array(), buf.arrayOffset() + buf.position(), max_read);
+    if (act_read > 0) {
+      buf.position(buf.position() + act_read);
+    }
+    return act_read;
   }
 }
