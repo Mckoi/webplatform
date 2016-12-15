@@ -397,11 +397,14 @@ public class MWPCoreProcess extends AbstractCoreProcess {
       MckoiDDBClient client = (MckoiDDBClient) ret_values.get("mckoiddb_client");
       NetworkConfigResource network_resource =
                   (NetworkConfigResource) ret_values.get("network_config_resource");
-      NetworkInterface net_if = (NetworkInterface) ret_values.get("network_interface");
+
+      // The network interface
+      NetworkInterface net_if =
+          getNetworkInterfaceFor(getNetInterface(), "mwp_main.conf");
 
       // Create the global sessions cache (1 second age),
       MWPDBSessionCache sessions_cache =
-                            new MWPDBSessionCache(client, network_resource, 1000);
+            new MWPDBSessionCache(client, network_resource, 1000);
       // Create the process client service,
       ProcessClientService process_client_service = new ProcessClientService(
                           sessions_cache, shared_thread_pool, net_if);
